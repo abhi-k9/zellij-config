@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zellij Config — On-Machine Verification Checklist</title>
+<style>
+  :root {
+    /* --muted is Catppuccin overlay2 (not the darker overlay0, #6c7086) so small
+       grey note text meets WCAG AA contrast (≥ 4.5:1) on these dark backgrounds. */
+    --bg:#1e1e2e;--surface:#181825;--overlay:#313244;--muted:#9399b2;
+    --subtle:#7f849c;--text:#cdd6f4;--subtext:#a6adc8;
+    --lavender:#b4befe;--blue:#89b4fa;--sky:#89dceb;--teal:#94e2d5;
+    --green:#a6e3a1;--yellow:#f9e2af;--peach:#fab387;--red:#f38ba8;
+    --mauve:#cba6f7;--pink:#f5c2e7;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,'Segoe UI',sans-serif;
+    font-size:12.5px;line-height:1.5;padding:22px 26px 48px;max-width:900px;margin:0 auto}
+  header{display:flex;align-items:baseline;justify-content:space-between;
+    border-bottom:1px solid var(--overlay);padding-bottom:12px;margin-bottom:8px;gap:20px}
+  header h1{font-size:18px;font-weight:700;color:var(--lavender);letter-spacing:-.3px}
+  header .meta{font-size:10.5px;color:var(--muted);font-family:'JetBrains Mono',ui-monospace,'Cascadia Mono',Consolas,monospace;text-align:right}
+  .intro{color:var(--subtext);font-size:11.5px;margin:12px 0 18px;padding:10px 12px;
+    background:var(--surface);border:1px solid var(--overlay);border-radius:7px}
+  .intro strong{color:var(--text)}
+  .item{background:var(--surface);border:1px solid var(--overlay);border-radius:7px;
+    margin-bottom:11px;overflow:hidden;break-inside:avoid}
+  .item-head{display:flex;align-items:flex-start;gap:10px;padding:9px 12px;border-bottom:1px solid var(--overlay)}
+  .item-head input[type=checkbox]{appearance:none;-webkit-appearance:none;
+    width:16px;height:16px;border:1.5px solid var(--muted);border-radius:4px;flex-shrink:0;
+    margin-top:1px;cursor:pointer;position:relative;background:transparent}
+  .item-head input[type=checkbox]:checked{background:var(--green);border-color:var(--green)}
+  .item-head input[type=checkbox]:checked::after{content:"✓";position:absolute;
+    top:-2px;left:2px;color:#11111b;font-size:13px;font-weight:700}
+  .item-head h2{font-size:13px;font-weight:700;color:var(--text)}
+  .item-head .opt{font-size:9px;font-weight:700;color:var(--yellow);border:1px solid rgba(249,226,175,.3);
+    background:rgba(249,226,175,.1);border-radius:3px;padding:0 5px;margin-left:6px;text-transform:uppercase;letter-spacing:.4px}
+  .item-head .opt.key{color:var(--red);border-color:rgba(243,139,168,.3);background:rgba(243,139,168,.1)}
+  .item-body{padding:8px 12px 10px 38px}
+  .row{margin:5px 0}
+  .row .lbl{display:inline-block;width:64px;font-size:9.5px;font-weight:700;text-transform:uppercase;
+    letter-spacing:.5px;color:var(--muted);vertical-align:top}
+  .row .val{display:inline-block;width:calc(100% - 70px);color:var(--subtext);font-size:11.5px}
+  .row.pass .val{color:var(--text)}
+  .row.pass .lbl{color:var(--green)}
+  code{font-family:'JetBrains Mono',ui-monospace,'Cascadia Mono',Consolas,monospace;font-size:10.5px;color:var(--sky);
+    background:rgba(49,50,68,.6);padding:1px 4px;border-radius:3px}
+  kbd{display:inline-block;font-family:'JetBrains Mono',ui-monospace,'Cascadia Mono',Consolas,monospace;font-size:10.5px;font-weight:600;
+    padding:1px 5px;border-radius:4px;background:var(--overlay);color:var(--text)}
+  .note{color:var(--muted);font-size:10.5px;font-style:italic}
+  footer{margin-top:18px;padding-top:10px;border-top:1px solid var(--overlay);
+    font-size:10px;color:var(--muted);display:flex;justify-content:space-between;gap:20px}
+  @media print{
+    body{background:#fff;color:#000;max-width:none}
+    .item,.intro{border-color:#bbb;background:#fff;break-inside:avoid}
+    .item-head{background:#f5f5f5;border-color:#bbb}
+    .item-head input[type=checkbox]{border-color:#333}
+    header h1,.item-head h2{color:#000}
+    code{background:#eee;color:#1e66f5}
+    kbd{background:#eee;color:#000;border:1px solid #999}
+    .row .val,.intro{color:#222}.item-head .opt{color:#555;border-color:#999;background:#eee}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Verification Checklist <span style="font-size:11px;font-weight:500;color:var(--muted)">— run these on your own machine</span></h1>
+  <div class="meta">zellij 0.45.1<br>Tier 2 (hardware-dependent)</div>
+</header>
+
+<!-- Each checkbox is named by its item title via aria-labelledby, so screen
+     readers announce e.g. "Local clipboard (copy-on-select), checkbox". -->
+<div class="intro">
+  Much of this config was validated against the real zellij 0.45.1 binary
+  (parsing, option keys, enum values, keybinds, plugin loading, live keystroke
+  behavior, protocol emission, crash recovery). <code>CHANGELOG.md</code> records
+  exactly what was run, and which doc claims later audits corrected — not every
+  sentence in the docs has been tested. <strong>These items can't be tested
+  in a headless sandbox</strong> — they need a real terminal, GUI, clipboard, or a
+  reboot. Tick each once you've confirmed it in your actual setup. If one fails,
+  it's most likely a terminal-emulator capability gap rather than a config bug.
+</div>
+
+<!-- 1 -->
+<div class="item">
+  <div class="item-head"><input type="checkbox" aria-labelledby="item-1"><h2 id="item-1">Local clipboard (copy-on-select)</h2></div>
+  <div class="item-body">
+    <div class="row"><span class="lbl">Tests</span><span class="val"><code>copy_on_select true</code> + <code>copy_clipboard "system"</code></span></div>
+    <div class="row"><span class="lbl">Do</span><span class="val">In any pane, drag-select some text with the mouse. Don't press anything else. Switch to another app and paste (<kbd>Ctrl/Cmd+V</kbd>).</span></div>
+    <div class="row pass"><span class="lbl">Pass</span><span class="val">The selected text pastes — selection alone copied it to the system clipboard.</span></div>
+  </div>
+</div>
+
+<!-- 2 -->
+<div class="item">
+  <div class="item-head"><input type="checkbox" aria-labelledby="item-2"><h2 id="item-2">Clipboard over SSH (OSC52) <span class="opt">if you SSH</span></h2></div>
+  <div class="item-body">
+    <div class="row"><span class="lbl">Tests</span><span class="val">OSC52 forwarding — the only clipboard path that crosses an SSH hop</span></div>
+    <div class="row"><span class="lbl">Do</span><span class="val">SSH into a remote box running this zellij, drag-select text in a pane, then paste into a <em>local</em> app on your laptop.</span></div>
+    <div class="row pass"><span class="lbl">Pass</span><span class="val">Text lands in your local clipboard. Needs an OSC52-capable local terminal (kitty, WezTerm, Ghostty, iTerm2, Alacritty…).</span></div>
+    <div class="row"><span class="lbl">If it fails</span><span class="val" style="color:var(--muted)">Your terminal likely doesn't allow OSC52 clipboard writes — enable it in the terminal's settings.</span></div>
+  </div>
+</div>
+
+<!-- 3 -->
+<div class="item">
+  <div class="item-head"><input type="checkbox" aria-labelledby="item-3"><h2 id="item-3">Mouse behavior</h2></div>
+  <div class="item-body">
+    <div class="row"><span class="lbl">Tests</span><span class="val"><code>mouse_mode true</code>, <code>focus_follows_mouse false</code>, <code>mouse_click_through false</code>, <code>advanced_mouse_actions</code> + <code>mouse_scroll_resize</code> (both default true, not set)</span></div>
+    <div class="row"><span class="lbl">Do</span><span class="val">Open two panes (<kbd>Alt+n</kbd>). (a) Click a pane → it focuses. (b) Move the mouse over the other pane <em>without clicking</em>. (c) Drag the border between the two panes, then hold <kbd>Ctrl</kbd> and scroll the wheel over a pane. (d) Wheel-scroll a pane.</span></div>
+    <div class="row pass"><span class="lbl">Pass</span><span class="val">(a) one click focuses; (b) focus does <em>not</em> follow the mouse on hover; (c) both the border drag and Ctrl+scroll resize the panes (Ctrl+drag is only needed for <em>floating</em> panes, where a plain drag moves them); (d) the wheel scrolls the pane and, since 0.45, the status bar switches to Scroll mode (<code>scroll_mode_sync</code>, default on).</span></div>
+  </div>
+</div>
+
+<!-- 4 -->
+<div class="item">
+  <div class="item-head"><input type="checkbox" aria-labelledby="item-4"><h2 id="item-4">Theme colors</h2></div>
+  <div class="item-body">
+    <div class="row"><span class="lbl">Tests</span><span class="val"><code>theme "catppuccin-mocha"</code> (confirmed a real built-in; colors are visual)</span></div>
+    <div class="row"><span class="lbl">Do</span><span class="val">Look at it: dark background, soft mauve/blue/green accents, rounded pane frames.</span></div>
+    <div class="row pass"><span class="lbl">Pass</span><span class="val">It reads as Catppuccin Mocha, not zellij's default palette.</span></div>
+    <div class="row"><span class="lbl">Bonus</span><span class="val" style="color:var(--muted)">If your terminal supports CSI 2031, uncomment <code>theme_dark</code>/<code>theme_light</code> in <code>config.kdl</code> and flip your terminal's light/dark mode — zellij should follow. (Leave <code>explicit_theme_hue</code> commented for this test: it pins one hue and stops the switching.)</span></div>
+  </div>
+</div>
+
+<!-- 5 -->
+<div class="item">
+  <div class="item-head"><input type="checkbox" aria-labelledby="item-5"><h2 id="item-5">Desktop notifications <span class="opt">if you want them</span></h2></div>
+  <div class="item-body">
+    <div class="row"><span class="lbl">Tests</span><span class="val"><code>host_notification_protocol "auto"</code> (forwarding verified; the OS popup is hardware)</span></div>
+    <div class="row"><span class="lbl">Do</span><span class="val">In a pane, run: <code>printf '\033]9;build done\033\\'</code> (POSIX <code>\033</code>; <code>\e</code> isn't portable — dash prints it literally) — or run a real long command that emits a notification on finish.</span></div>
+    <div class="row pass"><span class="lbl">Pass</span><span class="val">A real OS desktop notification appears. Needs an OSC9/99-capable terminal (kitty, WezTerm…) with notifications allowed.</span></div>
+  </div>
+</div>
+
+<!-- 6 -->
+<div class="item">
+  <div class="item-head"><input type="checkbox" aria-labelledby="item-6"><h2 id="item-6">Crash → reattach → nvim <code>:qa</code> safety <span class="opt key">the important one</span></h2></div>
+  <div class="item-body">
+    <div class="row"><span class="lbl">Tests</span><span class="val"><code>session_serialization true</code> + the two-tab default (the whole nvim design)</span></div>
+    <div class="row"><span class="lbl">Do</span><span class="val">
+      1. Run <code>zellij</code> → lands in <code>main</code> with <kbd>main</kbd> + <kbd>shell</kbd> tabs.<br>
+      2. In the <kbd>main</kbd> tab, open nvim and edit something.<br>
+      3. Simulate a crash: from <em>another</em> terminal run <code>pkill -9 -f 'zellij --server'</code> (or just reboot).<br>
+      4. Reattach: <code>zellij attach --create main</code>.<br>
+      5. If the <kbd>main</kbd> tab comes back running nvim (no parent shell), type <code>:qa</code>. (If it comes back as a plain shell, zellij didn't save the nvim — see the 0.45.1 note in README "Session recovery"; the test can't run.)
+    </span></div>
+    <div class="row pass"><span class="lbl">Pass</span><span class="val"><code>:qa</code> closes nvim's tab and drops you into the <kbd>shell</kbd> tab — the session stays alive. (Closing the last pane in a single-tab session would instead end it.)</span></div>
+    <div class="row"><span class="lbl">Note</span><span class="val" style="color:var(--muted)">Soft guarantee — holds while the <kbd>shell</kbd> tab exists. For a hard guarantee, add an nvim session plugin (persistence.nvim / auto-session); then even an ended session restores your buffers on relaunch. See README "Session recovery".</span></div>
+  </div>
+</div>
+
+<!-- 7 -->
+<div class="item">
+  <div class="item-head"><input type="checkbox" aria-labelledby="item-7"><h2 id="item-7">Reboot recovery</h2></div>
+  <div class="item-body">
+    <div class="row"><span class="lbl">Tests</span><span class="val"><code>session_serialization</code> across a full machine restart</span></div>
+    <div class="row"><span class="lbl">Do</span><span class="val">With a session running, reboot the machine. After login, run <code>zellij attach --create main</code> (not plain <code>zellij</code> — that would start a fresh session and discard the saved one).</span></div>
+    <div class="row pass"><span class="lbl">Pass</span><span class="val">The session comes back with its <kbd>main</kbd> and <kbd>shell</kbd> tabs. Recent changes may be missing — zellij 0.45.1 doesn't reliably keep the saved copy current (issue #4536; see README "Session recovery"). Panes redraw blank (<code>serialize_pane_viewport</code> is off by design).</span></div>
+  </div>
+</div>
+
+<!-- 8 -->
+<div class="item">
+  <div class="item-head"><input type="checkbox" aria-labelledby="item-8"><h2 id="item-8">zjstatus status bar renders <span class="opt">if you adopt zjstatus</span></h2></div>
+  <div class="item-body">
+    <div class="row"><span class="lbl">Tests</span><span class="val"><code>layouts/zjstatus.kdl</code> (loads verified; colors/git/clock are visual)</span></div>
+    <div class="row"><span class="lbl">Do</span><span class="val">Run <code>zellij -s zjs -n zjstatus</code>. On first run the bar shows a truncated permission prompt (e.g. <code>/n)</code>) — click the bar to focus it, then press <kbd>y</kbd>. Optionally set <code>pane_frames false</code> first (see the layout's header).</span></div>
+    <div class="row pass"><span class="lbl">Pass</span><span class="val">The bottom bar shows a colored mode indicator, session, tabs, git branch (if you started zellij inside a repo), and the clock; with 2+ panes, the swap layout name (e.g. <code>vertical</code>) appears and changes as you press <kbd>Alt+]</kbd> — no frame flicker. The tab list shows <kbd>main</kbd> and <kbd>shell</kbd> — the same nvim <code>:qa</code> safety as the default layout.</span></div>
+    <div class="row"><span class="lbl">Note</span><span class="val" style="color:var(--muted)">The layout ships with <code>datetime_timezone "America/Denver"</code> — change it to your IANA zone if the clock is off.</span></div>
+  </div>
+</div>
+
+<!-- 9 -->
+<div class="item">
+  <div class="item-head"><input type="checkbox" aria-labelledby="item-9"><h2 id="item-9">multitask runs commands on save <span class="opt">if you use multitask (Linux/macOS)</span></h2></div>
+  <div class="item-body">
+    <div class="row"><span class="lbl">Tests</span><span class="val">The opt-in <kbd>Ctrl+o</kbd> <kbd>t</kbd> binding — uncomment it in <code>config.kdl</code> first (launch verified; running on save couldn't be confirmed headless — not even with multitask's own documented command)</span></div>
+    <div class="row"><span class="lbl">Do</span><span class="val"><code>cd</code> into a project, press <kbd>Ctrl+o</kbd> then <kbd>t</kbd> (grant the permission prompt the first time). In the new tab, add <code>pwd &gt; /tmp/mt.txt</code> as its own line below the comments, and save.</span></div>
+    <div class="row pass"><span class="lbl">Pass</span><span class="val">A pane runs the command, and <code>/tmp/mt.txt</code> contains your project directory (not your home directory).</span></div>
+    <div class="row"><span class="lbl">If it fails</span><span class="val" style="color:var(--muted)">Try multitask's own README command in a pane: <code>zellij action start-or-reload-plugin multitask --configuration "shell=$SHELL,ccwd=$(pwd)"</code>. If that fails too, it's multitask, not this config.</span></div>
+  </div>
+</div>
+
+<footer>
+  <span>What was verified against zellij 0.45.1, and when: <code>CHANGELOG.md</code>.</span>
+  <span>Catppuccin Mocha · print me &amp; tick as you go</span>
+</footer>
+</body>
+</html>

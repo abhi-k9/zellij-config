@@ -1,0 +1,11 @@
+// markdownlint settings for README/CHANGELOG, used by CI (.github/workflows/check.yml).
+// Everything is checked except three style rules this repo deliberately doesn't follow:
+{
+  "default": true,
+  // Long lines are fine: tables and command examples read better unwrapped.
+  "MD013": false,
+  // Bare URLs are fine inside the plugin tables; GitHub renders them as links.
+  "MD034": false,
+  // Bold lead-in lines ("**Safe by design.**") are intentional, not missing headings.
+  "MD036": false
+}

@@ -1,0 +1,19 @@
+# Local editor and operating system files.
+.DS_Store
+Thumbs.db
+*~
+*.swp
+*.swo
+
+# Local archives, installation backups and interrupted plugin downloads.
+/*.zip
+/config.backup-*/
+/zellij.backup-*/
+/plugins/*.part
+
+# Output files produced by the supplied CI commands.
+/tidy.log
+/setup.err
+/offline.log
+/download.log
+/old.out

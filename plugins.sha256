@@ -1,0 +1,17 @@
+# SHA-256 checksums of the pinned plugin files, checked by `./setup.sh --offline`.
+#
+# One line per plugin:  <sha256>  <exact download URL from config.kdl>
+# setup.sh refuses to install a downloaded plugin whose checksum doesn't match
+# (or that has no line here), and then leaves your config unchanged.
+# `./check.sh` warns if a pin in config.kdl has no matching line.
+#
+# When you bump a plugin (README "Updating a pinned plugin"), replace its line:
+#     curl -fsSL <new-url> | sha256sum        # macOS: shasum -a 256
+#
+# Recorded 2026-09-25. zjstatus and multitask match the SHA-256 digests GitHub
+# publishes for those release files; the monocle and forgot releases predate
+# GitHub's digests, so their values are as downloaded from GitHub that day.
+282ceab219e56e1908c9fac33907241fe6c3e1ef7d85faab3e5f438cef87b8fe  https://github.com/dj95/zjstatus/releases/download/v0.25.0/zjstatus.wasm
+4cb7e2cc912d975b4e755c93e44e7f0de62ef9240a09a89b735490cf4713792c  https://github.com/imsnif/monocle/releases/download/v0.100.2/monocle.wasm
+31194145519dbdc128685b456f970374378fa19fc9da742fbe4a321bace449db  https://github.com/karimould/zellij-forgot/releases/download/0.4.2/zellij_forgot.wasm
+d2c6dadef431065efcc307cd573550031a9d11348ffde9d331f96136b7d60a9d  https://github.com/leakec/multitask/releases/download/v0.45.1/multitask.wasm

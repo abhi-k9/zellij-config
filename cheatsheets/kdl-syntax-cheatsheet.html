@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KDL — Syntax Cheat Sheet</title>
+<style>
+  :root {
+    /* --muted is Catppuccin overlay2 (not the darker overlay0, #6c7086) so small
+       grey note text meets WCAG AA contrast (≥ 4.5:1) on these dark backgrounds. */
+    --bg:#1e1e2e;--surface:#181825;--overlay:#313244;--muted:#9399b2;
+    --subtle:#7f849c;--text:#cdd6f4;--subtext:#a6adc8;
+    --lavender:#b4befe;--blue:#89b4fa;--sky:#89dceb;--teal:#94e2d5;
+    --green:#a6e3a1;--yellow:#f9e2af;--peach:#fab387;--red:#f38ba8;
+    --mauve:#cba6f7;--pink:#f5c2e7;--flamingo:#f2cdcd;--sapphire:#74c7ec;
+    --rosewater:#f5e0dc;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,'Segoe UI',sans-serif;
+    font-size:12px;line-height:1.5;padding:22px 26px 48px}
+  header{display:flex;align-items:baseline;justify-content:space-between;
+    border-bottom:1px solid var(--overlay);padding-bottom:12px;margin-bottom:20px;gap:20px}
+  header h1{font-size:18px;font-weight:700;color:var(--lavender);letter-spacing:-.3px}
+  header .meta{font-size:10.5px;color:var(--muted);font-family:'JetBrains Mono',ui-monospace,'Cascadia Mono',Consolas,monospace;text-align:right}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}
+  .col-2{grid-column:span 2}.col-full{grid-column:span 3}
+  .card{background:var(--surface);border:1px solid var(--overlay);border-radius:7px;overflow:hidden}
+  .card-header{display:flex;align-items:center;gap:7px;padding:6px 10px;border-bottom:1px solid var(--overlay)}
+  .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+  .card-header h2{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--subtext)}
+  .card-header .note{font-size:10px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;font-style:italic}
+  .card-header .mode-badge{margin-left:auto;font-size:9.5px;font-family:'JetBrains Mono',ui-monospace,'Cascadia Mono',Consolas,monospace;
+    color:var(--muted);background:rgba(49,50,68,.7);padding:1px 6px;border-radius:3px}
+  table{width:100%;border-collapse:collapse}
+  tr:not(:last-child) td{border-bottom:1px solid rgba(49,50,68,.5)}
+  td{padding:3.5px 10px;vertical-align:middle}
+  td:first-child{width:1%;white-space:nowrap}
+  /* full-width rows (dividers, notes, code) have only one cell, which is also
+     :first-child — let those wrap, or they widen the table and get clipped */
+  td[colspan]{white-space:normal;width:auto}
+  /* white-space inherits: a nowrap cell must not force nested tables to
+     nowrap too, so description cells always wrap */
+  td:not(:first-child){white-space:normal}
+  @media (max-width:1000px){ td:first-child{white-space:normal} }
+  td code{overflow-wrap:anywhere}
+  td pre{white-space:pre-wrap;overflow-wrap:anywhere}
+  td:last-child{color:var(--subtext);font-size:11px}
+  .divider td{padding:3px 10px;font-size:9px;font-weight:700;text-transform:uppercase;
+    letter-spacing:.6px;color:var(--muted);background:rgba(49,50,68,.4);
+    border-bottom:1px solid var(--overlay)!important}
+  kbd{display:inline-block;font-family:'JetBrains Mono',ui-monospace,'Cascadia Mono',Consolas,monospace;font-size:10.5px;
+    font-weight:600;padding:1px 5px;border-radius:4px;background:var(--overlay);
+    color:var(--text);white-space:nowrap}
+  .note{color:var(--muted);font-size:10.5px;font-style:italic}
+  code{font-family:'JetBrains Mono',ui-monospace,'Cascadia Mono',Consolas,monospace;font-size:10.5px;color:var(--subtle)}
+  .k-node{color:var(--blue)}
+  .k-str{color:var(--green)}
+  .k-num{color:var(--peach)}
+  .k-bool{color:var(--mauve)}
+  .k-prop{color:var(--yellow)}
+  .k-punc{color:var(--subtle)}
+  .k-com{color:var(--muted);font-style:italic}
+  .k-dash{color:var(--red);font-weight:600}
+  code.bad{color:var(--red);text-decoration:line-through}
+  .badge{font-size:9px;font-weight:700;border-radius:3px;padding:0 4px;
+    vertical-align:middle;margin-left:3px;text-transform:uppercase;letter-spacing:.3px}
+  .active{color:var(--teal);border:1px solid rgba(148,226,213,.3);background:rgba(148,226,213,.1)}
+  .warn  {color:var(--red);border:1px solid rgba(243,139,168,.3);background:rgba(243,139,168,.1)}
+  pre{font-family:'JetBrains Mono',ui-monospace,'Cascadia Mono',Consolas,monospace;font-size:10px;color:var(--text);
+    line-height:1.7;white-space:pre;overflow-x:auto}
+  .lead{padding:8px 12px;color:var(--subtext);font-size:11px}
+  .lead strong{color:var(--text)}
+  footer{margin-top:16px;padding-top:10px;border-top:1px solid var(--overlay);
+    font-size:10px;color:var(--muted);display:flex;justify-content:space-between;gap:20px}
+  @media print{
+    body{background:#fff;color:#000;padding:5mm;font-size:8px}
+    .card{border-color:#ccc;break-inside:avoid}
+    .card-header{background:#f5f5f5;border-color:#ccc}
+    .divider td{background:#ebebeb;color:#555;border-color:#ccc!important}
+    kbd{background:#eee;color:#000;border:1px solid #bbb}
+    .note,.badge{color:#555;border:1px solid #bbb;background:#eee}
+    td:last-child{color:#333}
+    header h1{color:#000} code{color:#555}
+    pre{color:#000}
+    .k-node{color:#1e66f5}.k-str{color:#40a02b}.k-num{color:#fe640b}
+    .k-bool{color:#8839ef}.k-prop{color:#df8e1d}.k-com{color:#777}
+    .k-dash{color:#d20f39}.k-punc{color:#555}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>KDL — Syntax Cheat Sheet <span style="font-size:11px;font-weight:500;color:var(--muted);letter-spacing:0">for the zellij config</span></h1>
+  <div class="meta">KDL Document Language<br>config.kdl &middot; layouts &middot; themes</div>
+</header>
+
+<div class="grid">
+
+  <!-- ═══════════════════════ ANATOMY ═══════════════════════ -->
+  <div class="card col-2">
+    <div class="card-header"><div class="dot" style="background:var(--blue)"></div><h2>Anatomy of a Node</h2><span class="note" style="margin-left:8px">everything in KDL is a node: a name, then values, then an optional block</span></div>
+    <div class="lead">A <strong>node</strong> is one line of config. It has a <span class="k-node">name</span>, zero or more <span class="k-str">arguments</span> (positional values) and <span class="k-prop">properties</span> (<span class="k-prop">key</span>=value), and an optional <span class="k-punc">{ }</span> block of <strong>child nodes</strong>.</div>
+    <table>
+      <tr><td colspan="2"><pre><span class="k-node">tab</span> <span class="k-prop">name</span>=<span class="k-str">"code"</span> <span class="k-prop">focus</span>=<span class="k-bool">true</span> <span class="k-punc">{</span>
+    <span class="k-node">pane</span> <span class="k-prop">size</span>=<span class="k-str">"75%"</span> <span class="k-punc">{</span> <span class="k-node">name</span> <span class="k-str">"editor"</span><span class="k-punc">;</span> <span class="k-punc">}</span>
+<span class="k-punc">}</span>
+<span class="k-punc">└┬┘ └──────┬──────────────┘ └───────────┬───────────┘</span>
+<span class="k-punc"> </span>name    properties            children (more nodes)</pre></td></tr>
+      <tr class="divider"><td colspan="2">More real lines from this config</td></tr>
+      <tr><td><pre><span class="k-node">theme</span> <span class="k-str">"catppuccin-mocha"</span></pre></td><td>node + one string argument</td></tr>
+      <tr><td><pre><span class="k-node">pane_frames</span> <span class="k-bool">true</span></pre></td><td>node + one boolean argument</td></tr>
+      <tr><td><pre><span class="k-node">copy_on_select</span> <span class="k-bool">true</span></pre></td><td>arguments have <strong>no</strong> key — position is meaning</td></tr>
+      <tr><td><pre><span class="k-node">ui</span> <span class="k-punc">{</span> <span class="k-node">pane_frames</span> <span class="k-punc">{</span> <span class="k-node">rounded_corners</span> <span class="k-bool">true</span><span class="k-punc">;</span> <span class="k-punc">}</span><span class="k-punc">;</span> <span class="k-punc">}</span></pre></td><td>blocks nest as deep as you need — on <strong>one line</strong>, every node needs its <code>;</code> (see Structure)</td></tr>
+    </table>
+  </div>
+
+  <!-- ═══════════════════════ VALUES ═══════════════════════ -->
+  <div class="card">
+    <div class="card-header"><div class="dot" style="background:var(--green)"></div><h2>Values &amp; Types</h2></div>
+    <table>
+      <tr><td><span class="k-str">"quoted string"</span></td><td>the common case; always safe</td></tr>
+      <tr><td><span class="k-str">"with \n \t \" \\"</span></td><td>escapes: newline, tab, quote, backslash</td></tr>
+      <tr><td><span class="k-str">"\u{1F600}"</span></td><td>unicode by hex code point</td></tr>
+      <tr><td><span class="k-num">42</span> &nbsp; <span class="k-num">-5</span> &nbsp; <span class="k-num">1.5</span></td><td>integers and floats</td></tr>
+      <tr><td><span class="k-num">10000</span> &nbsp; <span class="k-num">1_000</span></td><td><code>_</code> is a legal digit separator</td></tr>
+      <tr><td><span class="k-num">0xff</span> <span class="k-num">0o755</span> <span class="k-num">0b1010</span></td><td>hex / octal / binary</td></tr>
+      <tr><td><span class="k-bool">true</span> &nbsp; <span class="k-bool">false</span></td><td>booleans <span class="badge active">zellij v1 style</span></td></tr>
+      <tr><td><span class="k-bool">null</span></td><td>the null value (rare in zellij)</td></tr>
+    </table>
+    <div class="lead" style="border-top:1px solid var(--overlay)"><strong style="color:var(--red)">Watch out — KDL v2:</strong> the newer KDL 2.0 spec writes these as <code>#true</code> / <code>#false</code> / <code>#null</code> and raw strings as <code>#"..."#</code>. Zellij 0.45.1 does <strong>not</strong> accept them — its config and layout parser is <strong>KDL v1 only</strong>, and v2 syntax is a parse error (verified; even with a <code>kdl-version 2</code> marker). Write bare <code>true</code>/<code>false</code> and <code>r"…"</code> raw strings.</div>
+  </div>
+
+  <!-- ═══════════════════════ COMMENTS ═══════════════════════ -->
+  <div class="card">
+    <div class="card-header"><div class="dot" style="background:var(--red)"></div><h2>Comments &amp; Disabling</h2></div>
+    <table>
+      <tr><td><span class="k-com">// line</span></td><td>to end of line — the workhorse</td></tr>
+      <tr><td><span class="k-com">/* block */</span></td><td>spans multiple lines</td></tr>
+      <tr><td><span class="k-dash">/-</span> <span class="k-node">node</span></td><td><strong>slashdash</strong>: disable the <em>next whole thing</em></td></tr>
+    </table>
+    <div class="lead"><strong>Slashdash <span class="k-dash">/-</span></strong> comments out the next node, value, or entire <code>{ }</code> block — structure-aware, no matching <code>*/</code> to chase. Works in <code>config.kdl</code> (options and keybinds). <strong style="color:var(--red)">⚠ NOT in layout files</strong> — zellij's layout parser rejects <code>/-</code> and the whole layout fails to load (verified on 0.45.1). Use <code>//</code> in layouts instead.</div>
+    <table>
+      <tr class="divider"><td colspan="2">Disable without deleting (in config.kdl)</td></tr>
+      <tr><td colspan="2"><pre><span class="k-dash">/-</span><span class="k-node">scroll_buffer_size</span> <span class="k-num">50000</span>   <span class="k-com">// this option off (uses default)</span>
+
+<span class="k-node">keybinds</span> <span class="k-punc">{</span>
+    <span class="k-node">normal</span> <span class="k-punc">{</span>
+        <span class="k-dash">/-</span><span class="k-node">bind</span> <span class="k-str">"Alt f"</span> <span class="k-punc">{</span> <span class="k-node">ToggleFloatingPanes</span><span class="k-punc">;</span> <span class="k-punc">}</span>  <span class="k-com">// one bind off</span>
+    <span class="k-punc">}</span>
+<span class="k-punc">}</span></pre></td></tr>
+    </table>
+  </div>
+
+  <!-- ═══════════════════════ ARGS VS PROPS ═══════════════════════ -->
+  <div class="card">
+    <div class="card-header"><div class="dot" style="background:var(--yellow)"></div><h2>Arguments vs Properties</h2><span class="note" style="margin-left:8px">the #1 confusion</span></div>
+    <table>
+      <tr><td><span class="k-str">"F12"</span></td><td><strong>argument</strong> — a bare value, meaning set by position</td></tr>
+      <tr><td><span class="k-prop">size</span>=<span class="k-str">"50%"</span></td><td><strong>property</strong> — a <code>key=value</code> pair</td></tr>
+    </table>
+    <table>
+      <tr class="divider"><td colspan="2">Rules that bite</td></tr>
+      <tr><td>Order</td><td>arguments are <strong>positional</strong> (order matters); properties are not</td></tr>
+      <tr><td>Spacing</td><td>no spaces around <code>=</code> &nbsp;→&nbsp; <span class="k-prop">focus</span>=<span class="k-bool">true</span>, never <code>focus = true</code></td></tr>
+      <tr><td>Dupes</td><td>if a property repeats, the <strong>last</strong> one wins</td></tr>
+      <tr><td>Quotes</td><td>quote any value with spaces, or that looks like a number/keyword</td></tr>
+    </table>
+    <div class="lead"><pre><span class="k-node">bind</span> <span class="k-str">"F12"</span> <span class="k-punc">{</span> <span class="k-node">SwitchToMode</span> <span class="k-str">"Locked"</span><span class="k-punc">;</span> <span class="k-punc">}</span>
+<span class="k-com">//   ↑ arg   ↑ child node ↑ its arg</span></pre></div>
+  </div>
+
+  <!-- ═══════════════════════ STRUCTURE ═══════════════════════ -->
+  <div class="card">
+    <div class="card-header"><div class="dot" style="background:var(--sky)"></div><h2>Structure &amp; Tokens</h2></div>
+    <table>
+      <tr><td><span class="k-punc">{ }</span></td><td>children block — indent is cosmetic, braces are real</td></tr>
+      <tr><td><span class="k-punc">;</span></td><td>ends a node; lets several share one line. <strong style="color:var(--red)">⚠ zellij:</strong> on one line a <code>}</code> does <em>not</em> end a node — end <strong>every</strong> node with <code>;</code>, including the last one and each closed block: <code>ui { pane_frames { rounded_corners true; }; }</code>. Without them the file (config <em>or</em> layout) fails to load. Across lines, newlines do this job — no <code>;</code> needed. (verified on 0.45.1)</td></tr>
+      <tr><td><span class="k-punc">\</span></td><td>line continuation — wrap a long node</td></tr>
+      <tr><td><span class="k-node">bare-ident</span></td><td>names/keys need no quotes if plain</td></tr>
+    </table>
+    <table>
+      <tr class="divider"><td colspan="2">Seen in the keybinds block</td></tr>
+      <tr><td colspan="2"><pre><span class="k-node">bind</span> <span class="k-str">"F12"</span> <span class="k-punc">{</span> <span class="k-node">SwitchToMode</span> <span class="k-str">"Locked"</span><span class="k-punc">;</span> <span class="k-punc">}</span>
+<span class="k-com">//                              ↑ ';' ends the</span>
+<span class="k-com">//                                inner node</span></pre></td></tr>
+    </table>
+    <div class="lead"><span class="k-node">clear-defaults</span>=<span class="k-bool">true</span> — a zellij property (hyphens are fine in bare names) that wipes built-in binds/plugins before yours.</div>
+  </div>
+
+  <!-- ═══════════════════════ ZELLIJ GOTCHAS ═══════════════════════ -->
+  <div class="card col-2">
+    <div class="card-header"><div class="dot" style="background:var(--peach)"></div><h2>KDL as zellij reads it — gotchas</h2><span class="note" style="margin-left:8px">where KDL and zellij's parser surprise you</span></div>
+    <table>
+      <tr>
+        <td style="width:50%;vertical-align:top;padding:8px 12px">
+          <table>
+            <tr><td><span class="badge warn">silent</span></td><td>Unknown / misspelled node names are <strong>ignored without error</strong>. <code>serialize_pane_veiwport true</code> (note the typo) just does nothing — no warning, the real setting stays at its default.</td></tr>
+            <tr><td><span class="badge warn">v1</span></td><td>Write <code>true</code>/<code>false</code>, not <code>#true</code>. Copy-pasting v2 KDL from the web makes the whole file fail to parse on 0.45.1.</td></tr>
+            <tr><td><span class="badge warn">;</span></td><td>On <strong>one line</strong>, a closing <code>}</code> doesn't end a node — write <code>{ floating true; }</code>, not <code class="bad">{ floating true }</code>, and put <code>;</code> after each closed block too (<code>…}; }</code>). Otherwise the file won't load. Multi-line blocks need none.</td></tr>
+            <tr><td><span class="badge active">live</span></td><td>Zellij watches the file and hot-reloads most options on save — no restart needed to test a change.</td></tr>
+          </table>
+        </td>
+        <td style="vertical-align:top;padding:8px 12px">
+          <table>
+            <tr><td><span class="badge active">errors</span></td><td>Real <em>syntax</em> errors (bad braces, unclosed quote) surface via miette — a pointed, underlined message on the offending line.</td></tr>
+            <tr><td><span class="badge active">merge</span></td><td>Config is merged from several sources; your <code>config.kdl</code> extends the built-in defaults unless a block sets <code>clear-defaults=true</code>.</td></tr>
+            <tr><td><span class="badge active">quote</span></td><td>When in doubt, quote the value. <code>"Alt n"</code> and <code>size="50%"</code> must be quoted; a bare <code>50%</code> is a parse error.</td></tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+    <div class="lead" style="border-top:1px solid var(--overlay)"><strong>Quick self-check when an edit doesn't take effect:</strong> &nbsp;1) node name spelled exactly right (typos are silently ignored)? &nbsp;2) bare <code>true</code>/<code>false</code>, not <code>#true</code>? &nbsp;3) values that need quotes actually quoted? &nbsp;4) braces balanced, and on one-line blocks a <code>;</code> after every node? &nbsp;<code>zellij setup --check</code> pinpoints 2–4 with a line number; it can't catch 1.</div>
+  </div>
+
+  <!-- ═══════════════════════ COLOR KEY ═══════════════════════ -->
+  <div class="card">
+    <div class="card-header"><div class="dot" style="background:var(--mauve)"></div><h2>Reading the colors</h2></div>
+    <table>
+      <tr><td><span class="k-node">node</span></td><td>node / child name</td></tr>
+      <tr><td><span class="k-str">"string"</span></td><td>string argument or value</td></tr>
+      <tr><td><span class="k-num">number</span></td><td>numeric value</td></tr>
+      <tr><td><span class="k-bool">true</span></td><td>boolean / null keyword</td></tr>
+      <tr><td><span class="k-prop">key</span>=</td><td>property key</td></tr>
+      <tr><td><span class="k-dash">/-</span></td><td>slashdash (disable)</td></tr>
+      <tr><td><span class="k-com">// note</span></td><td>comment</td></tr>
+    </table>
+  </div>
+
+</div><!-- .grid -->
+
+<footer>
+  <span>KDL 1.0 dialect (zellij 0.45.1 reads v1 only — v2 syntax fails to parse) &nbsp;·&nbsp; spec: <code>kdl.dev</code></span>
+  <span>Edit &middot; save &middot; zellij hot-reloads &nbsp;·&nbsp; Catppuccin Mocha</span>
+</footer>
+
+</body>
+</html>

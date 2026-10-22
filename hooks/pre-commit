@@ -1,0 +1,45 @@
+#!/bin/sh
+# ─────────────────────────────────────────────────────────────────────────────
+#  Git pre-commit hook — runs ./check.sh on the STAGED files before every
+#  commit and blocks the commit if it flags anything.
+#
+#  Enable it once per clone (the hook lives in the repo, so it stays in sync):
+#      git config core.hooksPath hooks
+#  Skip it for a single commit:
+#      git commit --no-verify
+#  Disable it again:
+#      git config --unset core.hooksPath
+#
+#  If `zellij` is on your PATH, check.sh also runs its live checks (config,
+#  theme and every layout parse, documented shortcuts are bound, swap files
+#  match zellij's own); otherwise those are skipped. Works under Git Bash too.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Check what is STAGED — exactly what the commit will contain — not the working
+# folder. Otherwise a broken file that's staged but "fixed" without staging
+# would pass, and an unrelated unstaged edit could block a good commit (both
+# verified). `git checkout-index` exports the staged snapshot into a temp dir,
+# and check.sh runs there (it always works relative to its own location).
+root=$(git rev-parse --show-toplevel) || exit 1
+cd "$root" || exit 1
+
+snap=$(mktemp -d "${TMPDIR:-/tmp}/zellij-precommit.XXXXXX") || exit 1
+trap 'rm -rf "$snap"' EXIT INT TERM
+git checkout-index --all --prefix="$snap/" || exit 1
+
+if [ ! -x "$snap/check.sh" ]; then
+    echo "pre-commit: check.sh isn't staged (or isn't executable) — skipping." >&2
+    exit 0
+fi
+
+# Show the full report only when something is wrong; stay quiet when clean.
+if out=$("$snap/check.sh" 2>&1); then
+    exit 0
+fi
+# Print each flagged check's header plus its WARN lines (not the whole report).
+printf '%s\n' "$out" | grep -E '^[[:space:]]+WARN|^[0-9]+\. ' \
+    | grep -B1 -E '^[[:space:]]+WARN' | grep -v '^--$' >&2
+echo "" >&2
+echo "pre-commit: check.sh found problems (above) — commit blocked." >&2
+echo "            Fix them, or commit anyway with: git commit --no-verify" >&2
+exit 1

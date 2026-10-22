@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zellij Plugins — Cheat Sheet</title>
+<style>
+  :root {
+    /* --muted is Catppuccin overlay2 (not the darker overlay0, #6c7086) so small
+       grey note text meets WCAG AA contrast (≥ 4.5:1) on these dark backgrounds. */
+    --bg:#1e1e2e;--surface:#181825;--overlay:#313244;--muted:#9399b2;
+    --subtle:#7f849c;--text:#cdd6f4;--subtext:#a6adc8;
+    --lavender:#b4befe;--blue:#89b4fa;--sky:#89dceb;--teal:#94e2d5;
+    --green:#a6e3a1;--yellow:#f9e2af;--peach:#fab387;--red:#f38ba8;
+    --mauve:#cba6f7;--pink:#f5c2e7;--flamingo:#f2cdcd;--sapphire:#74c7ec;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,'Segoe UI',sans-serif;
+    font-size:12px;line-height:1.5;padding:22px 26px 48px}
+  header{display:flex;align-items:baseline;justify-content:space-between;
+    border-bottom:1px solid var(--overlay);padding-bottom:12px;margin-bottom:20px;gap:20px}
+  header h1{font-size:18px;font-weight:700;color:var(--lavender);letter-spacing:-.3px}
+  header .meta{font-size:10.5px;color:var(--muted);font-family:'JetBrains Mono',ui-monospace,'Cascadia Mono',Consolas,monospace;text-align:right}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}
+  .col-2{grid-column:span 2}.col-full{grid-column:span 3}
+  .card{background:var(--surface);border:1px solid var(--overlay);border-radius:7px;overflow:hidden}
+  .card-header{display:flex;align-items:center;gap:7px;padding:6px 10px;border-bottom:1px solid var(--overlay)}
+  .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+  .card-header h2{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--subtext)}
+  .card-header .note{font-size:10px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;font-style:italic}
+  table{width:100%;border-collapse:collapse}
+  tr:not(:last-child) td{border-bottom:1px solid rgba(49,50,68,.5)}
+  td{padding:3.5px 10px;vertical-align:middle}
+  td:first-child{width:1%;white-space:nowrap}
+  /* full-width rows (dividers, notes, code) have only one cell, which is also
+     :first-child — let those wrap, or they widen the table and get clipped */
+  td[colspan]{white-space:normal;width:auto}
+  /* white-space inherits: a nowrap cell must not force nested tables to
+     nowrap too, so description cells always wrap */
+  td:not(:first-child){white-space:normal}
+  @media (max-width:1000px){ td:first-child{white-space:normal} }
+  td code{overflow-wrap:anywhere}
+  td pre{white-space:pre-wrap;overflow-wrap:anywhere}
+  td:last-child{color:var(--subtext);font-size:11px}
+  .divider td{padding:3px 10px;font-size:9px;font-weight:700;text-transform:uppercase;
+    letter-spacing:.6px;color:var(--muted);background:rgba(49,50,68,.4);
+    border-bottom:1px solid var(--overlay)!important}
+  kbd{display:inline-block;font-family:'JetBrains Mono',ui-monospace,'Cascadia Mono',Consolas,monospace;font-size:10.5px;
+    font-weight:600;padding:1px 5px;border-radius:4px;background:var(--overlay);
+    color:var(--text);white-space:nowrap}
+  kbd.blue   {background:rgba(137,180,250,.13);color:var(--blue);   border:1px solid rgba(137,180,250,.26)}
+  kbd.teal   {background:rgba(148,226,213,.13);color:var(--teal);   border:1px solid rgba(148,226,213,.26)}
+  kbd.yellow {background:rgba(249,226,175,.13);color:var(--yellow); border:1px solid rgba(249,226,175,.26)}
+  kbd.mauve  {background:rgba(203,166,247,.13);color:var(--mauve);  border:1px solid rgba(203,166,247,.26)}
+  kbd.green  {background:rgba(166,227,161,.13);color:var(--green);  border:1px solid rgba(166,227,161,.26)}
+  kbd.peach  {background:rgba(250,179,135,.13);color:var(--peach);  border:1px solid rgba(250,179,135,.26)}
+  kbd.pink   {background:rgba(245,194,231,.13);color:var(--pink);   border:1px solid rgba(245,194,231,.26)}
+  .note{color:var(--muted);font-size:10.5px;font-style:italic}
+  code{font-family:'JetBrains Mono',ui-monospace,'Cascadia Mono',Consolas,monospace;font-size:10.5px;color:var(--subtle)}
+  .badge{font-size:9px;font-weight:700;border-radius:3px;padding:0 4px;
+    vertical-align:middle;margin-left:3px;text-transform:uppercase;letter-spacing:.3px}
+  .active  {color:var(--teal);  border:1px solid rgba(148,226,213,.3);background:rgba(148,226,213,.1)}
+  .aliased {color:var(--yellow);border:1px solid rgba(249,226,175,.3);background:rgba(249,226,175,.1)}
+  pre{font-family:'JetBrains Mono',ui-monospace,'Cascadia Mono',Consolas,monospace;font-size:10px;color:var(--text);
+    line-height:1.7;white-space:pre}
+  footer{margin-top:16px;padding-top:10px;border-top:1px solid var(--overlay);
+    font-size:10px;color:var(--muted);display:flex;justify-content:space-between;gap:20px}
+  @media print{
+    body{background:#fff;color:#000;padding:5mm;font-size:8px}
+    .card{border-color:#ccc;break-inside:avoid}
+    .card-header{background:#f5f5f5;border-color:#ccc}
+    .divider td{background:#ebebeb;color:#555;border-color:#ccc!important}
+    kbd,kbd.blue,kbd.teal,kbd.yellow,kbd.mauve,kbd.green,kbd.peach,kbd.pink{
+      background:#eee;color:#000;border:1px solid #bbb}
+    .note,.badge{color:#555;border:1px solid #bbb;background:#eee}
+    td:last-child{color:#333}
+    header h1{color:#000} code{color:#555}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Zellij Plugins &amp; Themes — Cheat Sheet <span style="font-size:11px;font-weight:500;color:var(--muted);letter-spacing:0">v0.45</span></h1>
+  <span class="meta">
+    <span style="color:var(--teal)">activated</span> = on in our config &nbsp;·&nbsp;
+    <span style="color:var(--yellow)">aliased</span> = registered, opt-in to launch &nbsp;·&nbsp;
+    Companion: <code>zellij-cheatsheet.html</code>
+  </span>
+</header>
+
+<div class="grid">
+
+<!-- ═══════════════════════ PLUGIN SYSTEM ═══════════════════════ -->
+<div class="card col-full">
+  <div class="card-header"><div class="dot" style="background:var(--lavender)"></div><h2>Plugin System</h2><span class="note" style="margin-left:8px">All plugins are sandboxed WebAssembly — safe and cross-platform</span></div>
+  <table>
+    <tr class="divider"><td colspan="4">Locations</td></tr>
+    <tr>
+      <td><code>zellij:name</code></td><td>Built-in (ships with zellij)</td>
+      <td><code>file:~/path.wasm</code></td><td>Local .wasm file</td>
+    </tr>
+    <tr>
+      <td><code>https://…/x.wasm</code></td><td>Remote URL — downloaded &amp; cached on first use (pin a release tag, not <code>latest</code>: the cache makes <code>latest</code> non-reproducible). <strong>Offline?</strong> the pinned files ship in <code>plugins/</code>; load them with <code>file:</code> paths (README: <em>Offline / air-gapped machines</em>)</td>
+      <td>Alias</td><td>Short name you register in <code>plugins {}</code> to use anywhere</td>
+    </tr>
+    <tr class="divider"><td colspan="4">Declaration &amp; usage</td></tr>
+    <tr>
+      <td colspan="2" style="vertical-align:top;padding:8px 10px"><pre>// config.kdl — register an alias
+plugins {
+    // one line — a URL broken inside the quotes would contain a newline
+    monocle location="https://github.com/imsnif/monocle/releases/download/v0.100.2/monocle.wasm"
+
+    my-plugin location="file:~/zellij-plugins/x.wasm" {   // ~ = home, every OS
+        key "value"   // passed to plugin on init
+    }
+}</pre></td>
+      <td colspan="2" style="vertical-align:top;padding:8px 10px"><pre>// Use anywhere:
+
+// 1. In a layout file
+pane { plugin location="monocle"; }
+
+// 2. From the CLI
+$ zellij plugin --floating -- monocle
+
+// 3. From a keybind (ours: Ctrl+o, then m)
+session {
+    bind "m" {
+        LaunchOrFocusPlugin "monocle" { floating true; };
+        SwitchToMode "Normal"
+    }
+}</pre></td>
+    </tr>
+    <tr class="divider"><td colspan="4">Manager UIs</td></tr>
+    <tr>
+      <td><kbd>Ctrl+o</kbd> <kbd>p</kbd></td><td>Plugin manager — install/manage from inside zellij</td>
+      <td><kbd>Ctrl+o</kbd> <kbd>l</kbd></td><td>Layout manager (apply layout to running session) <span class="badge" style="color:var(--peach);border:1px solid rgba(250,179,135,.3);background:rgba(250,179,135,.1)">new 0.44</span></td>
+    </tr>
+  </table>
+</div>
+
+<!-- ═══════════════════════ BUILT-IN PLUGINS ═══════════════════════ -->
+<div class="card col-2">
+  <div class="card-header"><div class="dot" style="background:var(--blue)"></div><h2>Built-in Plugins</h2><span class="note" style="margin-left:8px">Ship with zellij &nbsp;·&nbsp; reference as <code>zellij:name</code></span></div>
+  <table>
+    <tr class="divider"><td colspan="4">Status bars (pick one per layout)</td></tr>
+    <tr>
+      <td style="color:var(--teal)"><code>zellij:compact-bar</code></td>
+      <td style="color:var(--teal)">1 row: mode + tabs on one line <span class="badge active">our default</span></td>
+      <td><code>zellij:status-bar</code></td>
+      <td>2 rows: full keybinding hint grid — best while learning</td>
+    </tr>
+    <tr>
+      <td><code>zellij:tab-bar</code></td>
+      <td colspan="3">1 row: tabs only (no mode info) — pair with status-bar</td>
+    </tr>
+    <tr class="divider"><td colspan="4">Session &amp; files</td></tr>
+    <tr>
+      <td><code>zellij:session-manager</code></td>
+      <td>Sessions list &amp; resurrection picker — <kbd>Ctrl+o</kbd> <kbd>w</kbd></td>
+      <td><code>zellij:strider</code></td>
+      <td>File browser — used as the file-picker plugin</td>
+    </tr>
+    <tr class="divider"><td colspan="4">Settings / management</td></tr>
+    <tr>
+      <td><code>zellij:configuration</code></td>
+      <td>Interactive settings UI — <kbd>Ctrl+o</kbd> <kbd>c</kbd></td>
+      <td><code>zellij:plugin-manager</code></td>
+      <td>Install / manage community plugins — <kbd>Ctrl+o</kbd> <kbd>p</kbd></td>
+    </tr>
+    <tr>
+      <td><code>zellij:layout-manager</code></td>
+      <td>Apply a layout to a running session <span class="badge" style="color:var(--peach);border:1px solid rgba(250,179,135,.3);background:rgba(250,179,135,.1)">new 0.44</span> — <kbd>Ctrl+o</kbd> <kbd>l</kbd></td>
+      <td><code>zellij:about</code></td>
+      <td>Version / credits — <kbd>Ctrl+o</kbd> <kbd>a</kbd></td>
+    </tr>
+    <tr class="divider"><td colspan="4">Use in a layout</td></tr>
+    <tr>
+      <td colspan="4" class="note">
+        <code>pane size=1 borderless=true { plugin location="compact-bar"; }</code> — 1-line combined bar (what we ship, via zellij's built-in alias for <code>zellij:compact-bar</code>)<br>
+        <code>pane size=2 borderless=true { plugin location="zellij:status-bar"; }</code> — 2-line status bar (more keybinding info)<br>
+        <code>pane size=1 borderless=true { plugin location="zellij:tab-bar"; }</code> — 1-line tab strip
+      </td>
+    </tr>
+  </table>
+</div>
+
+<!-- ═══════════════════════ ALIASED — QUICK OVERVIEW ═══════════════════════ -->
+<div class="card">
+  <div class="card-header"><div class="dot" style="background:var(--yellow)"></div><h2>Aliased in our config</h2><span class="mode-badge" style="font-size:9.5px;font-family:'JetBrains Mono',ui-monospace,'Cascadia Mono',Consolas,monospace;color:var(--muted);background:rgba(49,50,68,.7);padding:1px 6px;border-radius:3px;margin-left:auto">opt-in</span></div>
+  <table>
+    <tr class="divider"><td colspan="2">Launch any of these on demand</td></tr>
+    <tr><td><code>zjstatus</code> <span class="badge aliased">aliased</span></td><td>Customizable status bar (tmux-line style)</td></tr>
+    <tr><td><code>monocle</code> <span class="badge aliased">aliased</span></td><td>Fuzzy file/content finder from the focused pane's directory — <kbd>Ctrl+o</kbd> <kbd>m</kbd></td></tr>
+    <tr><td><code>multitask</code> <span class="badge aliased">aliased</span></td><td>Run several commands and watch all outputs</td></tr>
+    <tr><td><code>forgot</code> <span class="badge aliased">aliased</span></td><td>Keybinding popup — bound to <kbd>Ctrl+o</kbd> <kbd>h</kbd></td></tr>
+    <tr class="divider"><td colspan="2">Launching</td></tr>
+    <tr><td colspan="2" class="note">Inside a session: <code>zellij plugin --floating -- monocle</code> — or wire to a keybind. See per-plugin cards below for setup details.</td></tr>
+  </table>
+</div>
+
+<!-- ═══════════════════════ ZJSTATUS ═══════════════════════ -->
+<div class="card col-2">
+  <div class="card-header"><div class="dot" style="background:var(--yellow)"></div><h2>zjstatus <span class="badge aliased">aliased</span></h2><span class="note" style="margin-left:8px">dj95/zjstatus &nbsp;·&nbsp; v0.25.0+ for zellij 0.45 &nbsp;·&nbsp; wants <code>pane_frames false</code> (or <kbd style="font-size:9.5px">Ctrl+p</kbd> <kbd style="font-size:9.5px">z</kbd> per session)</span></div>
+  <table>
+    <tr class="divider"><td colspan="2">Purpose</td></tr>
+    <tr><td colspan="2" class="note">Replacement for <code>compact-bar</code>: mode, session, tabs, swap layout, git branch, clock and more, all configured inside the layout file. Ours is <code>layouts/zjstatus.kdl</code> — Catppuccin Mocha, the same <strong>main</strong> + <strong>shell</strong> tabs as the default layout, and its own <code>zjstatus.swap.kdl</code>.</td></tr>
+    <tr class="divider"><td colspan="2">Use it</td></tr>
+    <tr><td><code>zellij -s zjs -n zjstatus</code></td><td>Try it in a new session (first run: click the bar, then <kbd>y</kbd> to grant permissions)</td></tr>
+    <tr><td><code>default_layout "zjstatus"</code></td><td>Adopt it in <code>config.kdl</code> — and set <code>pane_frames false</code></td></tr>
+    <tr class="divider"><td colspan="2">Excerpt of layouts/zjstatus.kdl</td></tr>
+    <tr><td colspan="2"><pre>pane size=1 borderless=true {
+    plugin location="zjstatus" {
+        color_bg    "#1e1e2e"           // color_NAME → use as $NAME
+        color_blue  "#89b4fa"
+        color_mauve "#cba6f7"
+        // …color_dim, color_red, color_green, … (the full palette)
+
+        format_left   "{mode}#[fg=$mauve,bg=$bg,bold] {session} "
+        format_center "{tabs}"
+        format_right  "{swap_layout}{command_git_branch}#[fg=$dim,bg=$bg] {datetime} "
+        format_space  "#[bg=$bg]"
+
+        mode_normal "#[bg=$blue,fg=$bg,bold] NORMAL "
+        mode_locked "#[bg=$red,fg=$bg,bold] LOCKED "
+        // …one mode_* per mode: pane, tab, resize, move, scroll,
+        //   enter_search, search, rename_tab, rename_pane, session,
+        //   prompt, tmux (or mode_default_to_mode)
+
+        tab_normal "#[fg=$dim,bg=$bg] {name} "
+        tab_active "#[fg=$blue,bg=$bg,bold,italic] {name} "
+
+        datetime          "{format}"
+        datetime_format   "%a %d %b  %H:%M"
+        datetime_timezone "America/Denver"   // your IANA zone
+    }
+}</pre></td></tr>
+    <tr class="divider"><td colspan="2">Widget tokens</td></tr>
+    <tr><td><code>{mode}</code></td><td>Current mode, styled per <code>mode_normal</code>, <code>mode_locked</code>, …</td></tr>
+    <tr><td><code>{session}</code></td><td>Session name</td></tr>
+    <tr><td><code>{tabs}</code></td><td>Tab list, styled per <code>tab_normal</code> / <code>tab_active</code></td></tr>
+    <tr><td><code>{datetime}</code></td><td>Clock — <code>datetime "{format}"</code> + a strftime <code>datetime_format</code> + <code>datetime_timezone</code></td></tr>
+    <tr><td><code>{swap_layout}</code></td><td>Active swap layout (<code>swap_layout_format</code>)</td></tr>
+    <tr><td><code>{command_NAME}</code></td><td>Output of a shell command: <code>command_NAME_command</code>, <code>_format</code>, <code>_interval</code> (seconds), <code>_rendermode</code></td></tr>
+    <tr><td colspan="2" class="note">Full widget reference: <code>github.com/dj95/zjstatus</code> (wiki)</td></tr>
+  </table>
+</div>
+
+<!-- ═══════════════════════ MONOCLE ═══════════════════════ -->
+<div class="card">
+  <div class="card-header"><div class="dot" style="background:var(--teal)"></div><h2>monocle <span class="badge aliased">aliased</span></h2><span class="note" style="margin-left:8px">imsnif/monocle</span></div>
+  <table>
+    <tr class="divider"><td colspan="2">Purpose</td></tr>
+    <tr><td colspan="2" class="note">Fuzzy finder for files AND content, searching from the focused pane's directory. Like a project-wide Telescope/fzf that lives in zellij — open it over any pane, search, open matching files in a new pane.</td></tr>
+    <tr class="divider"><td colspan="2">Launch</td></tr>
+    <tr><td><kbd>Ctrl+o</kbd> <kbd class="teal">m</kbd></td><td>Bound in this config — floating, rooted at the focused pane's directory</td></tr>
+    <tr><td><code>$ zellij plugin --floating -- monocle</code></td><td>From CLI</td></tr>
+    <tr class="divider"><td colspan="2">Inside monocle</td></tr>
+    <tr><td>Type</td><td>Live fuzzy search filenames + content</td></tr>
+    <tr><td><kbd class="teal">↑/↓</kbd></td><td>Move selection</td></tr>
+    <tr><td><kbd class="teal">Enter</kbd></td><td>Open in <code>$EDITOR</code> in a new pane</td></tr>
+    <tr><td><kbd class="teal">Esc</kbd></td><td>Close monocle</td></tr>
+  </table>
+</div>
+
+<!-- ═══════════════════════ MULTITASK ═══════════════════════ -->
+<div class="card">
+  <div class="card-header"><div class="dot" style="background:var(--peach)"></div><h2>multitask <span class="badge aliased">aliased</span></h2><span class="note" style="margin-left:8px">leakec/multitask (moved from imsnif) &nbsp;·&nbsp; releases track zellij versions (pin the tag matching your zellij, e.g. v0.45.1)</span></div>
+  <table>
+    <tr class="divider"><td colspan="2">Purpose</td></tr>
+    <tr><td colspan="2" class="note">A "mini-CI" in a pane. Launching it opens your <code>$EDITOR</code> on a <code>.multitask</code> file — every save runs the commands in it. Commands in the same block run <strong>in parallel</strong>; a blank line separates sequential <strong>steps</strong>, and the next step only starts if every command in the previous one succeeded. Press <kbd style="font-size:9.5px">Enter</kbd> on a failed pane to re-run it and resume the pipeline.</td></tr>
+    <tr class="divider"><td colspan="2">Launch</td></tr>
+    <tr><td><kbd>Ctrl+o</kbd> <kbd class="teal">t</kbd> <span class="badge">opt-in</span></td><td>Commented out in <code>config.kdl</code> (Unix-only: needs <code>sh</code> and <code>$SHELL</code>) — uncomment to launch it for the focused pane's directory. A second press restarts it.</td></tr>
+    <tr><td colspan="2"><pre># From a shell (its README's form; ccwd = where the commands run)
+$ zellij action start-or-reload-plugin multitask \
+    --configuration "shell=$SHELL,ccwd=$(pwd)"
+
+# Example .multitask file — it's a shell script, so comments use #
+cargo fmt --check
+cargo clippy          # runs in parallel with the line above
+
+cargo test            # step 2: only if step 1 succeeded</pre></td></tr>
+    <tr class="divider"><td colspan="2">Config keys (optional, passed at launch)</td></tr>
+    <tr><td><code>shell</code></td><td>Shebang for the .multitask file — <code>$SHELL</code> recommended</td></tr>
+    <tr><td><code>ccwd</code></td><td>Working directory for the commands (defaults to the session host dir)</td></tr>
+  </table>
+</div>
+
+<!-- ═══════════════════════ MANUAL LOCKING ═══════════════════════ -->
+<div class="card col-2">
+  <div class="card-header"><div class="dot" style="background:var(--pink)"></div><h2>Locking is manual <span class="badge active">by design</span></h2><span class="note" style="margin-left:8px">no autolock plugin &nbsp;·&nbsp; <kbd style="font-size:9.5px">F12</kbd> toggles both ways</span></div>
+  <table>
+    <tr class="divider"><td colspan="2">The problem locking solves</td></tr>
+    <tr><td colspan="2" class="note">Zellij's <kbd style="font-size:9.5px">Alt</kbd>-based shortcuts collide with editor and readline bindings (<code>Alt+h/j/k/l</code> pane focus vs nvim/readline, <code>Alt+f</code> floating panes vs readline word-forward, <code>Alt+n</code> new pane). Locked mode passes every key straight through to the running program.</td></tr>
+    <tr class="divider"><td colspan="2">How we do it</td></tr>
+    <tr><td><kbd class="pink">F12</kbd></td><td>Press on entering nvim / helix / lazygit</td></tr>
+    <tr><td><kbd class="pink">F12</kbd></td><td>Press again on leaving. Status bar shows <strong>LOCKED</strong></td></tr>
+    <tr><td colspan="2"><pre>keybinds {
+    locked {
+        unbind "Ctrl g"                    // default: Ctrl+g → unlock
+        bind "F12" { SwitchToMode "Normal"; }
+    }
+    shared_except "locked" {
+        unbind "Ctrl g"                    // default: Ctrl+g → lock
+        bind "F12" { SwitchToMode "Locked"; }
+    }
+}
+// ⚠ A single top-level  unbind "Ctrl g"  does NOT work — the default binds
+//   Ctrl+g in both blocks, so unbind it inside each (verified on 0.45.1).</pre></td></tr>
+    <tr class="divider"><td colspan="2">Why not fresh2dev/zellij-autolock</td></tr>
+    <tr><td colspan="2" class="note">It auto-locks by reading the focused pane's running command — and forces <code>Normal</code> whenever it <em>doesn't</em> match a trigger. A pane restored by session resurrection doesn't report back as <code>nvim</code>, so it drags you out of Locked mode a fraction of a second after you press F12. A plain toggle always does what you pressed.</td></tr>
+    <tr class="divider"><td colspan="2">If manual gets old</td></tr>
+    <tr><td>From nvim</td><td><code>VimEnter</code> / <code>VimLeave</code> autocmds calling <code>zellij action switch-mode locked</code> / <code>normal</code></td></tr>
+    <tr><td>Preset swap</td><td><kbd>Ctrl+o</kbd> <kbd>c</kbd> → non-colliding preset (moves defaults off <code>Alt</code>)</td></tr>
+  </table>
+</div>
+
+<div class="card col-2">
+  <div class="card-header"><div class="dot" style="background:var(--teal)"></div><h2>zellij-forgot <span class="badge aliased">aliased</span></h2><span class="note" style="margin-left:8px">karimould/zellij-forgot &nbsp;·&nbsp; keybinding cheatsheet popup</span></div>
+  <table>
+    <tr class="divider"><td colspan="2">Why you want this</td></tr>
+    <tr><td colspan="2" class="note">A searchable floating popup — your in-terminal cheatsheet. We set <code>LOAD_ZELLIJ_BINDINGS "false"</code> and supply a curated list (in the <kbd style="font-size:9.5px">Ctrl+o</kbd> <kbd style="font-size:9.5px">h</kbd> bind), because auto-load renders ragged rows, de-dupes multi-key actions, and labels custom binds "Unknown Action".</td></tr>
+    <tr class="divider"><td colspan="2">Bound in our config.kdl</td></tr>
+    <tr><td colspan="2"><pre>plugins {
+    forgot location="https://github.com/karimould/zellij-forgot/releases/download/0.4.2/zellij_forgot.wasm"
+}
+keybinds {
+    session {
+        bind "h" {
+            LaunchOrFocusPlugin "forgot" {
+                floating true
+                LOAD_ZELLIJ_BINDINGS "false"
+                "Pane mode: enter" "Ctrl p"   // …+ curated list
+            }
+            SwitchToMode "Normal"
+        }
+    }
+}</pre></td></tr>
+    <tr class="divider"><td colspan="2">Use it</td></tr>
+    <tr><td><kbd>Ctrl+o</kbd> <kbd>h</kbd></td><td>Open the popup; <kbd>Esc</kbd> closes it</td></tr>
+    <tr class="divider"><td colspan="2">Why session mode</td></tr>
+    <tr><td colspan="2" class="note">It used to be a global <kbd>Ctrl+y</kbd>, which took readline's yank and nvim's <code>&lt;C-y&gt;</code> (scroll up, accept completion) whenever you forgot <kbd>F12</kbd>. <kbd>h</kbd> is free in session mode (0.45.1 already uses <kbd>f</kbd>, <kbd>s</kbd>, <kbd>[</kbd> and <kbd>]</kbd> there).</td></tr>
+  </table>
+</div>
+
+<!-- ═══════════════════════ OUR LAYOUTS ═══════════════════════ -->
+<div class="card col-full">
+  <div class="card-header"><div class="dot" style="background:var(--mauve)"></div><h2>Our Layouts</h2><span class="note" style="margin-left:8px">All in <code>layouts/</code> &nbsp;·&nbsp; launch with <code>zellij -s &lt;session&gt; -n &lt;layout&gt;</code> &nbsp;·&nbsp; apply at runtime with <kbd style="font-size:9.5px">Ctrl+o</kbd> <kbd style="font-size:9.5px">l</kbd></span></div>
+  <table>
+    <tr>
+      <td style="width:33%;vertical-align:top;padding:8px 12px;border-right:1px solid var(--overlay)">
+        <strong style="color:var(--teal);display:block;margin-bottom:6px"><code>default.kdl</code> <span class="badge active">default</span></strong>
+        <div class="note" style="margin-bottom:8px">Loaded automatically by plain <code>zellij</code>. A single-line compact-bar and two tabs: <strong>main</strong> to work in, <strong>shell</strong> as the safety net that keeps a resurrected nvim's <code>:qa</code> from ending the session.</div>
+        <pre style="font-size:9.5px">layout {
+    default_tab_template {
+        children
+        pane size=1 borderless=true {
+            plugin location="compact-bar"
+        }
+    }
+    tab name="main" focus=true {
+        pane
+    }
+    tab name="shell" {
+        pane
+    }
+}</pre>
+        <div style="margin-top:8px;font-size:10.5px;color:var(--muted)">
+          <strong style="color:var(--text);font-style:normal">Result</strong>
+        </div>
+        <pre style="color:var(--muted);font-size:10px">┌────────────────────────────┐
+│                            │
+│   your panes               │
+│                            │
+├────────────────────────────┤
+│ NORMAL │ 1 main 2 shell    │ ← compact-bar
+└────────────────────────────┘</pre>
+      </td>
+      <td style="width:34%;vertical-align:top;padding:8px 12px;border-right:1px solid var(--overlay)">
+        <strong style="color:var(--teal);display:block;margin-bottom:6px"><code>dev.kdl</code></strong>
+        <div class="note" style="margin-bottom:8px">3-tab dev workspace. <code>zellij -s proj -n dev</code>. Commands in each pane are commented in the file — uncomment to auto-launch nvim, lazygit, or <code>tail -f</code>.</div>
+        <pre style="font-size:9.5px">tab name="code" focus=true {
+    pane size="75%" { name "editor"; }
+    pane size="25%" { name "shell"; }
+}
+tab name="git" { pane { name "git"; }; }
+tab name="logs" split_direction="vertical" {
+    pane size="50%" { name "watch"; }
+    pane size="50%" { name "scratch"; }
+}</pre>
+        <div style="margin-top:8px;font-size:10.5px;color:var(--muted)">
+          <strong style="color:var(--text);font-style:normal">code tab</strong>
+        </div>
+        <pre style="color:var(--muted);font-size:10px">┌────────────────────────────┐
+│                            │
+│       editor   75%         │
+│                            │
+├────────────────────────────┤
+│       shell    25%         │
+├────────────────────────────┤
+│ NORMAL │ 1 code 2 git…     │
+└────────────────────────────┘</pre>
+      </td>
+      <td style="width:33%;vertical-align:top;padding:8px 12px">
+        <strong style="color:var(--teal);display:block;margin-bottom:6px"><code>zjstatus.kdl</code> <span class="badge aliased">opt-in</span></strong>
+        <div class="note" style="margin-bottom:8px">The default layout's two tabs with the zjstatus bar (see the zjstatus card). <code>zellij -s zjs -n zjstatus</code> to try it; set <code>pane_frames false</code> to adopt it.</div>
+        <pre style="font-size:9.5px">layout {
+    default_tab_template {
+        children
+        pane size=1 borderless=true {
+            plugin location="zjstatus" {
+                // colors, mode_*, tabs, clock…
+            }
+        }
+    }
+    tab name="main" focus=true {
+        pane
+    }
+    tab name="shell" {
+        pane
+    }
+}</pre>
+        <div style="margin-top:8px;font-size:10.5px;color:var(--muted)">
+          <strong style="color:var(--text);font-style:normal">Session picker (built-in, no file needed)</strong>
+        </div>
+        <table style="margin-top:6px">
+          <tr><td><code>zellij -n welcome</code></td><td>zellij's own welcome layout — it already sets <code>session_serialization false</code>, so launches don't leave junk sessions</td></tr>
+          <tr><td><kbd>Ctrl+o</kbd> <kbd>w</kbd></td><td>Session manager from any session</td></tr>
+          <tr><td><kbd>Enter</kbd></td><td>Attach (or resurrect)</td></tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<!-- ═══════════════════════ THEMES ═══════════════════════ -->
+<div class="card col-2">
+  <div class="card-header"><div class="dot" style="background:var(--pink)"></div><h2>Themes</h2><span class="note" style="margin-left:8px">Catppuccin is built into zellij — no file needed</span></div>
+  <table>
+    <tr class="divider"><td colspan="4">Built-in flavors</td></tr>
+    <tr>
+      <td style="color:var(--teal)"><code>catppuccin-mocha</code></td>
+      <td style="color:var(--teal)">Darkest <span class="badge active">our default</span></td>
+      <td><code>catppuccin-macchiato</code></td>
+      <td>Dark</td>
+    </tr>
+    <tr>
+      <td><code>catppuccin-frappe</code></td><td>Medium-dark</td>
+      <td><code>catppuccin-latte</code></td><td>Light</td>
+    </tr>
+    <tr class="divider"><td colspan="4">Other built-ins worth trying</td></tr>
+    <tr>
+      <td colspan="4" class="note">
+        <code>tokyo-night</code> · <code>tokyo-night-storm</code> · <code>gruvbox-dark</code> · <code>gruvbox-light</code> · <code>nord</code> · <code>dracula</code> ·
+        <code>kanagawa</code> · <code>everforest-dark</code> · <code>iceberg-dark</code> · <code>night-owl</code> · <code>nightfox</code> · <code>onedark</code> · <code>solarized-dark</code> · <code>vesper</code><br>
+        Full list: <code>zellij.dev/documentation/theme-list.html</code>
+      </td>
+    </tr>
+    <tr class="divider"><td colspan="4">Auto light/dark <span class="badge" style="color:var(--peach);border:1px solid rgba(250,179,135,.3);background:rgba(250,179,135,.1)">0.44.2+</span></td></tr>
+    <tr>
+      <td colspan="4"><pre>// In config.kdl — switches with your terminal's color scheme
+theme_dark  "catppuccin-mocha"
+theme_light "catppuccin-latte"</pre></td>
+    </tr>
+    <tr><td colspan="4" class="note">Requires terminal support for CSI 2031 (Wezterm, Ghostty, Kitty) and BOTH lines; until the terminal reports its mode, the static <code>theme</code> applies. <code>explicit_theme_hue "dark"</code> / <code>"light"</code> (0.45.1) <strong>pins</strong> one side and ignores the terminal's reports — an override, not a fallback.</td></tr>
+    <tr class="divider"><td colspan="4">Custom themes (<code>themes/*.kdl</code>)</td></tr>
+    <tr>
+      <td colspan="4"><pre>themes {
+    my-custom {
+        text_unselected {
+            base 205 214 244; background 30 30 46
+            emphasis_0 245 194 231; emphasis_1 137 220 235
+            emphasis_2 166 227 161; emphasis_3 249 226 175
+        }
+        // …same fields for text_selected, ribbon_*, table_*, list_*,
+        //   frame_selected (focused border), exit_code_success / _error
+    }
+}
+// ⚠ Each component you include needs base + emphasis_0..3 (background is
+//   optional) — `frame_selected { base …; }` alone fails to parse on 0.45.1.
+//   Full working file: themes/example-custom.kdl.example — copy it to
+//   themes/my-custom.kdl (a .kdl.example file is ignored), then in config.kdl:
+//     theme "my-custom"</pre></td>
+    </tr>
+    <tr><td colspan="4" class="note">Each color is 3 numbers (RGB 0–255). Full component reference: <code>zellij.dev/documentation/themes.html</code> — we ship <code>themes/example-custom.kdl.example</code> as a starter.</td></tr>
+  </table>
+</div>
+
+<!-- ═══════════════════════ DISCOVERY ═══════════════════════ -->
+<div class="card">
+  <div class="card-header"><div class="dot" style="background:var(--green)"></div><h2>Finding More Plugins</h2></div>
+  <table>
+    <tr class="divider"><td colspan="2">Discovery</td></tr>
+    <tr><td><code>awesome-zellij</code></td><td>Curated community list: <code>github.com/zellij-org/awesome-zellij</code></td></tr>
+    <tr><td><kbd>Ctrl+o</kbd> <kbd>p</kbd></td><td>Plugin manager — browse &amp; install from inside zellij</td></tr>
+    <tr class="divider"><td colspan="2">A few worth knowing</td></tr>
+    <tr><td><code>room</code></td><td>Project / session switcher</td></tr>
+    <tr><td><code>harpoon</code></td><td>Pin and jump to favorite panes (nvim harpoon style)</td></tr>
+    <tr><td><code>zellij-forgot</code></td><td>Searchable keybind cheatsheet inside zellij</td></tr>
+    <tr><td><code>theme-tester</code></td><td>Live-edit a theme and see the result</td></tr>
+    <tr class="divider"><td colspan="2">Install manually</td></tr>
+    <tr><td colspan="2" class="note">Pin its release URL in <code>config.kdl</code>'s <code>plugins {}</code> the same way our four plugins are aliased; <code>zj</code> then checks it for updates too. Add the URL to the README's offline table, its checksum to <code>plugins.sha256</code> and the file to <code>plugins/</code> — <code>./check.sh</code> flags whichever is missing. (On macOS and Windows, don't create <code>~/.config/zellij</code> to hold <code>.wasm</code> files: zellij would then ignore your real config.)</td></tr>
+  </table>
+</div>
+
+</div><!-- .grid -->
+
+<footer>
+  <span>Plugins are .wasm — sandboxed by default, no network or shell access without explicit zellij permission grants</span>
+  <span>Our 4 aliases: <code>zjstatus</code> &middot; <code>monocle</code> &middot; <code>multitask</code> &middot; <code>forgot</code> &nbsp;·&nbsp; <code>github.com/zellij-org/awesome-zellij</code></span>
+</footer>
+
+</body>
+</html>

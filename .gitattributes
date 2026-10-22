@@ -1,0 +1,9 @@
+# Every text file is checked out with LF, whatever core.autocrlf says (Git for
+# Windows defaults it to true). check.sh and setup.sh compare config.kdl,
+# plugins.sha256 and the docs line by line, and a CR at each line end breaks
+# those comparisons, as it does a #!/bin/sh script; zellij and Windows editors
+# read LF fine. The exception is zj.cmd: cmd.exe can misread labels and `goto`
+# in a batch file with LF-only line endings.
+* text=auto eol=lf
+*.cmd   text eol=crlf
+*.wasm  binary

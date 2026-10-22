@@ -1,0 +1,101 @@
+// ═══════════════════════════════════════════════════════════════════════════
+//  Dev layout — editor-focused workspace with three tabs.
+//
+//  Usage (with dev.kdl installed in your layout dir, it resolves by name):
+//    zellij -s proj -n dev                    new "proj" session, dev layout
+//    cd ~/projects/foo && zellij -s foo -n dev   same, cwd = the project dir
+//
+//  ⚠ `-n` (--new-session-with-layout) is REQUIRED to start a NEW session from a
+//  layout. `zellij --session proj --layout dev` does NOT work: when --session is
+//  given, --layout means "add these tabs to session proj" and errors with "no
+//  active session" if proj doesn't exist. Also, because config.kdl sets
+//  session_name "main" + attach_to_session, a bare `zellij --layout dev` never
+//  makes a new session: it creates "main" with this layout if main isn't
+//  running, but if main IS running it just attaches and ignores the layout.
+//  Use -s/-n above for a separate session.
+//  (All verified against zellij 0.45.1.)
+//
+//  Layout:
+//    Tab 1 "code"  — editor pane (top, large) + shell pane (bottom, small)
+//    Tab 2 "git"   — one wide shell, ready for `git status` / `lazygit`
+//    Tab 3 "logs"  — split log-watching pane on left, free shell on right
+//
+//  WHY USE IT: one command to spin up a fresh project workspace (editor + git +
+//  logs) in its own session, separate from your default `main`. Serialization is
+//  ON (see config.kdl), so an existing project session is resurrected on
+//  reattach — you only run the `-s … -n dev` form above to CREATE one.
+//
+//  DELIBERATELY DECOUPLED FROM NVIM: every pane is a plain shell. The editor
+//  pane does NOT run `nvim` as its command — you launch nvim yourself inside
+//  that shell. This is on purpose (and matches "no nvim<->zellij coupling"):
+//    • nvim runs as a CHILD of the shell, so `:qa` drops you back to the shell
+//      instead of closing the pane — and it's never the last pane anyway (the
+//      shell pane below + the git/logs tabs keep the session alive regardless).
+//    • the layout stays portable (Linux/macOS/Windows) with no hardcoded tools.
+//  The commented `command` lines below are opt-in for anyone who wants
+//  auto-launch — but note the trade-off in the editor pane's comment.
+// ═══════════════════════════════════════════════════════════════════════════
+
+layout {
+    // Same compact-bar as default.kdl, applied to every tab.
+    default_tab_template {
+        children
+        pane size=1 borderless=true {
+            plugin location="compact-bar"
+        }
+    }
+
+    // ─── Tab 1: code ───────────────────────────────────────────────────────
+    // Big editor area on top (75%), small command shell below (25%).
+    // Press `Ctrl+p` then `f` to toggle either pane to fullscreen.
+    tab name="code" focus=true {
+        pane size="75%" {
+            name "editor"
+            // RECOMMENDED: leave this as a plain shell and run `nvim` yourself.
+            // It then nests in the shell, so `:qa` returns you here instead of
+            // closing the pane. Uncommenting a `command` below makes that tool
+            // the pane's PROCESS (no shell under it) — quitting it closes the
+            // pane (harmless here, since it's never the last pane). If you do
+            // enable one, add `start_suspended true` to hold it behind zellij's
+            // "Waiting to run" prompt (Enter runs it, Esc drops to a shell)
+            // instead of auto-launching:
+            // command "nvim"
+            //   args "."
+            //   start_suspended true          // optional: don't auto-run
+            // command "hx"
+            //   args "."
+            // command "code"            // VS Code (opens a new window, not in-pane)
+            //   args "--wait" "."
+        }
+        pane size="25%" {
+            name "shell"
+        }
+    }
+
+    // ─── Tab 2: git ────────────────────────────────────────────────────────
+    // Single full-width pane. Good for `git status`, `git log --oneline`,
+    // or launching lazygit/gitui interactively.
+    tab name="git" {
+        pane {
+            name "git"
+            // Uncomment to auto-launch lazygit if it's installed:
+            // command "lazygit"
+        }
+    }
+
+    // ─── Tab 3: logs ───────────────────────────────────────────────────────
+    // Vertical split: left side is for log-watching (point `tail -f` at
+    // whatever you need), right side is a free shell.
+    tab name="logs" split_direction="vertical" {
+        pane size="50%" {
+            name "watch"
+            // Example: tail a logfile in your project — relative paths resolve
+            // against the layout's cwd or wherever you started zellij from.
+            // command "tail"
+            //   args "-f" "./logs/app.log"
+        }
+        pane size="50%" {
+            name "scratch"
+        }
+    }
+}

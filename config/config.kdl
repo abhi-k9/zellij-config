@@ -1,0 +1,364 @@
+// ═══════════════════════════════════════════════════════════════════════════
+//  Zellij configuration — targeting v0.45.1
+//  Format: KDL v1  (https://kdl.dev) — like JSON, but for humans
+//
+//  This file lives at:
+//    Linux   : ~/.config/zellij/config.kdl  (else $XDG_CONFIG_HOME/zellij/)
+//    macOS   : ~/.config/zellij/config.kdl  (checked first; the legacy
+//              ~/Library/Application Support/org.Zellij-Contributors.Zellij/
+//              location also works but is shadowed if ~/.config/zellij exists)
+//    Windows : %APPDATA%\Zellij\config\config.kdl
+//  (Or wherever $ZELLIJ_CONFIG_DIR / --config-dir point.)
+//
+//  Zellij watches this file live — most changes apply without a restart.
+//  `zellij setup --check` validates it, but unknown keys are silently ignored:
+//  compare spellings against `zellij setup --dump-config`.
+//
+//  HOW TO READ IT: each comment says what a setting does and why it is set;
+//  longer rationale lives in config/README.md (the section is named). A
+//  trailing `// default` marks a line that restates zellij 0.45.1's own
+//  default — pinned so the file documents itself; deleting it changes nothing.
+// ═══════════════════════════════════════════════════════════════════════════
+
+
+// ─── Appearance ────────────────────────────────────────────────────────────
+
+// Built into zellij — no theme file needed. Other flavors: catppuccin-latte,
+// catppuccin-frappe, catppuccin-macchiato. All built-ins:
+// https://zellij.dev/documentation/theme-list.html
+theme "catppuccin-mocha"
+
+// Follow the terminal's light/dark mode (0.44.2+; the terminal must report it
+// via CSI 2031 — WezTerm, Ghostty, Kitty, …). Set BOTH lines: with only one,
+// the static `theme` above stays in charge.
+// theme_dark  "catppuccin-mocha"
+// theme_light "catppuccin-latte"
+//
+// explicit_theme_hue (0.45.1) PINS the hue instead: "dark" always uses
+// theme_dark, "light" always theme_light, and the terminal's reports are
+// ignored. It is an override, not a fallback for terminals that stay silent —
+// while it is set, nothing auto-switches.
+// explicit_theme_hue "dark"
+
+// Frames around panes. Toggle per session with Ctrl+p, z. The zjstatus layout
+// wants this false (see the ⚠ FRAMES note in layouts/zjstatus.kdl).
+pane_frames true                        // default
+
+// Frame style (0.45.0+): "full" border, "titles" (a single title line, shown
+// only when a tab has >1 pane — the 0.45 default) or "none". Pinned to "full"
+// for a stable pre-0.45 look, and because rounded_corners only applies to a
+// full border. Runtime: `zellij action set-pane-frame-style full|titles|none`.
+pane_frame_style "full"
+
+ui {
+    pane_frames {
+        rounded_corners true            // only visible with pane_frame_style "full"
+        hide_session_name false         // default — true hides the session name in frame titles
+    }
+}
+
+show_startup_tips true                  // default — turn off once the keys are familiar
+show_release_notes true                 // default — shown once per new zellij version
+
+
+// ─── Behavior ──────────────────────────────────────────────────────────────
+
+// "normal": zellij's keys are live. "locked": every key goes to the app until
+// you unlock (F12 in this config — see Keybindings).
+default_mode "normal"                   // default
+
+// Terminal window closed: "detach" keeps the session running (come back with
+// `zellij attach --create main`); "quit" ends it.
+on_force_close "detach"                 // default
+
+// Resolved against layouts/ first, then zellij's built-ins (compact, welcome,
+// …). "default" is OUR layouts/default.kdl: compact-bar plus two tabs, "main"
+// and "shell" (why: README "Session recovery"). Opt-in alternative: "zjstatus"
+// — then also set pane_frames false (see layouts/zjstatus.kdl).
+default_layout "default"
+
+// Unset = $SHELL. Set it for a different or non-login shell, e.g. "fish",
+// "/bin/zsh", "pwsh", "C:\\Windows\\System32\\cmd.exe".
+// default_shell "fish"
+
+// Scrollback lines per pane. Raise to 50000+ for heavy log reading.
+scroll_buffer_size 10000                // default
+
+// Arrange new panes with the tab's swap layouts — the arrangements Alt+[ / Alt+]
+// cycle through, from layouts/*.swap.kdl. false = new panes split the focused one.
+auto_layout true                        // default
+
+// Resizing a pane beyond a certain size (Alt+= / Alt+-) stacks its neighbours.
+stacked_resize true                     // default
+
+
+// ─── Clipboard & Mouse ─────────────────────────────────────────────────────
+
+// Copy goes through OSC52 while copy_command is unset: the terminal writes the
+// clipboard, which works in most terminals and over SSH — the portable choice
+// (README "Clipboard"). Only on a local-only box where OSC52 fails, uncomment ONE
+// (each is a single-OS program and can't reach your laptop over SSH):
+// copy_command "pbcopy"                          // macOS
+// copy_command "wl-copy"                         // Linux Wayland
+// copy_command "xclip -selection clipboard"      // Linux X11
+// copy_command "clip.exe"                        // Windows / WSL→Windows
+
+copy_clipboard "system"                 // default — "primary" = X11/Wayland middle-click buffer; ignored when copy_command is set
+copy_on_select true                     // default — releasing a mouse selection copies it
+
+// Click to focus, drag a border to resize, wheel to scroll (since 0.45 the
+// wheel also enters Scroll mode — see scroll_mode_sync below). Hold Shift to
+// bypass zellij and use the terminal's own selection.
+mouse_mode true                         // default
+
+// Hover effects: frame highlight and help text over the pane under the mouse.
+// Related keys, unset here (all default true): mouse_hover_tips (only the
+// help-text tips), advanced_mouse_actions (hover effects AND pane grouping),
+// mouse_scroll_resize (Ctrl+wheel resizes; checklist item 3 relies on it).
+mouse_hover_effects true                // default
+
+focus_follows_mouse false               // default — true focuses a pane on hover (i3/sway feel)
+mouse_click_through false               // default — true lets the focusing click also reach the app
+
+
+// ─── Sessions & Resurrection ───────────────────────────────────────────────
+// Rationale, the nvim caveat and the hard-guarantee alternatives (an nvim
+// session plugin, or a post_command_discovery_hook — not used here): README
+// "Session recovery". zellij 0.45.1 caveats: README "Known issues (0.45.1)".
+
+// Save each session (tabs, panes, cwds, running commands) and resurrect it.
+// After a crash or reboot use `zellij attach --create main` — plain `zellij`
+// starts a fresh main and discards the saved one. A resurrected nvim has no
+// shell under it; layouts/default.kdl's extra "shell" tab keeps `:qa` from
+// ending the session.
+session_serialization true              // default
+
+// Also save each pane's visible screen? Off, so resurrected panes come back
+// clean. ⚠ NAME TRAP: zellij's docs call this `pane_viewport_serialization`
+// (docs bug, zellij-org/zellij#3987) — that name parses and is silently
+// ignored. Keep `serialize_pane_viewport`; `zellij setup --dump-config` has it.
+serialize_pane_viewport false           // default
+
+// Scrollback lines saved per pane, 0 = the whole buffer (capped at
+// scroll_buffer_size). Inert while serialize_pane_viewport is false.
+scrollback_lines_to_serialize 0
+
+// Seconds between saves.
+serialization_interval 60
+
+// Singleton "main" session (like `tmux new -A -s main`): plain `zellij` joins a
+// RUNNING main, else creates one. Project sessions: `zellij -s proj -n dev`, not
+// `--session proj --layout dev` (that adds tabs to an existing session). A bare
+// `zellij --layout dev` joins a running main and ignores the layout. Details:
+// README "Layouts".
+session_name "main"
+attach_to_session true
+
+osc8_hyperlinks true                    // default — clickable OSC8 links in pane output
+
+// Flash the pane/tab frame on BEL; a bell in an unfocused tab adds [!] to its name.
+visual_bell true                        // default
+
+// Forward desktop notifications (OSC 9/99/777) from panes to your terminal, e.g.
+// a long build finishing in a background pane. "auto" uses OSC 99 where the
+// terminal supports it, else OSC 9; also "osc9", "osc99", "bell" (ring
+// instead) and "off".
+host_notification_protocol "auto"
+
+// Since 0.45.0 the mouse wheel enters Scroll mode. Uncomment for the pre-0.45
+// behavior (the wheel scrolls, the mode stays):
+// scroll_mode_sync false
+
+// Richer key events for apps (Ctrl+Shift+letter, key release) on terminals
+// that support the kitty keyboard protocol.
+support_kitty_keyboard_protocol true    // default
+
+// ASCII-friendly plugin UI — set it if the status bar shows broken glyphs
+// (a font without Nerd Font / powerline arrows).
+// simplified_ui true
+
+
+// ─── Environment ───────────────────────────────────────────────────────────
+
+// Exported into every pane zellij spawns (not into zellij itself). zellij
+// already sets $ZELLIJ and $ZELLIJ_SESSION_NAME — don't set ZELLIJ here, it
+// would shadow the internal value.
+env {
+    RUST_BACKTRACE "1"                  // backtraces from Rust programs you run in panes
+    // EDITOR "nvim"
+}
+
+// Scroll mode `e` opens the scrollback in $EDITOR / $VISUAL; with neither set
+// it silently returns to Normal. Set $EDITOR in your environment (kept out of
+// this file so it stays cross-platform), or pin one here:
+// scrollback_editor "nvim"     // Linux/macOS: vim, micro, hx…  Windows: "notepad", "code"
+
+
+// ─── Keybindings ───────────────────────────────────────────────────────────
+// zellij is modal: Ctrl+<letter> enters a mode, single keys act inside it.
+//   Defaults: https://zellij.dev/documentation/keybindings-default.html
+//   Actions:  https://zellij.dev/documentation/keybindings-possible-actions.html
+// The defaults are KEPT (no `clear-defaults=true`); the blocks below only add
+// or remove keys. `shared_except "locked"` = every mode except Locked.
+
+keybinds {
+    // Ctrl+q (quit) is a fat-finger of Ctrl+w in shells. Quit deliberately with
+    // Ctrl+o, q (below), or detach with Ctrl+o, d. Delete this line to keep it.
+    unbind "Ctrl q"
+
+    // LOCK TOGGLE on F12 instead of Ctrl+g, which nvim and many TUIs use (and
+    // which an app could never receive while locked). One key, both directions;
+    // locking is manual — press F12 entering nvim/a TUI, again on leaving.
+    // The unbinds sit INSIDE each block on purpose: a top-level `unbind "Ctrl g"`
+    // doesn't work, because the default binds Ctrl+g in two contexts (verified
+    // on 0.45.1; README "Debugging"). If your terminal eats F12, re-add
+    // `bind "Ctrl g"` in both blocks.
+    locked {
+        unbind "Ctrl g"                       // default Ctrl+g → Normal (unlock)
+        bind "F12" { SwitchToMode "Normal"; }
+    }
+    shared_except "locked" {
+        unbind "Ctrl g"                       // default Ctrl+g → Locked (lock)
+        bind "F12" { SwitchToMode "Locked"; }
+    }
+
+    // Session mode (Ctrl+o) additions, next to zellij's own launchers. 0.45.1
+    // already uses d, w, c, l, p, a, s, f, [ and ] there; q, m, h, t and e are free.
+    session {
+        bind "q" { Quit; }                    // replaces the unbound Ctrl+q
+
+        // monocle (find files and contents) in a floating pane, rooted at the
+        // focused pane's directory; Esc hides it.
+        bind "m" {
+            LaunchOrFocusPlugin "monocle" { floating true; };
+            SwitchToMode "Normal"
+        }
+
+        // KEYBINDING POPUP — Ctrl+o, h (zellij-forgot, floating; Esc closes it).
+        // The rows below ARE the popup's content, and the master copy of this
+        // config's key list: zellij config has no `include`, so it can't live in
+        // another file. Hand-kept mirror: cheatsheets/zellij-cheatsheet.html (the
+        // README lists only the keys this config changes). check.sh check 10
+        // verifies that every Alt/Ctrl/F-key any of them mentions is bound.
+        // Edit here first, then the cheatsheet.
+        // In session mode rather than on a global key: a global Ctrl+y used to
+        // take readline's yank and nvim's <C-y> whenever you forgot F12.
+        bind "h" {
+            LaunchOrFocusPlugin "forgot" {
+                floating true
+                // Auto-loading zellij's live bindings is OFF: it renders ragged
+                // "Mode: X, Action: Y" rows, de-dupes multi-key actions and shows
+                // custom binds as "Unknown Action". Set "true" to bring it back.
+                LOAD_ZELLIJ_BINDINGS "false"
+                // Searchable by label text — "pane", "scroll", "tab", etc.
+                "Global: new pane"                  "Alt n"
+                "Global: toggle floating panes"     "Alt f"
+                "Global: focus pane left / right"   "Alt h / Alt l  (switches tab at edge)"
+                "Global: focus pane down / up"      "Alt j / Alt k"
+                "Global: grow / shrink focused pane" "Alt =  /  Alt -"
+                "Global: move tab left / right"     "Alt i / Alt o"
+                "Global: prev / next swap layout"   "Alt [  /  Alt ]"
+                "Global: lock / unlock interface"   "F12  (manual; lock before entering nvim)"
+                "Pane mode: enter"                  "Ctrl p"
+                "Pane: new / split down / split right" "n / d / r"
+                "Pane: close / fullscreen / rename" "x / f / c"
+                "Pane: toggle floating / embed"     "w / e"
+                "Pane: toggle frames"               "z"
+                "Pane: focus"                       "h j k l  or arrows"
+                "Tab mode: enter"                   "Ctrl t"
+                "Tab: new / close / rename"         "n / x / r"
+                "Tab: switch / jump to N / sync"    "h l  /  1-9  /  s"
+                "Tab: break pane to new tab"        "b"
+                "Resize mode: enter"                "Ctrl n"
+                "Resize: grow / shrink / direction" "+  /  -  /  h j k l"
+                "Move mode: enter"                  "Ctrl h"
+                "Move: move pane"                   "h j k l  or  n / p"
+                "Scroll mode: enter"                "Ctrl s"
+                "Scroll: line / page"               "j k  or arrows  /  PageUp PageDown"
+                "Scroll: half page up / down"       "u / d"
+                "Scroll: jump to bottom (live)"     "Ctrl c"
+                "Scroll: edit buffer in editor"     "e   (needs EDITOR set)"
+                "Scroll: search"                    "s  then type;  n / p = next / prev match"
+                "Session mode: enter"               "Ctrl o"
+                "Session: detach / manager / layouts" "d / w / l"
+                "Session: keybinding popup"         "h   (custom; this list)"
+                "Session: monocle file finder"      "m   (custom)"
+                "Session: quit zellij"              "q   (custom; Ctrl+q is unbound)"
+                "Locked mode: unlock"               "F12"
+            }
+            SwitchToMode "Normal"
+        }
+
+        // OPT-IN, UNIX-ONLY — Ctrl+o, t: multitask ("mini-CI": commands you write
+        // into a .multitask file run in parallel steps) for the focused pane's
+        // directory. multitask needs that directory (its `ccwd` setting) at
+        // launch, which a plugin bind can't pass, so this runs multitask's
+        // documented launch command in a short-lived floating pane. Commented out
+        // because it needs a Unix `sh` and $SHELL (multitask runs the file as a
+        // shell script; on Windows `sh` may be missing or a different program).
+        //   - A second press RESTARTS a running multitask (start-or-reload).
+        //   - A comma in the directory name cuts the path (the setting is a
+        //     comma-separated key=value list); spaces are fine.
+        //   (Verified on 0.45.1: opens a new tab with $EDITOR on the .multitask
+        //   template, like the command in multitask's README.)
+        // bind "t" {
+        //     Run "sh" "-c" "zellij action start-or-reload-plugin multitask --configuration \"shell=${SHELL:-/bin/sh},ccwd=$(pwd)\"" {
+        //         floating true
+        //         close_on_exit true
+        //         name "multitask launcher"
+        //     }
+        //     SwitchToMode "Normal"
+        // }
+
+        // OPT-IN, UNIX-ONLY — Ctrl+o, e: open this config in $EDITOR (falls back
+        // to vi) in a floating pane; zellij hot-reloads on save. `Run` doesn't
+        // expand env vars or `~`, hence the bash wrapper. It opens
+        // $ZELLIJ_CONFIG_FILE, else $ZELLIJ_CONFIG_DIR/config.kdl, else
+        // ~/.config/zellij/config.kdl — a `zellij --config other.kdl` flag can't
+        // be followed (zellij doesn't tell panes which file it loaded).
+        // (Verified on 0.45.1: opens in a floating pane named "config".)
+        // bind "e" {
+        //     Run "bash" "-c" "\"${EDITOR:-vi}\" \"${ZELLIJ_CONFIG_FILE:-${ZELLIJ_CONFIG_DIR:-$HOME/.config/zellij}/config.kdl}\"" {
+        //         floating true
+        //         close_on_exit true
+        //         name "config"
+        //     }
+        //     SwitchToMode "Normal"
+        // }
+    }
+}
+
+
+// ─── Plugins ───────────────────────────────────────────────────────────────
+// Aliases give a plugin URL a short name for layouts, binds and
+// `zellij plugin -- <alias>`. They extend zellij's built-in aliases
+// (compact-bar, session-manager, welcome-screen, …). An alias only registers a
+// name: nothing here starts until a bind or a layout uses it.
+//
+// VERSIONS ARE PINNED: zellij caches each .wasm by URL, so `releases/latest`
+// would give two machines different builds, and a future build may need a
+// newer zellij. To bump one, follow README "Updating a pinned plugin" (the tag
+// here, the docs, plugins.sha256, then a plugin-cache clear that keeps your
+// saved sessions). No network: README "Offline / air-gapped machines", or
+// `./setup.sh --offline`.
+//
+// Copy each tag verbatim from its releases page — the formats differ upstream:
+// zjstatus and monocle use `vX.Y.Z`, forgot `X.Y.Z`, multitask the zellij version.
+plugins {
+    // https://github.com/dj95/zjstatus — status bar used by layouts/zjstatus.kdl.
+    // v0.25.0 needs zellij >= 0.45.0 (it fixes the 0.45 frame flicker).
+    zjstatus location="https://github.com/dj95/zjstatus/releases/download/v0.25.0/zjstatus.wasm"
+
+    // https://github.com/imsnif/monocle — fuzzy file/content finder (Ctrl+o, m).
+    monocle location="https://github.com/imsnif/monocle/releases/download/v0.100.2/monocle.wasm"
+
+    // https://github.com/leakec/multitask (moved from imsnif/multitask) —
+    // "mini-CI". Released in lockstep with zellij: bump it with every upgrade.
+    multitask location="https://github.com/leakec/multitask/releases/download/v0.45.1/multitask.wasm"
+
+    // https://github.com/karimould/zellij-forgot — the Ctrl+o, h keybinding popup.
+    forgot location="https://github.com/karimould/zellij-forgot/releases/download/0.4.2/zellij_forgot.wasm"
+}
+
+// To start a plugin with every session (in the background), add a block like
+// `load_plugins { zjstatus; }` here. check.sh reports one as INFO, not an error.

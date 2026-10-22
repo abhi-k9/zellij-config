@@ -1,0 +1,119 @@
+// ═══════════════════════════════════════════════════════════════════════════
+//  Swap layouts for default.kdl — what Alt+[ / Alt+] cycle through.
+//
+//  zellij pairs a layout NAME.kdl with an optional NAME.swap.kdl next to it.
+//  Its built-in layouts come with one; a custom layout without it has none, so
+//  Alt+[ / Alt+] silently do nothing (the status bar shows "BASE"). Verified on
+//  0.45.1: without this file, nothing; with it, Alt+] cycles
+//  VERTICAL → HORIZONTAL → STACKED → HALF-STACKED, in every tab.
+//
+//  Contents: zellij's own swap layouts for its built-in "compact" layout,
+//  dumped with  `zellij setup --dump-swap-layout compact`  (zellij 0.45.1).
+//  The template below only has to match the layout's bar so zellij can tell
+//  the bar apart from your panes; it never adds a second bar.
+//  When you upgrade zellij, re-dump it if the built-in swap layouts changed.
+// ═══════════════════════════════════════════════════════════════════════════
+
+tab_template name="ui" {
+   children
+   pane size=1 borderless=true {
+       plugin location="compact-bar"
+   }
+}
+
+swap_tiled_layout name="vertical" {
+    ui max_panes=4 {
+        pane split_direction="vertical" {
+            pane
+            pane { children; }
+        }
+    }
+    ui max_panes=7 {
+        pane split_direction="vertical" {
+            pane { children; }
+            pane { pane; pane; pane; pane; }
+        }
+    }
+    ui max_panes=11 {
+        pane split_direction="vertical" {
+            pane { children; }
+            pane { pane; pane; pane; pane; }
+            pane { pane; pane; pane; pane; }
+        }
+    }
+}
+
+swap_tiled_layout name="horizontal" {
+    ui max_panes=3 {
+        pane
+        pane
+    }
+    ui max_panes=7 {
+        pane {
+            pane split_direction="vertical" { children; }
+            pane split_direction="vertical" { pane; pane; pane; pane; }
+        }
+    }
+    ui max_panes=11 {
+        pane {
+            pane split_direction="vertical" { children; }
+            pane split_direction="vertical" { pane; pane; pane; pane; }
+            pane split_direction="vertical" { pane; pane; pane; pane; }
+        }
+    }
+}
+
+swap_tiled_layout name="stacked" {
+    ui min_panes=3 {
+        pane stacked=true { children; }
+    }
+}
+
+swap_tiled_layout name="half-stacked" {
+    ui min_panes=4 {
+        pane split_direction="vertical" {
+            pane
+            pane stacked=true { children; }
+        }
+    }
+}
+
+swap_floating_layout name="staggered" {
+    floating_panes
+}
+
+swap_floating_layout name="enlarged" {
+    floating_panes max_panes=10 {
+        pane { x "5%"; y 1; width "90%"; height "90%"; }
+        pane { x "5%"; y 2; width "90%"; height "90%"; }
+        pane { x "5%"; y 3; width "90%"; height "90%"; }
+        pane { x "5%"; y 4; width "90%"; height "90%"; }
+        pane { x "5%"; y 5; width "90%"; height "90%"; }
+        pane { x "5%"; y 6; width "90%"; height "90%"; }
+        pane { x "5%"; y 7; width "90%"; height "90%"; }
+        pane { x "5%"; y 8; width "90%"; height "90%"; }
+        pane { x "5%"; y 9; width "90%"; height "90%"; }
+        pane { x 10; y 10; width "90%"; height "90%"; }
+    }
+}
+
+swap_floating_layout name="spread" {
+    floating_panes max_panes=1 {
+        pane {y "50%"; x "50%"; }
+    }
+    floating_panes max_panes=2 {
+        pane { x "1%"; y "25%"; width "45%"; }
+        pane { x "50%"; y "25%"; width "45%"; }
+    }
+    floating_panes max_panes=3 {
+        pane { y "55%"; width "45%"; height "45%"; }
+        pane { x "1%"; y "1%"; width "45%"; }
+        pane { x "50%"; y "1%"; width "45%"; }
+    }
+    floating_panes max_panes=4 {
+       pane { x "1%"; y "55%"; width "45%"; height "45%"; }
+       pane { x "50%"; y "55%"; width "45%"; height "45%"; }
+       pane { x "1%"; y "1%"; width "45%"; height "45%"; }
+       pane { x "50%"; y "1%"; width "45%"; height "45%"; }
+   }
+}

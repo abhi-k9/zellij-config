@@ -1,0 +1,257 @@
+# Continuous checks for this zellij config — runs on every push and pull request.
+#
+#   linux    — everything: check.sh with zellij installed (all checks live,
+#              including parsing every layout and diffing the swap files),
+#              shellcheck, HTML validation, Markdown lint, a real install via
+#              setup.sh --offline (from plugins/ with the network blocked, and
+#              by download from a copy without plugins/), and the zj launcher.
+#   macos    — portability: check.sh under macOS's own /bin/bash (3.2) and BSD
+#              tools, setup.sh (install, --offline with shasum, --restore) and
+#              the zj launcher under /bin/sh. These are the platforms the
+#              scripts promise to support but that can't be exercised on Linux.
+#   windows  — the launcher only: zj.cmd + zj.ps1 under Windows PowerShell
+#              5.1, with a stub in place of zellij, and the same reports as
+#              launcher/zj under Git Bash.
+#
+# Keep ZELLIJ_VERSION in step with the version config.kdl targets, and update
+# the two ZELLIJ_SHA256_* values with it: they're the SHA-256 of the zellij
+# binary inside each release tarball, as published next to it
+# (<asset>.sha256sum). Actions are pinned by commit; the comment names the tag.
+name: check
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  ZELLIJ_VERSION: v0.45.1
+  ZELLIJ_SHA256_LINUX: d006c521dcb475a6005d741e9dd7c5758e5a23b28dd60a5c10cebfa4876319dd   # x86_64-unknown-linux-musl
+  ZELLIJ_SHA256_MACOS: ca5f9333735bdbc59a621f1d8ed8e24798845302a28ff175d253d4793d5a4a2c   # aarch64-apple-darwin
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false   # the jobs never push; don't leave a token behind
+
+      - name: Install zellij ${{ env.ZELLIJ_VERSION }} (checksum verified)
+        run: |
+          tmp=$(mktemp -d)
+          curl -fsSL "https://github.com/zellij-org/zellij/releases/download/${ZELLIJ_VERSION}/zellij-x86_64-unknown-linux-musl.tar.gz" \
+            | tar xz -C "$tmp" zellij
+          echo "${ZELLIJ_SHA256_LINUX}  $tmp/zellij" | sha256sum -c -
+          mkdir -p "$HOME/bin"
+          mv "$tmp/zellij" "$HOME/bin/zellij"
+          echo "$HOME/bin" >> "$GITHUB_PATH"
+          "$HOME/bin/zellij" --version
+
+      - name: check.sh (all checks live)
+        run: ./check.sh
+
+      - name: shellcheck
+        run: |
+          shellcheck -s sh setup.sh hooks/pre-commit launcher/zj
+          shellcheck -s bash check.sh
+
+      - name: HTML (tidy)
+        # tidy exits 1 for warnings and 2 for errors. Errors fail the job;
+        # warnings become annotations, so a newer tidy on the runner adding a
+        # new warning doesn't turn the build red. (Locally: 0 of either.)
+        run: |
+          sudo apt-get update -q >/dev/null
+          sudo apt-get install -y -q tidy >/dev/null
+          tidy -v
+          status=0
+          for f in cheatsheets/*.html; do
+            echo "== $f"
+            rc=0; tidy -q -e "$f" 2> tidy.log || rc=$?
+            cat tidy.log
+            if [ "$rc" -ge 2 ]; then status=1
+            elif [ "$rc" -eq 1 ]; then echo "::warning file=$f::tidy reported warnings (see log)"; fi
+          done
+          exit "$status"
+
+      - name: Markdown (markdownlint)
+        run: npx --yes markdownlint-cli@0.41.0 config/README.md CHANGELOG.md
+
+      - name: setup.sh — install, re-install (backup), --offline, --restore
+        # setup.sh only warns (on stderr) when zellij loads a different dir or
+        # rejects the config or a layout; here any warning fails the job.
+        run: |
+          export ZELLIJ_CONFIG_DIR="$RUNNER_TEMP/zellij"
+          run_setup() {
+            rc=0; ./setup.sh "$@" 2> setup.err || rc=$?
+            cat setup.err >&2
+            if [ "$rc" -ne 0 ] || grep -q 'warning:' setup.err; then exit 1; fi
+          }
+          run_setup
+          run_setup                               # second run makes a backup
+          # --offline with the network blocked: every plugin from plugins/
+          (export https_proxy=http://127.0.0.1:9 HTTPS_PROXY=http://127.0.0.1:9
+           run_setup --offline) | tee offline.log
+          n=$(grep -oE 'location="https://[^"]+\.wasm"' config/config.kdl | sort -u | wc -l)
+          test "$(grep -c 'checksum ok (from plugins/)' offline.log)" -eq "$n"
+          grep -q 'location="file:' "$ZELLIJ_CONFIG_DIR/config.kdl"
+          run_setup --restore
+          # --offline from a copy without plugins/: downloads + verifies checksums
+          mkdir "$RUNNER_TEMP/nobundle"
+          cp -R setup.sh plugins.sha256 config launcher "$RUNNER_TEMP/nobundle/"
+          ZELLIJ_CONFIG_DIR="$RUNNER_TEMP/zellij2" "$RUNNER_TEMP/nobundle/setup.sh" --offline | tee download.log
+          test "$(grep -c 'checksum ok (downloaded)' download.log)" -eq "$n"
+
+      - name: zj launcher — update check, then starts zellij
+        run: |
+          export ZELLIJ_CONFIG_DIR="$PWD/config" XDG_STATE_HOME="$RUNNER_TEMP/state"
+          rc=0; sh launcher/zj --check-updates || rc=$?
+          case $rc in
+            0) ;;
+            1) echo "::notice::newer plugin releases exist — see the log" ;;
+            *) echo "::error::zj --check-updates couldn't check (exit $rc)"; exit 1 ;;
+          esac
+          sh launcher/zj --version </dev/null      # first start: checks, then runs zellij
+          test -s "$XDG_STATE_HOME/zellij-config/plugin-update-check"
+          sed -E 's#(dj95/zjstatus/releases/download/)[^/]+#\1v0.0.1#' config/config.kdl > "$RUNNER_TEMP/old.kdl"
+          rc=0; sh launcher/zj --check-updates "$RUNNER_TEMP/old.kdl" > old.out || rc=$?
+          cat old.out
+          test "$rc" -eq 1
+          grep -q 'zjstatus .*-> ' old.out
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false   # the jobs never push; don't leave a token behind
+
+      - name: Install zellij ${{ env.ZELLIJ_VERSION }} (checksum verified)
+        run: |
+          tmp=$(mktemp -d)
+          curl -fsSL "https://github.com/zellij-org/zellij/releases/download/${ZELLIJ_VERSION}/zellij-aarch64-apple-darwin.tar.gz" \
+            | tar xz -C "$tmp" zellij
+          echo "${ZELLIJ_SHA256_MACOS}  $tmp/zellij" | shasum -a 256 -c -
+          mkdir -p "$HOME/bin"
+          mv "$tmp/zellij" "$HOME/bin/zellij"
+          echo "$HOME/bin" >> "$GITHUB_PATH"
+
+      - name: check.sh under macOS /bin/bash 3.2 and BSD tools
+        run: |
+          /bin/bash --version | head -1
+          /bin/bash ./check.sh
+
+      - name: setup.sh under /bin/sh (BSD cp/sed/awk, shasum)
+        run: |
+          export ZELLIJ_CONFIG_DIR="$RUNNER_TEMP/zellij"
+          run_setup() {
+            rc=0; /bin/sh ./setup.sh "$@" 2> setup.err || rc=$?
+            cat setup.err >&2
+            if [ "$rc" -ne 0 ] || grep -q 'warning:' setup.err; then exit 1; fi
+          }
+          run_setup
+          run_setup --offline
+          run_setup --restore
+
+      - name: zj launcher under /bin/sh
+        run: |
+          export ZELLIJ_CONFIG_DIR="$PWD/config" XDG_STATE_HOME="$RUNNER_TEMP/state"
+          rc=0; /bin/sh launcher/zj --check-updates || rc=$?
+          case $rc in
+            0) ;;
+            1) echo "::notice::newer plugin releases exist — see the log" ;;
+            *) echo "::error::zj --check-updates couldn't check (exit $rc)"; exit 1 ;;
+          esac
+          /bin/sh launcher/zj --version </dev/null
+          test -s "$XDG_STATE_HOME/zellij-config/plugin-update-check"
+
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false   # the jobs never push; don't leave a token behind
+
+      - name: zj.cmd + zj.ps1 (Windows PowerShell 5.1) vs launcher/zj (Git Bash)
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Continue'
+          function Fail([string]$m) { Write-Output "::error::$m"; exit 1 }
+          $bash = "$env:ProgramFiles\Git\bin\bash.exe"
+          $tmp = $env:RUNNER_TEMP
+          # A stub zellij: reports this repo's config dir, echoes any other call.
+          New-Item -ItemType Directory -Force "$tmp\bin", "$tmp\localappdata" | Out-Null
+          [IO.File]::WriteAllText("$tmp\bin\zellij.cmd", ("@echo off`r`nif ""%~1""==""setup"" (`r`n  echo [CONFIG DIR]: ""%ZJ_TEST_DIR%""`r`n  exit /b 0`r`n)`r`necho zellij-stub %*`r`n"))
+          $env:PATH = "$tmp\bin;$env:PATH"
+          $env:ZJ_TEST_DIR = "$PWD\config"
+          $env:LOCALAPPDATA = "$tmp\localappdata"
+          $stamp = "$env:LOCALAPPDATA\zellij-config\plugin-update-check"
+
+          # Fixtures: an outdated zjstatus pin, a repo that doesn't exist, a file: path.
+          $cfg = [IO.File]::ReadAllText("$PWD\config\config.kdl")
+          [IO.File]::WriteAllText("$tmp\old.kdl", ($cfg -replace '(dj95/zjstatus/releases/download/)[^/]+', '${1}v0.0.1'))
+          [IO.File]::WriteAllText("$tmp\gone.kdl", 'plugins { x location="https://github.com/zellij-org/zj-no-such-repo/releases/download/v1.0.0/x.wasm"; }')
+          [IO.File]::WriteAllText("$tmp\disk.kdl", 'plugins { x location="file:C:/some dir/x.wasm"; }')
+
+          # --check-updates: zj.cmd/zj.ps1 and launcher/zj must agree, byte for byte.
+          $cases = @(
+              @{ File = 'config/config.kdl'; Codes = @(0, 1) },
+              @{ File = ($tmp -replace '\\', '/') + '/old.kdl'; Codes = @(1) },
+              @{ File = ($tmp -replace '\\', '/') + '/gone.kdl'; Codes = @(2) },
+              @{ File = ($tmp -replace '\\', '/') + '/disk.kdl'; Codes = @(2) }
+          )
+          foreach ($c in $cases) {
+              $ps = (cmd /c "launcher\zj.cmd --check-updates `"$($c.File)`"" | Out-String) -replace "`r", ''
+              $psrc = $LASTEXITCODE
+              $sh = (& $bash launcher/zj --check-updates $c.File | Out-String) -replace "`r", ''
+              $shrc = $LASTEXITCODE
+              Write-Output "== $($c.File): zj.cmd exit $psrc, launcher/zj exit $shrc"
+              Write-Output $ps
+              if ($c.Codes -notcontains $psrc) { Fail "zj.cmd exit $psrc for $($c.File), expected $($c.Codes -join ' or ')" }
+              if ($psrc -ne $shrc) { Fail "exit codes differ for $($c.File)" }
+              if ($ps -cne $sh) { Write-Output "launcher/zj printed:"; Write-Output $sh; Fail "reports differ for $($c.File)" }
+          }
+          if ((cmd /c "launcher\zj.cmd --check-updates `"$tmp\old.kdl`"" | Out-String) -notmatch 'zjstatus .*-> ') { Fail 'outdated zjstatus pin not reported' }
+
+          # No FILE: the config dir zellij reports.
+          $out = cmd /c "launcher\zj.cmd --check-updates" | Out-String
+          if ($out -notmatch [regex]::Escape("$PWD\config\config.kdl")) { Fail "--check-updates didn't use zellij's config dir: $out" }
+
+          # Startup. Input is piped, so the "Press Enter" pause is skipped.
+          $env:ZELLIJ_CONFIG_FILE = "$tmp\old.kdl"
+          $out = '' | cmd /c 'launcher\zj.cmd attach --create "my session"' | Out-String
+          Write-Output $out
+          if ($out -notmatch 'Newer plugin releases exist') { Fail 'first start: no update notice' }
+          if ($out -notmatch 'zellij-stub attach --create "my session"') { Fail 'first start: zellij not run with the arguments' }
+          if (-not (Test-Path $stamp)) { Fail 'first start: no stamp written' }
+          $t = (Get-Item $stamp).LastWriteTime
+
+          $out = '' | cmd /c 'launcher\zj.cmd --version' | Out-String
+          if ($out.Trim() -ne 'zellij-stub --version') { Fail "second start checked again: $out" }
+          if ((Get-Item $stamp).LastWriteTime -ne $t) { Fail 'second start touched the stamp' }
+
+          (Get-Item $stamp).LastWriteTime = (Get-Date).AddDays(-29)
+          $out = '' | cmd /c 'launcher\zj.cmd --version' | Out-String
+          if ($out -match 'Newer plugin') { Fail 'checked after 29 days' }
+
+          (Get-Item $stamp).LastWriteTime = (Get-Date).AddDays(-31)
+          $env:ZJ_NO_UPDATE_CHECK = '1'
+          $out = '' | cmd /c 'launcher\zj.cmd --version' | Out-String
+          if ($out -match 'Newer plugin') { Fail 'ZJ_NO_UPDATE_CHECK ignored' }
+          Remove-Item Env:\ZJ_NO_UPDATE_CHECK
+          $out = '' | cmd /c 'launcher\zj.cmd --version' | Out-String
+          if ($out -notmatch 'Newer plugin') { Fail 'no check after 31 days' }
+
+          # A check that can't reach GitHub is retried a day later: stamp set back 29 days.
+          (Get-Item $stamp).LastWriteTime = (Get-Date).AddDays(-31)
+          $env:ZELLIJ_CONFIG_FILE = "$tmp\gone.kdl"
+          $out = '' | cmd /c 'launcher\zj.cmd --version' | Out-String
+          if ($out.Trim() -ne 'zellij-stub --version') { Fail "failed check wasn't silent: $out" }
+          $age = ((Get-Date) - (Get-Item $stamp).LastWriteTime).TotalDays
+          if ($age -lt 28.9 -or $age -gt 29.1) { Fail "after a failed check the stamp is $age days old, expected 29" }
+          Write-Output 'zj.cmd / zj.ps1: all launcher checks passed'
+          exit 0

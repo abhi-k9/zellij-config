@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zellij — Cheat Sheet</title>
+<style>
+  :root {
+    /* --muted is Catppuccin overlay2 (not the darker overlay0, #6c7086) so small
+       grey note text meets WCAG AA contrast (≥ 4.5:1) on these dark backgrounds. */
+    --bg:#1e1e2e;--surface:#181825;--overlay:#313244;--muted:#9399b2;
+    --subtle:#7f849c;--text:#cdd6f4;--subtext:#a6adc8;
+    --lavender:#b4befe;--blue:#89b4fa;--sky:#89dceb;--teal:#94e2d5;
+    --green:#a6e3a1;--yellow:#f9e2af;--peach:#fab387;--red:#f38ba8;
+    --mauve:#cba6f7;--pink:#f5c2e7;--flamingo:#f2cdcd;--sapphire:#74c7ec;
+    --rosewater:#f5e0dc;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,'Segoe UI',sans-serif;
+    font-size:12px;line-height:1.5;padding:22px 26px 48px}
+  header{display:flex;align-items:baseline;justify-content:space-between;
+    border-bottom:1px solid var(--overlay);padding-bottom:12px;margin-bottom:20px;gap:20px}
+  header h1{font-size:18px;font-weight:700;color:var(--lavender);letter-spacing:-.3px}
+  header .meta{font-size:10.5px;color:var(--muted);font-family:'JetBrains Mono',ui-monospace,'Cascadia Mono',Consolas,monospace;text-align:right}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}
+  .col-2{grid-column:span 2}.col-full{grid-column:span 3}
+  .card{background:var(--surface);border:1px solid var(--overlay);border-radius:7px;overflow:hidden}
+  .card-header{display:flex;align-items:center;gap:7px;padding:6px 10px;border-bottom:1px solid var(--overlay)}
+  .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+  .card-header h2{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--subtext)}
+  .card-header .note{font-size:10px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;font-style:italic}
+  .card-header .mode-badge{margin-left:auto;font-size:9.5px;font-family:'JetBrains Mono',ui-monospace,'Cascadia Mono',Consolas,monospace;
+    color:var(--muted);background:rgba(49,50,68,.7);padding:1px 6px;border-radius:3px}
+  table{width:100%;border-collapse:collapse}
+  tr:not(:last-child) td{border-bottom:1px solid rgba(49,50,68,.5)}
+  td{padding:3.5px 10px;vertical-align:middle}
+  td:first-child{width:1%;white-space:nowrap}
+  /* full-width rows (dividers, notes, code) have only one cell, which is also
+     :first-child — let those wrap, or they widen the table and get clipped */
+  td[colspan]{white-space:normal;width:auto}
+  /* white-space inherits: a nowrap cell must not force nested tables to
+     nowrap too, so description cells always wrap */
+  td:not(:first-child){white-space:normal}
+  @media (max-width:1000px){ td:first-child{white-space:normal} }
+  td code{overflow-wrap:anywhere}
+  td pre{white-space:pre-wrap;overflow-wrap:anywhere}
+  td:last-child{color:var(--subtext);font-size:11px}
+  .divider td{padding:3px 10px;font-size:9px;font-weight:700;text-transform:uppercase;
+    letter-spacing:.6px;color:var(--muted);background:rgba(49,50,68,.4);
+    border-bottom:1px solid var(--overlay)!important}
+  kbd{display:inline-block;font-family:'JetBrains Mono',ui-monospace,'Cascadia Mono',Consolas,monospace;font-size:10.5px;
+    font-weight:600;padding:1px 5px;border-radius:4px;background:var(--overlay);
+    color:var(--text);white-space:nowrap}
+  kbd.blue     {background:rgba(137,180,250,.13);color:var(--blue);    border:1px solid rgba(137,180,250,.26)}
+  kbd.mauve    {background:rgba(203,166,247,.13);color:var(--mauve);   border:1px solid rgba(203,166,247,.26)}
+  kbd.green    {background:rgba(166,227,161,.13);color:var(--green);   border:1px solid rgba(166,227,161,.26)}
+  kbd.yellow   {background:rgba(249,226,175,.13);color:var(--yellow);  border:1px solid rgba(249,226,175,.26)}
+  kbd.peach    {background:rgba(250,179,135,.13);color:var(--peach);   border:1px solid rgba(250,179,135,.26)}
+  kbd.teal     {background:rgba(148,226,213,.13);color:var(--teal);    border:1px solid rgba(148,226,213,.26)}
+  kbd.red      {background:rgba(243,139,168,.13);color:var(--red);     border:1px solid rgba(243,139,168,.26)}
+  kbd.sky      {background:rgba(137,220,235,.13);color:var(--sky);     border:1px solid rgba(137,220,235,.26)}
+  kbd.lavender {background:rgba(180,190,254,.13);color:var(--lavender);border:1px solid rgba(180,190,254,.26)}
+  kbd.flamingo {background:rgba(242,205,205,.13);color:var(--flamingo);border:1px solid rgba(242,205,205,.26)}
+  kbd.sapphire {background:rgba(116,199,236,.13);color:var(--sapphire);border:1px solid rgba(116,199,236,.26)}
+  .note{color:var(--muted);font-size:10.5px;font-style:italic}
+  code{font-family:'JetBrains Mono',ui-monospace,'Cascadia Mono',Consolas,monospace;font-size:10.5px;color:var(--subtle)}
+  .badge{font-size:9px;font-weight:700;border-radius:3px;padding:0 4px;
+    vertical-align:middle;margin-left:3px;text-transform:uppercase;letter-spacing:.3px}
+  .active{color:var(--teal);border:1px solid rgba(148,226,213,.3);background:rgba(148,226,213,.1)}
+  .new   {color:var(--peach);border:1px solid rgba(250,179,135,.3);background:rgba(250,179,135,.1)}
+  pre{font-family:'JetBrains Mono',ui-monospace,'Cascadia Mono',Consolas,monospace;font-size:10px;color:var(--text);
+    line-height:1.7;white-space:pre}
+  footer{margin-top:16px;padding-top:10px;border-top:1px solid var(--overlay);
+    font-size:10px;color:var(--muted);display:flex;justify-content:space-between;gap:20px}
+  @media print{
+    body{background:#fff;color:#000;padding:5mm;font-size:8px}
+    .card{border-color:#ccc;break-inside:avoid}
+    .card-header{background:#f5f5f5;border-color:#ccc}
+    .divider td{background:#ebebeb;color:#555;border-color:#ccc!important}
+    kbd,kbd.blue,kbd.mauve,kbd.green,kbd.yellow,kbd.peach,kbd.teal,kbd.red,
+    kbd.sky,kbd.lavender,kbd.flamingo,kbd.sapphire{
+      background:#eee;color:#000;border:1px solid #bbb}
+    .note,.badge{color:#555;border:1px solid #bbb;background:#eee}
+    td:last-child{color:#333}
+    header h1{color:#000} code{color:#555}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Zellij — Cheat Sheet <span style="font-size:11px;font-weight:500;color:var(--muted);letter-spacing:0">v0.45</span></h1>
+  <span class="meta">
+    <span style="color:var(--teal)">teal</span> = activated in our config &nbsp;·&nbsp;
+    <span style="color:var(--peach)">peach</span> = new in 0.44 / 0.45 &nbsp;·&nbsp;
+    <kbd style="font-size:9.5px">Esc</kbd>/<kbd style="font-size:9.5px">Enter</kbd> returns to Normal &nbsp;·&nbsp;
+    Companion sheet: <code>zellij-plugins-cheatsheet.html</code>
+  </span>
+</header>
+
+<div class="grid">
+
+<!-- ═══════════════════════ MODE OVERVIEW ═══════════════════════ -->
+<div class="card col-full">
+  <div class="card-header"><div class="dot" style="background:var(--lavender)"></div><h2>Mode System</h2><span class="note" style="margin-left:8px">Modal interface — <kbd style="font-size:9.5px">Ctrl</kbd>+letter enters a mode; single keys act inside it; <kbd style="font-size:9.5px">Esc</kbd>/<kbd style="font-size:9.5px">Enter</kbd> returns to Normal</span></div>
+  <table style="border-collapse:collapse">
+    <tr>
+      <td style="width:11%"><kbd class="lavender">F12</kbd></td><td style="padding-right:16px">→ <strong>Locked</strong> — all keys pass through (manual toggle)</td>
+      <td style="width:11%"><kbd class="blue">Ctrl+p</kbd></td><td style="padding-right:16px">→ <strong>Pane</strong> — create, close, focus, resize, float</td>
+      <td style="width:11%"><kbd class="green">Ctrl+t</kbd></td><td>→ <strong>Tab</strong> — create, close, rename, reorder</td>
+    </tr>
+    <tr>
+      <td><kbd class="yellow">Ctrl+n</kbd></td><td style="padding-right:16px">→ <strong>Resize</strong> — resize focused pane interactively</td>
+      <td><kbd class="peach">Ctrl+h</kbd></td><td style="padding-right:16px">→ <strong>Move</strong> — move focused pane around the grid</td>
+      <td><kbd class="teal">Ctrl+s</kbd></td><td>→ <strong>Scroll</strong> — scroll/search the scrollback buffer</td>
+    </tr>
+    <tr>
+      <td><kbd class="mauve">Ctrl+o</kbd></td><td style="padding-right:16px">→ <strong>Session</strong> — detach, switch, configure, layouts</td>
+      <td><kbd class="sapphire">Ctrl+b</kbd></td><td style="padding-right:16px">→ <strong>Tmux</strong> — tmux-compatible bindings layer</td>
+      <td><kbd class="red">Ctrl+q</kbd> <span class="badge active">unbound</span></td><td>Quit zellij — disabled in our config (fat-finger guard); quit via <kbd class="mauve">Ctrl+o</kbd> <kbd class="mauve">q</kbd> instead</td>
+    </tr>
+  </table>
+</div>
+
+<!-- ═══════════════════ THIS CONFIG — CHANGES ═══════════════════ -->
+<div class="card col-full">
+  <div class="card-header"><div class="dot" style="background:var(--pink)"></div><h2>This Config — Changes from Default</h2><span class="note" style="margin-left:8px">everything this config changes; every other line of <code>config.kdl</code> restates a zellij default (marked <code>// default</code>). Full key list: the <kbd style="font-size:9.5px">Ctrl+o</kbd> <kbd style="font-size:9.5px">h</kbd> popup.</span></div>
+  <table>
+    <tr><td><kbd class="red">Ctrl+q</kbd> <span class="badge active">unbound</span></td><td>Default quit removed (fat-finger guard)</td>
+        <td><kbd class="mauve">Ctrl+o</kbd> <kbd class="mauve">q</kbd> <span class="badge active">added</span></td><td>Deliberate two-step quit (replaces it)</td></tr>
+    <tr><td><kbd class="mauve">Ctrl+o</kbd> <kbd class="mauve">h</kbd> <span class="badge active">added</span></td><td>zellij-forgot keybinding popup (floating; <kbd style="font-size:9.5px">Esc</kbd> closes)</td>
+        <td><kbd class="flamingo">F12</kbd> <span class="badge active">added</span></td><td>Lock toggle (Ctrl+g unbound — clashes with nvim)</td></tr>
+    <tr><td><kbd class="mauve">Ctrl+o</kbd> <kbd class="mauve">m</kbd> <span class="badge active">added</span></td><td>monocle — find files &amp; contents from the focused pane's directory</td>
+        <td><kbd class="mauve">Ctrl+o</kbd> <kbd class="mauve">t</kbd> / <kbd class="mauve">e</kbd> <span class="badge">opt-in</span></td><td>multitask / edit config — commented out in <code>config.kdl</code> (Unix-only)</td></tr>
+    <tr><td>Locking <span class="badge active">manual</span></td><td>No autolock plugin — press F12 entering nvim, F12 leaving</td>
+        <td colspan="2" class="note">Forget, and zellij eats your Alt+hjkl / Alt+f keystrokes.</td></tr>
+    <tr><td>Session <code>main</code></td><td><code>session_name "main"</code> + <code>attach_to_session true</code> — plain <code>zellij</code> joins or creates one persistent session</td>
+        <td>Default layout</td><td>Two tabs, <strong>main</strong> + <strong>shell</strong>, with the 1-line <code>compact-bar</code></td></tr>
+    <tr><td>Resurrection <span class="badge active">on</span></td><td><code>session_serialization true</code> (zellij's default, kept on) — the two-tab layout keeps <code>:qa</code> in a resurrected nvim from ending the session</td>
+        <td>Look</td><td><code>catppuccin-mocha</code>, <code>pane_frame_style "full"</code> (0.45 default is "titles") + <code>rounded_corners</code></td></tr>
+    <tr><td><code>env</code></td><td><code>RUST_BACKTRACE "1"</code> for programs in panes</td>
+        <td>Plugin aliases</td><td>zjstatus, monocle, multitask, forgot — pinned, loaded on demand</td></tr>
+    <tr><td colspan="4" class="note">Gotcha: scroll-mode <kbd style="font-size:9.5px">e</kbd> (edit scrollback) needs <code>$EDITOR</code> set in your environment, or it just returns to Normal.</td></tr>
+  </table>
+</div>
+
+<!-- ═══════════════════════ NORMAL MODE ═══════════════════════ -->
+<div class="card">
+  <div class="card-header"><div class="dot" style="background:var(--lavender)"></div><h2>Normal Mode</h2><span class="mode-badge">always active</span></div>
+  <table>
+    <tr class="divider"><td colspan="2">Quick pane actions (no mode switch)</td></tr>
+    <tr><td><kbd>Alt+n</kbd></td><td>New pane (largest available space)</td></tr>
+    <tr><td><kbd>Alt+f</kbd></td><td>Toggle floating panes</td></tr>
+    <tr><td><kbd>Alt+i</kbd> / <kbd>Alt+o</kbd></td><td>Move tab left / right</td></tr>
+    <tr><td><kbd>Alt+=</kbd> / <kbd>Alt+-</kbd></td><td>Grow / shrink the focused pane</td></tr>
+    <tr><td><kbd>Alt+p</kbd></td><td>Toggle pane in group (multi-select)</td></tr>
+    <tr><td><kbd>Alt+Shift+p</kbd></td><td>Toggle group marking on/off</td></tr>
+    <tr class="divider"><td colspan="2">Focus navigation</td></tr>
+    <tr><td><kbd>Alt+h</kbd> / <kbd>Alt+←</kbd></td><td>Focus left / prev tab at edge</td></tr>
+    <tr><td><kbd>Alt+l</kbd> / <kbd>Alt+→</kbd></td><td>Focus right / next tab at edge</td></tr>
+    <tr><td><kbd>Alt+j</kbd> / <kbd>Alt+↓</kbd></td><td>Focus down</td></tr>
+    <tr><td><kbd>Alt+k</kbd> / <kbd>Alt+↑</kbd></td><td>Focus up</td></tr>
+    <tr class="divider"><td colspan="2">Swap layouts (auto-arrange)</td></tr>
+    <tr><td><kbd>Alt+[</kbd></td><td>Previous swap layout</td></tr>
+    <tr><td><kbd>Alt+]</kbd></td><td>Next swap layout</td></tr>
+    <tr><td colspan="2" class="note">Cycle vertical / horizontal / stacked / half-stacked arrangements (from <code>layouts/*.swap.kdl</code>); <code>auto_layout true</code> applies them as you open panes</td></tr>
+    <tr class="divider"><td colspan="2">Mouse <span class="badge new">enhanced 0.44</span></td></tr>
+    <tr><td>Click pane</td><td>Focus it (no input passes through — see below)</td></tr>
+    <tr><td>Drag selection</td><td>Auto-copies to clipboard (<code>copy_on_select true</code>)</td></tr>
+    <tr><td>Hover pane</td><td>Frame highlight + help text (<code>mouse_hover_effects</code>, default on)</td></tr>
+    <tr><td>Wheel</td><td>Scroll the pane — enters Scroll mode <span class="badge new">0.45</span> (<code>scroll_mode_sync false</code> restores the old behavior)</td></tr>
+    <tr><td>Shift+drag</td><td>Bypass zellij — terminal-native selection</td></tr>
+  </table>
+</div>
+
+<!-- ═══════════════════════ PANE MODE ═══════════════════════ -->
+<div class="card">
+  <div class="card-header"><div class="dot" style="background:var(--blue)"></div><h2>Pane Mode</h2><span class="mode-badge">Ctrl+p</span></div>
+  <table>
+    <tr class="divider"><td colspan="2">Focus</td></tr>
+    <tr><td><kbd class="blue">h</kbd> <kbd class="blue">j</kbd> <kbd class="blue">k</kbd> <kbd class="blue">l</kbd></td><td>Focus left / down / up / right (or arrows)</td></tr>
+    <tr><td><kbd class="blue">p</kbd></td><td>Cycle focus to next pane</td></tr>
+    <tr class="divider"><td colspan="2">Create</td></tr>
+    <tr><td><kbd class="blue">n</kbd></td><td>New pane (largest available)</td></tr>
+    <tr><td><kbd class="blue">d</kbd></td><td>New pane below (horizontal split)</td></tr>
+    <tr><td><kbd class="blue">r</kbd></td><td>New pane right (vertical split)</td></tr>
+    <tr><td><kbd class="blue">w</kbd></td><td>Toggle floating panes</td></tr>
+    <tr><td><kbd class="blue">e</kbd></td><td>Embed floating / float embedded</td></tr>
+    <tr class="divider"><td colspan="2">Manage</td></tr>
+    <tr><td><kbd class="blue">x</kbd></td><td>Close focused pane</td></tr>
+    <tr><td><kbd class="blue">f</kbd></td><td>Toggle fullscreen (zoom)</td></tr>
+    <tr><td><kbd class="blue">z</kbd></td><td>Toggle pane frames on/off</td></tr>
+    <tr><td><kbd class="blue">i</kbd></td><td>Pin floating pane (stays on top)</td></tr>
+    <tr><td><kbd class="blue">c</kbd></td><td>Rename pane → RenamePane mode</td></tr>
+    <tr class="divider"><td colspan="2">Floating panes</td></tr>
+    <tr><td colspan="2" class="note">Drag pane title to move · Ctrl+drag border to resize · Ctrl+scroll resizes from the edge</td></tr>
+  </table>
+</div>
+
+<!-- ═══════════════════════ TAB MODE ═══════════════════════ -->
+<div class="card">
+  <div class="card-header"><div class="dot" style="background:var(--green)"></div><h2>Tab Mode</h2><span class="mode-badge">Ctrl+t</span></div>
+  <table>
+    <tr class="divider"><td colspan="2">Navigate</td></tr>
+    <tr><td><kbd class="green">h</kbd> / <kbd class="green">←</kbd></td><td>Previous tab</td></tr>
+    <tr><td><kbd class="green">l</kbd> / <kbd class="green">→</kbd></td><td>Next tab</td></tr>
+    <tr><td><kbd class="green">Tab</kbd></td><td>Toggle to the last-used tab</td></tr>
+    <tr><td><kbd class="green">1</kbd>–<kbd class="green">9</kbd></td><td>Jump to tab by number</td></tr>
+    <tr class="divider"><td colspan="2">Create / close</td></tr>
+    <tr><td><kbd class="green">n</kbd></td><td>New tab</td></tr>
+    <tr><td><kbd class="green">x</kbd></td><td>Close current tab</td></tr>
+    <tr class="divider"><td colspan="2">Manage</td></tr>
+    <tr><td><kbd class="green">r</kbd></td><td>Rename tab</td></tr>
+    <tr><td><kbd class="green">s</kbd></td><td>Toggle sync — broadcast input to all panes in tab</td></tr>
+    <tr><td><kbd class="green">b</kbd></td><td>Break focused pane out to new tab</td></tr>
+    <tr><td><kbd class="green">]</kbd> / <kbd class="green">[</kbd></td><td>Break pane to next / prev tab</td></tr>
+    <tr><td colspan="2" class="note">Bell from an unfocused tab shows <code>[!]</code> on its name <span class="badge new">new 0.44</span></td></tr>
+  </table>
+</div>
+
+<!-- ═══════════════════════ RESIZE + MOVE ═══════════════════════ -->
+<div class="card">
+  <div class="card-header"><div class="dot" style="background:var(--yellow)"></div><h2>Resize &amp; Move</h2></div>
+  <table>
+    <tr class="divider"><td colspan="2">Resize mode — <kbd class="yellow" style="font-size:9.5px">Ctrl+n</kbd></td></tr>
+    <tr><td><kbd class="yellow">h j k l</kbd></td><td>Expand toward left / down / up / right</td></tr>
+    <tr><td><kbd class="yellow">H J K L</kbd></td><td>Shrink from each side (uppercase)</td></tr>
+    <tr><td><kbd class="yellow">=</kbd> / <kbd class="yellow">-</kbd></td><td>Grow / shrink the focused pane (no direction needed; <kbd class="yellow">+</kbd> = <kbd class="yellow">=</kbd>)</td></tr>
+    <tr><td colspan="2" class="note">Hold key for continuous resize. <code>stacked_resize true</code> auto-stacks panes when squeezed</td></tr>
+    <tr class="divider"><td colspan="2">Move mode — <kbd class="peach" style="font-size:9.5px">Ctrl+h</kbd></td></tr>
+    <tr><td><kbd class="peach">h j k l</kbd></td><td>Move pane left / down / up / right (swap with neighbor)</td></tr>
+    <tr><td><kbd class="peach">n</kbd> / <kbd class="peach">Tab</kbd></td><td>Cycle pane to next position</td></tr>
+  </table>
+</div>
+
+<!-- ═══════════════════════ SCROLL + SEARCH ═══════════════════════ -->
+<div class="card">
+  <div class="card-header"><div class="dot" style="background:var(--teal)"></div><h2>Scroll &amp; Search</h2><span class="mode-badge">Ctrl+s</span></div>
+  <table>
+    <tr class="divider"><td colspan="2">Navigate the scrollback</td></tr>
+    <tr><td><kbd class="teal">j</kbd> / <kbd class="teal">k</kbd></td><td>Scroll down / up one line</td></tr>
+    <tr><td><kbd class="teal">d</kbd> / <kbd class="teal">u</kbd></td><td>Half-page down / up</td></tr>
+    <tr><td><kbd class="teal">PgDn</kbd> / <kbd class="teal">PgUp</kbd></td><td>Full page down / up</td></tr>
+    <tr><td><kbd class="teal">Ctrl+c</kbd></td><td>Jump to bottom (live) and exit scroll mode</td></tr>
+    <tr class="divider"><td colspan="2">Buffer actions</td></tr>
+    <tr><td><kbd class="teal">e</kbd></td><td>Edit scrollback in <code>$EDITOR</code> — full search/yank. <em>Needs <code>$EDITOR</code> or <code>$VISUAL</code> set, or it silently returns to Normal.</em></td></tr>
+    <tr><td><kbd class="teal">s</kbd></td><td>Enter Search submode (type, see matches highlight)</td></tr>
+    <tr class="divider"><td colspan="2">Search submode (after pressing <kbd class="teal" style="font-size:9.5px">s</kbd>)</td></tr>
+    <tr><td><kbd class="teal">n</kbd> / <kbd class="teal">p</kbd></td><td>Next / previous match</td></tr>
+    <tr><td><kbd class="teal">c</kbd> / <kbd class="teal">w</kbd> / <kbd class="teal">o</kbd></td><td>Toggle case / wrap-around / whole-word</td></tr>
+    <tr><td colspan="2" class="note">Scroll buffer: <code>scroll_buffer_size 10000</code> lines per pane (configurable)</td></tr>
+  </table>
+</div>
+
+<!-- ═══════════════════════ SESSION ═══════════════════════ -->
+<div class="card">
+  <div class="card-header"><div class="dot" style="background:var(--mauve)"></div><h2>Session Mode</h2><span class="mode-badge">Ctrl+o</span></div>
+  <table>
+    <tr class="divider"><td colspan="2">In-mode keys</td></tr>
+    <tr><td><kbd class="mauve">d</kbd></td><td>Detach from session (keeps running)</td></tr>
+    <tr><td><kbd class="mauve">w</kbd></td><td>Open session manager (switch / resurrect)</td></tr>
+    <tr><td><kbd class="mauve">c</kbd></td><td>Open configuration screen</td></tr>
+    <tr><td><kbd class="mauve">l</kbd></td><td>Open layout manager <span class="badge new">new 0.44</span></td></tr>
+    <tr><td><kbd class="mauve">p</kbd></td><td>Plugin manager (install/manage)</td></tr>
+    <tr><td><kbd class="mauve">a</kbd></td><td>About screen</td></tr>
+    <tr><td><kbd class="mauve">s</kbd></td><td>Share — web sharing (<code>zellij:share</code>)</td></tr>
+    <tr><td><kbd class="mauve">f</kbd></td><td>Toggle host fullscreen (<code>ToggleHostFullscreen</code>, 0.45.1 default)</td></tr>
+    <tr><td><kbd class="mauve">]</kbd> / <kbd class="mauve">[</kbd></td><td>Focus host / guest session (<code>FocusHostSession</code> / <code>FocusGuestSession</code>)</td></tr>
+    <tr><td><kbd class="mauve">q</kbd></td><td>Quit zellij <span class="badge active">added</span> (replaces unbound Ctrl+q)</td></tr>
+    <tr><td><kbd class="mauve">h</kbd></td><td>Keybinding popup (zellij-forgot) <span class="badge active">added</span></td></tr>
+    <tr><td><kbd class="mauve">m</kbd></td><td>monocle — find files &amp; contents <span class="badge active">added</span></td></tr>
+    <tr><td><kbd class="mauve">t</kbd> / <kbd class="mauve">e</kbd></td><td>multitask / edit config — <span class="badge">opt-in</span> commented out in <code>config.kdl</code> (Unix-only)</td></tr>
+    <tr class="divider"><td colspan="2">Resurrection <span class="badge active">on</span></td></tr>
+    <tr><td colspan="2" class="note"><code>session_serialization true</code> + <code>serialization_interval 60</code> — the session is saved and resurrected with <code>zellij attach --create main</code> (not plain <code>zellij</code>). ⚠ on zellij 0.45.1 the saved copy isn't reliably kept current (issue #4536), so it may come back older than you left it. A resurrected nvim comes back with no parent shell, but the default layout's separate "shell" tab means <code>:qa</code> closes nvim's pane/tab, not the session (soft: holds while the shell tab exists).</td></tr>
+    <tr><td colspan="2" class="note">Saved sessions live in <code>contract_version_1/</code> inside the cache dir (<code>~/.cache/zellij/</code> on Linux) — keep it when clearing the plugin cache (README "Clearing the plugin cache") · <code>on_force_close "detach"</code> keeps the session alive if your terminal window closes</td></tr>
+  </table>
+</div>
+
+<!-- ═══════════════════════ LOCKED + TMUX ═══════════════════════ -->
+<div class="card">
+  <div class="card-header"><div class="dot" style="background:var(--flamingo)"></div><h2>Locked &amp; Tmux</h2></div>
+  <table>
+    <tr class="divider"><td colspan="2">Locked mode — <kbd class="flamingo" style="font-size:9.5px">F12</kbd></td></tr>
+    <tr><td colspan="2" class="note">All bindings disabled — every key passes to the running program. Enter it by hand with F12 before starting nvim/helix/lazygit, and F12 again to leave. Status bar shows <strong>LOCKED</strong>.</td></tr>
+    <tr><td><kbd class="flamingo">F12</kbd> <span class="badge active">added</span></td><td>Toggle lock on/off (Ctrl+g unbound — it clashed with nvim)</td></tr>
+    <tr class="divider"><td colspan="2">Tmux mode — <kbd class="sapphire" style="font-size:9.5px">Ctrl+b</kbd></td></tr>
+    <tr><td colspan="2" class="note">Tmux-compatible layer for muscle memory. Press <kbd class="sapphire" style="font-size:9.5px">Ctrl+b</kbd> then:</td></tr>
+    <tr><td><kbd class="sapphire">%</kbd> / <kbd class="sapphire">"</kbd></td><td>Vertical split / horizontal split</td></tr>
+    <tr><td><kbd class="sapphire">h j k l</kbd></td><td>Focus left / down / up / right</td></tr>
+    <tr><td><kbd class="sapphire">n</kbd> / <kbd class="sapphire">p</kbd></td><td>Next / previous tab</td></tr>
+    <tr><td><kbd class="sapphire">c</kbd> / <kbd class="sapphire">x</kbd></td><td>New tab / close pane</td></tr>
+    <tr><td><kbd class="sapphire">z</kbd> / <kbd class="sapphire">d</kbd></td><td>Fullscreen / detach</td></tr>
+    <tr><td><kbd class="sapphire">Space</kbd> / <kbd class="sapphire">[</kbd></td><td>Next swap layout / enter Scroll mode</td></tr>
+  </table>
+</div>
+
+<!-- ═══════════════════════ CLI ═══════════════════════ -->
+<div class="card">
+  <div class="card-header"><div class="dot" style="background:var(--sky)"></div><h2>CLI Reference</h2></div>
+  <table>
+    <tr class="divider"><td colspan="2">Start</td></tr>
+    <tr><td><code>zellij</code></td><td>Join a <em>running</em> <strong>main</strong>, else start a fresh one (this config; stock zellij = random name)</td></tr>
+    <tr><td><code>zellij attach --create main</code></td><td><strong>Use after a crash/reboot</strong> — resurrects the saved main (plain <code>zellij</code> would replace it), joins or creates otherwise</td></tr>
+    <tr><td><code>zellij -s &lt;name&gt;</code></td><td>Named session</td></tr>
+    <tr><td><code>zellij -s &lt;name&gt; -n &lt;layout&gt;</code></td><td>New named session with a layout. (<code>-l</code> alone is ignored if <code>main</code> is already running)</td></tr>
+    <tr><td><code>zellij --config &lt;file&gt;</code></td><td>Use a specific config file</td></tr>
+    <tr class="divider"><td colspan="2">Attach / list / kill</td></tr>
+    <tr><td><code>zellij attach &lt;name&gt;</code> (<code>a</code>)</td><td>Attach to existing</td></tr>
+    <tr><td><code>zellij a -c &lt;name&gt;</code></td><td>Attach or create</td></tr>
+    <tr><td><code>zellij ls</code></td><td>List sessions (with status)</td></tr>
+    <tr><td><code>zellij k &lt;name&gt;</code> / <code>ka</code></td><td>Kill one / all</td></tr>
+    <tr><td><code>zellij d &lt;name&gt;</code></td><td>Delete (already-stopped session)</td></tr>
+    <tr class="divider"><td colspan="2">Run commands in panes</td></tr>
+    <tr><td><code>zellij run -- cmd</code></td><td>Run in new pane (in the current session)</td></tr>
+    <tr><td><code>zellij run -f -- cmd</code></td><td>Run floating</td></tr>
+    <tr><td><code>zellij run -d down -- cmd</code></td><td>Direction: up/down/left/right</td></tr>
+    <tr><td><code>zellij edit &lt;file&gt;</code></td><td>Open in <code>$EDITOR</code> in a new pane</td></tr>
+    <tr class="divider"><td colspan="2">Setup / introspection</td></tr>
+    <tr><td><code>zellij setup --check</code></td><td>Validate <code>config.kdl</code> (add <code>--layout &lt;name&gt;</code> before <code>setup</code> to parse a layout too)</td></tr>
+    <tr><td><code>zellij setup --dump-config</code></td><td>Print the full default config</td></tr>
+    <tr><td><code>zellij setup --dump-layout default</code></td><td>Print a built-in layout</td></tr>
+    <tr class="divider"><td colspan="2">Environment</td></tr>
+    <tr><td><code>$ZELLIJ</code></td><td>Set inside any zellij pane — detect "am I in zellij?"</td></tr>
+    <tr><td><code>$ZELLIJ_SESSION_NAME</code></td><td>Current session name</td></tr>
+    <tr><td><code>$ZELLIJ_CONFIG_DIR</code></td><td>Override config dir</td></tr>
+  </table>
+</div>
+
+<!-- ═══════════════════════ LAYOUTS ═══════════════════════ -->
+<div class="card col-2">
+  <div class="card-header"><div class="dot" style="background:var(--peach)"></div><h2>Layouts — KDL Format</h2><span class="note" style="margin-left:8px"><code>~/.config/zellij/layouts/*.kdl</code> &nbsp;·&nbsp; launch: <code>zellij -s &lt;session&gt; -n &lt;layout&gt;</code> &nbsp;·&nbsp; apply at runtime: <kbd style="font-size:9.5px">Ctrl+o</kbd> <kbd style="font-size:9.5px">l</kbd></span></div>
+  <table>
+    <tr>
+      <td style="width:48%;vertical-align:top;padding:8px 12px">
+        <strong style="color:var(--text);display:block;margin-bottom:6px">Our shipped layouts</strong>
+        <table style="margin-top:4px">
+          <tr><td style="color:var(--teal)"><code>default.kdl</code> <span class="badge active">default</span></td><td>2 tabs: <strong>main</strong> + <strong>shell</strong> (nvim <code>:qa</code> safety), 1-line <code>compact-bar</code> at bottom</td></tr>
+          <tr><td style="color:var(--teal)"><code>dev.kdl</code></td><td>3 tabs: <strong>code</strong> (editor 75% + shell 25%), <strong>git</strong>, <strong>logs</strong> (split)</td></tr>
+          <tr><td style="color:var(--teal)"><code>zjstatus.kdl</code></td><td>Opt-in: the same 2 tabs with a zjstatus bar (wants <code>pane_frames false</code>)</td></tr>
+          <tr><td colspan="2" class="note">Each has a <code>*.swap.kdl</code> for <kbd style="font-size:9.5px">Alt+[</kbd> / <kbd style="font-size:9.5px">Alt+]</kbd>. <code>zellij -n welcome</code> uses zellij's built-in welcome screen.</td></tr>
+        </table>
+        <pre style="margin-top:12px">layout {                                  // dev.kdl, condensed
+    default_tab_template {
+        children                              // your panes go here
+        pane size=1 borderless=true {         // 1-line status bar
+            plugin location="compact-bar"
+        }
+    }
+
+    tab name="code" focus=true {
+        pane size="75%" { name "editor"; }   // top, large
+        pane size="25%" { name "shell"; }    // bottom, small
+    }
+    tab name="git"   { pane; }
+    tab name="logs"  split_direction="vertical" {
+        pane size="50%" { name "watch"; }
+        pane size="50%" { name "scratch"; }
+    }
+}</pre>
+      </td>
+      <td style="vertical-align:top;padding:8px 12px;color:var(--subtext);font-size:11px">
+        <strong style="color:var(--text);display:block;margin-bottom:6px">Pane properties</strong>
+        <table style="width:100%;border-collapse:collapse">
+          <tr><td style="padding:3px 0;white-space:nowrap;width:1%"><code>split_direction</code></td><td style="padding:3px 8px">"vertical" (side-by-side) or "horizontal" (stacked)</td></tr>
+          <tr><td style="padding:3px 0;white-space:nowrap"><code>size</code></td><td style="padding:3px 8px">"70%" or fixed e.g. <code>1</code> rows/cols</td></tr>
+          <tr><td style="padding:3px 0;white-space:nowrap"><code>name</code></td><td style="padding:3px 8px">Pane title shown in frame</td></tr>
+          <tr><td style="padding:3px 0;white-space:nowrap"><code>command</code> / <code>args</code></td><td style="padding:3px 8px">Auto-run on start (e.g. <code>nvim</code> + <code>"."</code>)</td></tr>
+          <tr><td style="padding:3px 0;white-space:nowrap"><code>cwd</code></td><td style="padding:3px 8px">Working directory (absolute or relative)</td></tr>
+          <tr><td style="padding:3px 0;white-space:nowrap"><code>borderless</code></td><td style="padding:3px 8px"><code>true</code> — hides frame/title</td></tr>
+          <tr><td style="padding:3px 0;white-space:nowrap"><code>focus</code></td><td style="padding:3px 8px"><code>true</code> — gets focus on open</td></tr>
+          <tr><td style="padding:3px 0;white-space:nowrap"><code>close_on_exit</code></td><td style="padding:3px 8px"><code>true</code> — close pane when command exits</td></tr>
+          <tr><td style="padding:3px 0;white-space:nowrap"><code>stacked</code></td><td style="padding:3px 8px"><code>true</code> — children become a single-line stack</td></tr>
+          <tr><td style="padding:3px 0;white-space:nowrap"><code>floating_panes { }</code></td><td style="padding:3px 8px">Wrap to make panes floating with <code>x y width height</code></td></tr>
+          <tr><td style="padding:3px 0;white-space:nowrap"><code>plugin location=</code></td><td style="padding:3px 8px">e.g. <code>"zellij:tab-bar"</code>, an alias (<code>"compact-bar"</code>), or <code>"file:~/x.wasm"</code></td></tr>
+        </table>
+        <div style="margin-top:10px">
+          <strong style="color:var(--text)">Container structure</strong><br>
+          <code>layout {}</code> → <code>tab {}</code> → <code>pane {}</code>, with optional <code>default_tab_template</code> for shared chrome (status bar, etc.)
+        </div>
+        <div style="margin-top:10px">
+          <strong style="color:var(--text)">Templates</strong> let you reuse:<br>
+          <code>pane_template name="x" { ... }</code> &nbsp;then use <code>x</code> as a node.<br>
+          A special <code>children</code> node marks where child panes are inserted.
+        </div>
+        <div style="margin-top:10px;color:var(--muted);font-style:italic">
+          Tip: <code>zellij setup --dump-layout default</code> prints the built-in default — useful starting point for hacking.
+        </div>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<!-- ═══════════════════════ CONFIG OPTIONS ═══════════════════════ -->
+<div class="card col-full">
+  <div class="card-header"><div class="dot" style="background:var(--yellow)"></div><h2>config.kdl — Key Options</h2><span class="note" style="margin-left:8px">Linux &amp; macOS: <code>~/.config/zellij/config.kdl</code> &nbsp;·&nbsp; Windows: <code>%APPDATA%\Zellij\config\config.kdl</code> &nbsp;·&nbsp; <span style="color:var(--teal)">teal</span> = activated in ours</span></div>
+  <table>
+    <tr class="divider"><td colspan="4">Appearance</td></tr>
+    <tr>
+      <td style="color:var(--teal)"><code>theme "catppuccin-mocha"</code></td>
+      <td style="color:var(--teal)">Built into zellij <span class="badge active">activated</span></td>
+      <td><code>pane_frames true</code> + <code>pane_frame_style "full"</code></td>
+      <td>Full borders <span class="badge active">activated</span> &nbsp;·&nbsp; 0.45 default is <code>"titles"</code>; <code>rounded_corners</code> needs <code>"full"</code></td>
+    </tr>
+    <tr>
+      <td><code>simplified_ui true</code></td><td>ASCII-friendly bar — no Nerd Font needed (commented in ours)</td>
+      <td><code>theme_dark</code> / <code>theme_light</code></td><td>Follow the terminal's light/dark mode (0.44.2+; set both) · <code>explicit_theme_hue</code> <span class="badge new">0.45.1</span> pins dark/light and ignores the terminal</td>
+    </tr>
+    <tr class="divider"><td colspan="4">Behavior</td></tr>
+    <tr>
+      <td><code>default_mode "normal"</code></td><td>Or <code>"locked"</code> to start with every key passed to the app</td>
+      <td style="color:var(--teal)"><code>on_force_close "detach"</code></td>
+      <td style="color:var(--teal)">Survive terminal close <span class="badge active">activated</span></td>
+    </tr>
+    <tr>
+      <td><code>auto_layout true</code></td><td>Arrange new panes via swap layouts</td>
+      <td><code>stacked_resize true</code></td><td>Auto-stack when resizing</td>
+    </tr>
+    <tr class="divider"><td colspan="4">Mouse &amp; clipboard</td></tr>
+    <tr>
+      <td style="color:var(--teal)"><code>mouse_hover_effects true</code></td>
+      <td style="color:var(--teal)">Frame highlight + help text on hover <span class="badge new">new 0.44</span></td>
+      <td><code>mouse_click_through false</code></td>
+      <td>Click only focuses (no pass-through)</td>
+    </tr>
+    <tr>
+      <td><code>copy_on_select true</code></td><td>Selection auto-copies <span class="badge active">activated</span></td>
+      <td style="color:var(--teal)"><code>copy_command</code> <em>(unset)</em></td>
+      <td style="color:var(--teal)">Uses OSC52 — works on Windows Terminal, Wezterm, Kitty, iTerm2, and through SSH <span class="badge active">activated</span></td>
+    </tr>
+    <tr class="divider"><td colspan="4">Session resurrection</td></tr>
+    <tr>
+      <td style="color:var(--teal)"><code>session_serialization true</code></td>
+      <td style="color:var(--teal)">Resurrect on reattach/reboot <span class="badge active">activated</span></td>
+      <td style="color:var(--subtle)"><code>serialize_pane_viewport false</code></td>
+      <td style="color:var(--subtle)"><span class="note">last screen not restored (default)</span></td>
+    </tr>
+    <tr>
+      <td style="color:var(--subtle)"><code>scrollback_lines_to_serialize 0</code></td>
+      <td style="color:var(--subtle)"><span class="note">inert unless viewport serialization on</span></td>
+      <td style="color:var(--subtle)"><code>serialization_interval 60</code></td>
+      <td style="color:var(--teal)">Save every 60 s <span class="badge active">activated</span></td>
+    </tr>
+    <tr class="divider"><td colspan="4">Misc</td></tr>
+    <tr>
+      <td><code>scroll_buffer_size 10000</code></td><td>Lines per pane (default; bump for big logs)</td>
+      <td><code>visual_bell true</code></td><td>Flash pane on BEL — fwd from unfocused tabs <span class="badge new">new 0.44</span></td>
+    </tr>
+    <tr>
+      <td><code>osc8_hyperlinks true</code></td><td>Clickable terminal hyperlinks</td>
+      <td><code>support_kitty_keyboard_protocol true</code></td><td>Richer key events (Ctrl+Shift+letter, key release)</td>
+    </tr>
+    <tr class="divider"><td colspan="4">Keybindings — structure</td></tr>
+    <tr>
+      <td colspan="2" class="note"><code>keybinds { normal { bind "..." { ... } } }</code> — add binds to a specific mode, or use <code>shared_except "locked" { ... }</code> for global ones</td>
+      <td colspan="2" class="note"><code>shared_except "locked" { bind "..." { ... } }</code> — global except listed modes</td>
+    </tr>
+    <tr>
+      <td colspan="2" class="note">Top-level <code>unbind "Ctrl q"</code> removes a key the defaults bind in one context (ours does this). A key bound in several contexts (Ctrl+g) must be unbound inside each block — top-level silently fails</td>
+      <td colspan="2" class="note"><code>keybinds clear-defaults=true { ... }</code> — start from zero</td>
+    </tr>
+  </table>
+</div>
+
+</div><!-- .grid -->
+
+<footer>
+  <span>Targeting Zellij 0.45.1 &nbsp;·&nbsp; default keybinding preset (NOT non-colliding) &nbsp;·&nbsp; switch presets: <kbd style="font-size:9.5px">Ctrl+o</kbd> → <kbd style="font-size:9.5px">c</kbd></span>
+  <span>OSC52 clipboard &nbsp;·&nbsp; Catppuccin Mocha built-in &nbsp;·&nbsp; Session resurrection ON</span>
+</footer>
+
+</body>
+</html>

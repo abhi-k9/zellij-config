@@ -1,0 +1,130 @@
+// ═══════════════════════════════════════════════════════════════════════════
+//  zjstatus layout — a rich status bar (mode · session · tabs · git branch ·
+//  clock) in place of the built-in compact-bar. OPT-IN; the default layout is
+//  unaffected.
+//
+//  TRY IT:     zellij -s zjs -n zjstatus
+//  ADOPT IT:   in config.kdl set  default_layout "zjstatus"  and handle frames
+//              (see ⚠ FRAMES — set pane_frames false, or use Ctrl+p z per session).
+//              Then plain `zellij` uses this bar.
+//
+//  ⚠ FIRST RUN — GRANT PERMISSION. On first launch zjstatus asks to allow
+//  ReadApplicationState, ChangeApplicationState and RunCommands, shown as a prompt
+//  IN the one-row bar — so it looks truncated, e.g. just `…Allow? (y/n)` or even
+//  only `/n)`. Pressing y from your shell won't work (the keystroke goes to the
+//  shell). CLICK on the status bar to focus it (mouse_mode is on), then press y.
+//  The bar renders immediately after. You must re-grant after a zjstatus version
+//  bump (the wasm changes). RunCommands is only needed by the git-branch widget —
+//  delete the command_git_branch_* lines below to avoid requesting it.
+//
+//  ⚠ FRAMES — zjstatus manages pane frames itself (hide_frame_for_single_pane),
+//  and its docs require pane_frames OFF globally or zellij and zjstatus fight over
+//  frames each event cycle (flicker). Two ways to handle it:
+//    1. config.kdl → pane_frames false (keep pane_frame_style "full" +
+//       rounded_corners — they still style the frames zjstatus toggles ON when a
+//       tab has >1 pane). Clean borderless single pane, rounded frames on split.
+//       Downside: it's global, so your other (compact-bar) layouts lose frames too.
+//    2. Leave pane_frames true globally and just press Ctrl+p then z
+//       (TogglePaneFrames) after launching zjstatus — flips frames for that
+//       session only, no config edit, reverts when the session ends.
+//  There is NO per-layout way to set it (verified on 0.45.1): `pane_frames false`
+//  INSIDE the layout {} block makes the layout fail to load, and placed after
+//  the block (where layouts may carry config, as zellij's built-in welcome
+//  layout does for session_serialization) it parses but is silently ignored. Nor can config
+//  auto-detect zjstatus — options aren't conditional. So it's option 1 or 2.
+//
+//  TWO TABS, same as default.kdl: "main" (work / nvim) and "shell" (the safety
+//  net). If a resurrected nvim in "main" gets `:qa`, you land in "shell" instead
+//  of the session ending. See default.kdl's header for the full rationale.
+//
+//  Keep the tab blocks MULTI-LINE (as below). A one-line block like
+//  `tab name="x" { pane }` makes the whole layout fail to load, because zellij
+//  doesn't treat `}` as ending a node on the same line — write `{ pane; }` if you
+//  want one line. (That parse error was once misread as zjstatus refusing
+//  explicit tabs; it doesn't. Verified on 0.45.1: both tabs render in the bar,
+//  and survive a crash + reattach.)
+//
+//  Requires the zjstatus alias (pinned v0.25.0 in config.kdl; zellij ≥ 0.45.0).
+//  The bar's rendering is visual — confirm it on your machine (see the checklist).
+// ═══════════════════════════════════════════════════════════════════════════
+
+layout {
+    default_tab_template {
+        children
+        pane size=1 borderless=true {
+            plugin location="zjstatus" {
+                // ── Catppuccin Mocha palette (edit in one place; used as $name) ──
+                color_bg     "#1e1e2e"
+                color_dim    "#6c7086"
+                color_blue   "#89b4fa"
+                color_mauve  "#cba6f7"
+                color_green  "#a6e3a1"
+                color_red    "#f38ba8"
+                color_peach  "#fab387"
+                color_yellow "#f9e2af"
+                color_teal   "#94e2d5"
+                color_sky    "#89dceb"
+
+                format_left   "{mode}#[fg=$mauve,bg=$bg,bold] {session} "
+                format_center "{tabs}"
+                format_right  "{swap_layout}{command_git_branch}#[fg=$dim,bg=$bg] {datetime} "
+                format_space  "#[bg=$bg]"
+
+                hide_frame_for_single_pane "true"
+
+                // One format for each of zellij's 14 modes.
+                mode_normal       "#[bg=$blue,fg=$bg,bold] NORMAL "
+                mode_locked       "#[bg=$red,fg=$bg,bold] LOCKED "
+                mode_pane         "#[bg=$green,fg=$bg,bold] PANE "
+                mode_tab          "#[bg=$peach,fg=$bg,bold] TAB "
+                mode_resize       "#[bg=$yellow,fg=$bg,bold] RESIZE "
+                mode_move         "#[bg=$teal,fg=$bg,bold] MOVE "
+                mode_scroll       "#[bg=$mauve,fg=$bg,bold] SCROLL "
+                mode_enter_search "#[bg=$sky,fg=$bg,bold] SEARCH "
+                mode_search       "#[bg=$sky,fg=$bg,bold] SEARCH "
+                mode_rename_tab   "#[bg=$peach,fg=$bg,bold] RENAME TAB "
+                mode_rename_pane  "#[bg=$green,fg=$bg,bold] RENAME PANE "
+                mode_session      "#[bg=$mauve,fg=$bg,bold] SESSION "
+                mode_prompt       "#[bg=$yellow,fg=$bg,bold] PROMPT "
+                mode_tmux         "#[bg=$peach,fg=$bg,bold] TMUX "
+
+                tab_normal "#[fg=$dim,bg=$bg] {name} "
+                tab_active "#[fg=$blue,bg=$bg,bold,italic] {name} "
+
+                // active swap layout — the arrangement Alt+[ / Alt+] cycle through
+                // (vertical / horizontal / stacked / half-stacked, from
+                // zjstatus.swap.kdl). Hidden while there's none to show; clicking
+                // it switches to the next one.
+                swap_layout_format        "#[fg=$peach,bg=$bg] {name} "
+                swap_layout_hide_if_empty "true"
+
+                // git branch of the directory zellij was STARTED in (blank
+                // outside a repo). zjstatus can't follow the focused pane — its
+                // only cwd option takes a fixed absolute path.
+                // To pin one repo:  command_git_branch_cwd "/abs/path/to/repo"
+                // Every tab's bar is its own plugin instance, so each tab runs
+                // git on this interval (seconds); 15 keeps N tabs cheap.
+                command_git_branch_command    "git rev-parse --abbrev-ref HEAD"
+                command_git_branch_format     "#[fg=$green,bg=$bg]  {stdout} "
+                command_git_branch_interval   "15"
+                command_git_branch_rendermode "static"
+
+                datetime        "{format}"
+                datetime_format "%a %d %b  %H:%M"
+                // ⚠ set this to YOUR IANA timezone (e.g. "Europe/Paris",
+                //   "America/New_York"); zjstatus doesn't read the system zone.
+                datetime_timezone "America/Denver"
+            }
+        }
+    }
+
+    // "main": your working tab — run nvim (or anything full-screen) here.
+    tab name="main" focus=true {
+        pane
+    }
+    // "shell": the safety-net tab — keeps the session alive if you `:qa` out of a
+    // lone (resurrected) nvim in "main". Also handy for git/commands.
+    tab name="shell" {
+        pane
+    }
+}
