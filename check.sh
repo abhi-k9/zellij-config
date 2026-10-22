@@ -327,7 +327,7 @@ fi
 # names must be unique, since installs store plugins by file name.
 sect "14. Bundled plugins (plugins/*.wasm) match plugins.sha256"
 sha_of() {
-  if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | awk '{print $1}' | tr -d '\\'
+  if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | awk '{print $1}' | tr -d '\134'
   elif command -v shasum >/dev/null 2>&1; then shasum -a 256 "$1" | awk '{print $1}'
   elif command -v openssl >/dev/null 2>&1; then openssl dgst -sha256 -r "$1" | awk '{print $1}'
   fi
