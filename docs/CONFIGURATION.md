@@ -48,6 +48,13 @@ Otherwise Unix uses an existing `~/.config/zellij` first. Linux then uses
 `~/Library/Application Support/org.Zellij-Contributors.Zellij` directory. Fresh
 macOS installs use `~/.config/zellij`. Windows uses `%APPDATA%\Zellij\config`.
 
+For direct cloning, that platform-specific config directory is the repository
+root. For example, Linux uses `~/.config/zellij/config.kdl` and native Windows
+uses `%APPDATA%\Zellij\config\config.kdl`. Both place `layouts/`, `themes/`,
+`plugins/` and `launcher/` beside `config.kdl`. There is no additional internal
+`config/` folder. The Windows path's final `config` is still required as part of
+its default directory. See the [directory tree and PATH examples](../README.md#where-the-clone-lives).
+
 For optional setup deployment, source and destination must be separate. Relative paths and trailing separators
 are normalized. Quotes, backslashes, spaces and Unicode are escaped correctly in
 generated KDL. Paths containing control characters are rejected before mutation.

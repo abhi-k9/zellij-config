@@ -25,14 +25,65 @@ git clone https://github.com/abhi-k9/zellij-config.git "$env:APPDATA\Zellij\conf
 ```
 
 The Windows `launcher\zj.cmd` entry point also works. WSL uses the Linux paths
-inside WSL. No setup script or launcher installation is required. You can add
-`launcher/` to PATH for the short `zj` command. For a custom checkout location,
-pass `--config-dir /path/to/checkout` to the launcher.
+inside WSL. No setup script or launcher installation is required. For a custom
+checkout location, pass `--config-dir /path/to/checkout` to the launcher.
 
 Zellij itself can be started directly using the root configuration. It uses the
 HTTPS aliases and its own download cache; **automatic bundled fallback is
 provided by `zj`**, not by Zellij's native plugin loader. Python is required for
 `zj` and the management helpers, not for plain Zellij.
+
+### Where the clone lives
+
+**The clone destination is both the repository root and Zellij's config
+directory.** The entire checkout lives there, including `launcher/`, `tools/`
+and documentation. Zellij reads `config.kdl` directly from that directory.
+
+| Platform | Clone destination / config directory | Directory to add to PATH |
+| --- | --- | --- |
+| Linux / macOS, using the commands above | `~/.config/zellij` | `~/.config/zellij/launcher` |
+| Native Windows | `%APPDATA%\Zellij\config` | `%APPDATA%\Zellij\config\launcher` |
+| WSL | `~/.config/zellij` inside WSL | `~/.config/zellij/launcher` inside WSL |
+
+The layout inside any of these destinations is the same:
+
+```text
+<clone destination>/
+├── config.kdl
+├── layouts/
+├── themes/
+├── plugins/
+├── launcher/
+├── tools/
+└── docs/
+```
+
+On Windows, the final `config` in `%APPDATA%\Zellij\config` is part of Zellij's
+platform-specific path. It remains even though the repository's former internal
+`config/` folder was removed. On Linux/macOS, `config.kdl` is directly at
+`~/.config/zellij/config.kdl`; do not add another `config/` or `zellij-config/`
+level inside the destination. Git's explicit destination argument in the clone
+commands above prevents the extra repository-name folder.
+
+### Make the short zj command available
+
+Add the checkout's **launcher subdirectory** to PATH. For the Linux/macOS paths
+above, put this in `~/.bashrc` (Bash) or `~/.zshrc` (Zsh):
+
+```sh
+export PATH="$HOME/.config/zellij/launcher:$PATH"
+```
+
+On Windows, add `%APPDATA%\Zellij\config\launcher` to your **user Path** through
+Environment Variables. Open a new terminal after changing PATH, then run:
+
+```sh
+zj attach --create main
+```
+
+For a custom clone destination, add that destination's `launcher` subdirectory
+instead. Keep the directory containing the actual `zellij` executable on PATH
+as well; `zj` launches it.
 
 ## Downloads and offline fallback
 
