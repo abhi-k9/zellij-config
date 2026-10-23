@@ -11,6 +11,7 @@ import stat
 import subprocess
 import tempfile
 import time
+import threading
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -18,6 +19,42 @@ import urllib.request
 
 class ConfigError(Exception):
     """An actionable error suitable for the command line."""
+
+
+def spawn_detached(command: list[str]) -> None:
+    """Start a worker without terminal handles or an unreaped Unix child."""
+    if os.name == 'nt':
+        process = subprocess.Popen(command, stdin=subprocess.DEVNULL,
+                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                                   close_fds=True, creationflags=subprocess.DETACHED_PROCESS |
+                                   subprocess.CREATE_NEW_PROCESS_GROUP)
+        threading.Thread(target=process.wait, daemon=True).start()
+        return
+    child = os.fork()
+    if child:
+        while True:
+            try:
+                _, status = os.waitpid(child, 0)
+                break
+            except InterruptedError:
+                continue
+        if status:
+            raise OSError('Could not detach the update-check worker')
+        return
+    try:
+        os.setsid()
+        # The short-lived child is reaped above. The worker is reparented and
+        # reaped by the OS, including when Zellij keeps running for days.
+        if os.fork():
+            os._exit(0)
+        null = os.open(os.devnull, os.O_RDWR)
+        for descriptor in [0, 1, 2]:
+            os.dup2(null, descriptor)
+        if null > 2:
+            os.close(null)
+        os.execv(command[0], command)
+    finally:
+        os._exit(1)
 
 
 def sha256(path: Path) -> str:

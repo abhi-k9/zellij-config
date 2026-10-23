@@ -13,6 +13,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import threading
 import time
 import unittest
 from unittest import mock
@@ -317,6 +318,64 @@ class KDLTests(unittest.TestCase):
 
 
 class LauncherTests(Workspace):
+    def test_background_dispatch_does_not_run_network_in_foreground(self):
+        file = self.config()
+        with mock.patch.object(launcher, 'state_directory', return_value=self.base / 'state'), \
+                mock.patch.object(launcher, 'spawn_detached') as spawn, \
+                mock.patch.object(launcher, 'scan', side_effect=AssertionError('Network on startup')):
+            launcher.background_updates(file, launcher.locations(file), now=100)
+            launcher.background_updates(file, launcher.locations(file), now=101)
+            self.assertEqual(spawn.call_count, 1)
+            launcher.background_updates(file, launcher.locations(file), now=701)
+            self.assertEqual(spawn.call_count, 2)
+
+    def test_completed_background_notice_is_displayed_once_from_cache(self):
+        file = self.config()
+        urls = launcher.locations(file)
+        with mock.patch.object(launcher, 'state_directory', return_value=self.base / 'state'), \
+                mock.patch.object(launcher, 'github_release', return_value={'tag_name': 'v2'}):
+            launcher.cached_scan(file, urls, now=100)
+        with mock.patch.object(launcher, 'state_directory', return_value=self.base / 'state'), \
+                mock.patch.object(launcher, 'spawn_detached') as spawn:
+            self.assertTrue(launcher.background_updates(file, urls, now=101).different)
+            self.assertIsNone(launcher.background_updates(file, urls, now=102))
+        spawn.assert_not_called()
+
+    def test_background_worker_lock_never_blocks_startup(self):
+        file = self.config()
+        urls = launcher.locations(file)
+        with mock.patch.object(launcher, 'state_directory', return_value=self.base / 'state'), \
+                mock.patch.object(launcher, 'spawn_detached') as spawn:
+            _, lock = launcher.scan_cache(file, urls)
+            with common.FileLock(lock):
+                self.assertIsNone(launcher.background_updates(file, urls, now=100))
+        spawn.assert_not_called()
+
+    def test_failed_background_spawn_can_be_retried(self):
+        file = self.config()
+        urls = launcher.locations(file)
+        with mock.patch.object(launcher, 'state_directory', return_value=self.base / 'state'), \
+                mock.patch.object(launcher, 'spawn_detached', side_effect=OSError('unavailable')) as spawn:
+            launcher.background_updates(file, urls, now=100)
+            launcher.background_updates(file, urls, now=101)
+            self.assertEqual(spawn.call_count, 2)
+            stamp, _ = launcher.scan_cache(file, urls)
+            self.assertNotIn('worker_until', common.read_json(stamp))
+
+    def test_background_reservation_lock_is_released_before_dispatch(self):
+        file = self.config()
+        urls = launcher.locations(file)
+        with mock.patch.object(launcher, 'state_directory', return_value=self.base / 'state'):
+            _, lock = launcher.scan_cache(file, urls)
+
+            def dispatch(command):
+                with common.FileLock(lock):
+                    pass  # A worker can acquire the cache lock immediately.
+
+            with mock.patch.object(launcher, 'spawn_detached', side_effect=dispatch) as spawn:
+                launcher.background_updates(file, urls, now=100)
+            spawn.assert_called_once()
+
     def config(self, name='one', tags=('v1',)):
         file = self.base / name / 'config.kdl'
         file.parent.mkdir()
@@ -487,17 +546,62 @@ class RuntimeTests(Workspace):
         fetch.assert_called_once()
         self.assertEqual(cache.read_bytes(), data)
 
-    def test_fallback_retries_download_next_launch_and_retains_old_generation(self):
+    def test_fallback_retries_after_cooldown_and_retains_old_generation(self):
         _, config, _, data = self.managed()
         with mock.patch.object(plugin_files, 'fetch_bytes', side_effect=common.ConfigError('offline')):
-            _, fallback, _ = self.prepare(config)
+            _, fallback, _ = self.prepare(config, now=100)
         old = fallback.read_bytes()
+        with mock.patch.object(plugin_files, 'fetch_bytes') as fetch, \
+                mock.patch.object(runtime, 'atomic_write', side_effect=AssertionError('Rewriting unchanged files')):
+            _, again, _ = self.prepare(config, now=101)
+        fetch.assert_not_called()
+        self.assertEqual(again, fallback)
         with mock.patch.object(plugin_files, 'fetch_bytes', return_value=data) as fetch:
-            _, online, locations = self.prepare(config)
+            _, online, locations = self.prepare(config, now=401)
         fetch.assert_called_once()
         self.assertNotEqual(online, fallback)
         self.assertNotIn('.bundled.wasm', locations[0])
         self.assertEqual(fallback.read_bytes(), old)
+
+    def test_cooldown_does_not_block_recovery_when_backup_is_missing(self):
+        root, config, pin, data = self.managed()
+        with mock.patch.object(plugin_files, 'fetch_bytes', side_effect=common.ConfigError('offline')):
+            self.prepare(config, now=100)
+        (root / 'plugins' / pin['asset']).unlink()
+        with mock.patch.object(plugin_files, 'fetch_bytes', return_value=data) as fetch:
+            _, _, locations = self.prepare(config, now=101)
+        fetch.assert_called_once()
+        self.assertNotIn('.bundled.wasm', locations[0])
+
+    def test_changed_pin_url_bypasses_previous_download_cooldown(self):
+        root, config, pin, data = self.managed()
+        with mock.patch.object(plugin_files, 'fetch_bytes', side_effect=common.ConfigError('offline')):
+            self.prepare(config, now=100)
+        previous = common.plugin_url(pin)
+        pins = common.read_json(root / 'versions.json')
+        pins['plugins'][0]['tag'] = 'vNewTag'
+        (root / 'versions.json').write_bytes(common.json_bytes(pins))
+        config.write_text(kdl.replace_plugin_locations(config.read_text(encoding='utf-8'),
+                          {previous: common.plugin_url(pins['plugins'][0])}), encoding='utf-8')
+        with mock.patch.object(plugin_files, 'fetch_bytes', return_value=data) as fetch:
+            self.prepare(config, now=101)
+        fetch.assert_called_once()
+
+    def test_missing_plugins_download_concurrently(self):
+        root = self.clone()
+        pins = common.load_versions(root)['plugins']
+        payloads = {common.plugin_url(pin): (root / 'plugins' / pin['asset']).read_bytes() for pin in pins}
+        barrier = threading.Barrier(3)
+
+        def fetch(url, **kwargs):
+            barrier.wait(timeout=5)
+            return payloads[url]
+
+        with mock.patch.object(plugin_files, 'fetch_bytes', side_effect=fetch) as download:
+            _, _, locations = self.prepare(root / 'config.kdl')
+        self.assertEqual(download.call_count, 3)
+        self.assertEqual(len(locations), 3)
+        self.assertTrue(all('.bundled.wasm' not in location for location in locations))
 
     def test_source_edits_during_download_are_not_overwritten(self):
         _, config, _, data = self.managed()
@@ -524,7 +628,7 @@ class RuntimeTests(Workspace):
     def test_help_version_and_validation_do_not_prepare_or_check_network(self):
         with mock.patch.object(launcher.shutil, 'which', return_value=sys.executable), \
                 mock.patch.object(launcher.os, 'execv'), mock.patch.object(launcher.subprocess, 'call', return_value=0), \
-                mock.patch.object(runtime, 'prepare') as prepare, mock.patch.object(launcher, 'cached_scan') as scan:
+                mock.patch.object(runtime, 'prepare') as prepare, mock.patch.object(launcher, 'background_updates') as scan:
             for args in [['--version'], ['--help'], ['setup', '--check']]:
                 launcher.launch(args)
         prepare.assert_not_called()
@@ -549,7 +653,7 @@ class RuntimeTests(Workspace):
                 mock.patch.object(launcher, 'state_directory', return_value=self.base / 'state'), \
                 mock.patch.object(launcher.shutil, 'which', return_value=sys.executable), \
                 mock.patch.object(launcher.os, 'execv'), mock.patch.object(launcher.subprocess, 'call', return_value=0), \
-                mock.patch.object(launcher, 'cached_scan', return_value=None) as scan:
+                mock.patch.object(launcher, 'background_updates', return_value=None) as scan:
             launcher.launch(['--config', str(config)])
         scan.assert_called_once_with(config.resolve(), [common.plugin_url(pin)])
 
@@ -704,6 +808,69 @@ class VersionTests(Workspace):
                 mock.patch.object(versions, 'fetch_bytes', return_value=data):
             path = versions.install_zellij(root, self.bin)
         self.assertEqual(path.read_bytes(), payload)
+
+
+class NativeBackgroundTests(Workspace):
+    def wait_for(self, path):
+        deadline = time.monotonic() + 10
+        while not path.exists() and time.monotonic() < deadline:
+            time.sleep(0.01)
+        self.assertTrue(path.exists(), f'Background worker did not create {path.name}')
+
+    def test_native_detached_worker_preserves_arguments_and_does_not_wait(self):
+        worker = self.base / 'worker with spaces 雪.py'
+        started, release, done = [self.base / name for name in ['started', 'release', 'done']]
+        worker.write_text(
+            'import json, os, pathlib, sys, time\n'
+            'started, release, done = map(pathlib.Path, sys.argv[1:4])\n'
+            'started.write_text("ready")\n'
+            'deadline = time.monotonic() + 10\n'
+            'while not release.exists() and time.monotonic() < deadline: time.sleep(0.01)\n'
+            'result = {"arguments": sys.argv[4:], "stdin": sys.stdin.read(), "stdout_tty": sys.stdout.isatty()}\n'
+            'temporary = done.with_suffix(".tmp")\n'
+            'temporary.write_text(json.dumps(result), encoding="utf-8")\n'
+            'os.replace(temporary, done)\n', encoding='utf-8')
+        arguments = ['', 'quote"', 'back\\slash', 'spaces and 雪', '$semi;tick`']
+        common.spawn_detached([sys.executable, str(worker), str(started), str(release), str(done), *arguments])
+        # The worker cannot complete until this process releases it. Returning
+        # here establishes dispatch didn't wait for the background work.
+        self.assertFalse(done.exists())
+        self.wait_for(started)
+        release.write_text('continue')
+        self.wait_for(done)
+        result = common.read_json(done)
+        self.assertEqual(result['arguments'], arguments)
+        self.assertEqual(result['stdin'], '')
+        self.assertFalse(result['stdout_tty'])
+
+    def test_native_update_worker_persists_results_without_network(self):
+        config = self.base / 'config with spaces 雪.kdl'
+        config.write_text('plugins {}\n', encoding='utf-8')
+        environment = {'XDG_STATE_HOME': str(self.base / 'state'),
+                       'LOCALAPPDATA': str(self.base / 'state'),
+                       'ZJ_NO_UPDATE_CHECK': '', 'ZJ_OFFLINE': ''}
+        with mock.patch.dict(os.environ, environment):
+            stamp, lock = launcher.scan_cache(config, [])
+            launcher.background_updates(config, [])
+            deadline = time.monotonic() + 10
+            while 'notice' not in launcher.cache_data(stamp) and time.monotonic() < deadline:
+                time.sleep(0.01)
+            result = launcher.cache_data(stamp)
+            # The atomic result appears just before the worker closes its lock.
+            # Wait for that close before Windows removes this temporary tree.
+            released = False
+            while time.monotonic() < deadline:
+                try:
+                    with common.FileLock(lock):
+                        released = True
+                    break
+                except OSError:
+                    time.sleep(0.01)
+        self.assertIn('notice', result)
+        self.assertTrue(released)
+        self.assertEqual(result['notice']['checked'], 0)
+        self.assertFalse(result['complete'])
+        self.assertNotIn('worker_until', result)
 
 
 class RealBinaryTests(Workspace):

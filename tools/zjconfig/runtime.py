@@ -4,8 +4,10 @@ from __future__ import annotations
 import hashlib
 import os
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
+import time
 
-from .common import ConfigError, FileLock, atomic_write, plugin_url, private_tempdir, read_json, validate_versions
+from .common import ConfigError, FileLock, atomic_write, json_bytes, plugin_url, private_tempdir, read_json, validate_versions
 from .kdl import plugin_locations, quote, replace_plugin_locations
 from .plugin_files import acquire, verified
 
@@ -70,7 +72,26 @@ def arguments_for_config(arguments: list[str], file: Path, runtime: Path) -> lis
     return [*prefix, *result, *arguments[index:]]
 
 
-def prepare(file: Path, arguments: list[str], state: Path, *, offline=False) -> list[str]:
+RETRY_SECONDS = 300
+
+
+def store_if_changed(path: Path, data: bytes) -> None:
+    if path.is_symlink() or not path.exists() or path.read_bytes() != data:
+        atomic_write(path, data)
+
+
+def retry_later(path: Path, pin: dict, now: int) -> bool:
+    try:
+        data = read_json(path)
+        until = data.get('until') if isinstance(data, dict) else None
+        return (isinstance(until, int) and data.get('url') == plugin_url(pin)
+                and now < until <= now + RETRY_SECONDS)
+    except (OSError, ValueError):
+        return False
+
+
+def prepare(file: Path, arguments: list[str], state: Path, *, offline=False, now=None) -> list[str]:
+    now = int(time.time()) if now is None else now
     file = file.resolve()
     manifest = next((path for path in [file.parent / 'versions.json',
                                       file.parent / '.zellij-config-versions.json']
@@ -108,6 +129,7 @@ def prepare(file: Path, arguments: list[str], state: Path, *, offline=False) -> 
                 raise ConfigError(f'Runtime directory belongs to another user: {directory}')
             directory.chmod(0o700)
         replacements = {}
+        missing = []
         for pin, aliases in selected:
             destination = directory / (pin['sha256'] + '.wasm')
             try:
@@ -116,21 +138,48 @@ def prepare(file: Path, arguments: list[str], state: Path, *, offline=False) -> 
                 if destination.is_symlink():
                     raise ConfigError('Refusing a plugin cache symlink')
                 verified(destination.read_bytes(), pin)
-                chosen = destination
+                for alias in aliases:
+                    replacements[alias] = 'file:' + destination.as_posix()
             except (OSError, ConfigError):
-                bundled = file.parent / 'plugins' / pin['asset']
-                data, origin = acquire(pin, bundled, offline=offline)
+                retry = directory / (pin['name'] + '-' + pin['sha256'] + '.retry.json')
+                cooling = not offline and retry_later(retry, pin, now)
+                missing.append((pin, aliases, destination, retry, cooling))
+
+        def resolve(item):
+            pin, _, _, _, cooling = item
+            bundled = file.parent / 'plugins' / pin['asset']
+            attempted = not offline and not cooling
+            try:
+                data, origin = acquire(pin, bundled, offline=offline or cooling)
+            except ConfigError:
+                if not cooling:
+                    raise
+                # A missing/bad backup must not prevent trying an available
+                # network just because an earlier request failed.
+                attempted = True
+                data, origin = acquire(pin, bundled)
+            return data, origin, attempted
+
+        if missing:
+            # Threads perform only reads/downloads. The lock owner publishes
+            # verified results serially; at most three network requests run.
+            with ThreadPoolExecutor(max_workers=min(3, len(missing))) as pool:
+                resolved = list(pool.map(resolve, missing))
+            for (pin, aliases, destination, retry, _), (data, origin, attempted) in zip(missing, resolved):
                 if origin == 'download':
                     atomic_write(destination, data)
                     chosen = destination
+                    retry.unlink(missing_ok=True)
                 else:
                     # Snapshot verified fallback bytes outside the checkout too;
                     # later git pulls cannot change a running session's files.
                     chosen = directory / (pin['sha256'] + '.bundled.wasm')
-                    atomic_write(chosen, data)
+                    store_if_changed(chosen, data)
+                    if attempted:
+                        atomic_write(retry, json_bytes({'url': plugin_url(pin), 'until': now + RETRY_SECONDS}))
                     print(f'zj: {pin["name"]}: using verified bundled fallback', flush=True)
-            for alias in aliases:
-                replacements[alias] = 'file:' + chosen.as_posix()
+                for alias in aliases:
+                    replacements[alias] = 'file:' + chosen.as_posix()
         rendered = replace_plugin_locations(text, replacements).encode('utf-8')
         # The source and pins can be edited while downloads are in flight.
         if file.read_text(encoding='utf-8') != text or validate_versions(read_json(manifest)) != pins:
@@ -139,6 +188,5 @@ def prepare(file: Path, arguments: list[str], state: Path, *, offline=False) -> 
         # session's plugin selection or replace the config it watches.
         generation = hashlib.sha256(rendered).hexdigest()
         output = directory / (generation + '.kdl')
-        if output.is_symlink() or not output.exists() or output.read_bytes() != rendered:
-            atomic_write(output, rendered)
+        store_if_changed(output, rendered)
     return arguments_for_config(arguments, file, output)

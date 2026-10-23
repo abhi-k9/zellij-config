@@ -95,8 +95,24 @@ At startup, `zj` selects plugins in this order:
 
 A bad checksum, timeout or missing release triggers the verified backup. If
 neither source is valid, startup fails with a diagnostic instead of running
-unverified bytes. Download attempts have size, socket and elapsed-time limits.
-The launcher retries downloading on the next launch after using a backup.
+unverified bytes. Missing downloads run concurrently (at most three), with size,
+socket and elapsed-time limits. After a failed download, that plugin uses its
+verified backup for five minutes before retrying. A changed pin bypasses this
+cooldown, as does a missing or corrupt backup. Unchanged backup snapshots are
+reused without rewriting them.
+
+Periodic release checks run in a detached background worker, so they cannot hold
+up terminal startup. Results are cached per config and pinset; any update or
+incomplete-check notice appears once on a later launch. Complete checks wait
+30 days and incomplete checks retry after one day. For an immediate live check:
+
+```sh
+zj --check-updates
+```
+
+`ZJ_NO_UPDATE_CHECK=1` disables automatic update workers/notices while keeping
+plugin downloads and fallback enabled. Cold startup can still wait for the
+parallel plugin downloads; a verified download cache avoids that work.
 
 For a deliberately disconnected system, skip all startup network requests:
 

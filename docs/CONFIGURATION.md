@@ -23,6 +23,10 @@ Download/cache checksum errors cannot select unverified bytes. `ZJ_OFFLINE=1`
 skips startup network access and uses a verified download cache or bundled files.
 Private per-user runtime snapshots leave the checkout untouched; restart a
 session to apply source config edits when using `zj`.
+Missing downloads run concurrently, with at most three requests in flight.
+Failed downloads have a five-minute per-pin cooldown, during which backups are
+still hash-verified. Changed pins and unusable backups bypass the cooldown.
+Unchanged backup snapshots are reused without rewriting their files.
 
 To change versions when you choose:
 
@@ -122,6 +126,11 @@ config's pins. `--config`, `-c`, `--config-dir` and their environment equivalent
 are respected. Checks are cached separately for each config and pinset: a
 complete scan waits 30 days, and an incomplete scan retries after one day.
 Known updates are still shown when a later request fails.
+Automatic requests run in a detached worker with no terminal handles; startup
+reads only cached results and schedules work when due. A notice is displayed once
+on a later launch after the worker finishes. Rapid launches share a reservation;
+if a worker crashes, scheduling can retry after ten minutes. Workers never change
+pins or the configuration. Explicit checks below run live in the foreground.
 
 ```sh
 zj --check-updates

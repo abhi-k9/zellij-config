@@ -88,3 +88,10 @@ does not provide an HTTPS-to-bundled-file fallback. Launcher sessions use an
 immutable startup config snapshot: source edits apply to a new session rather
 than being watched live. Downloaded plugin caches are reused only after hash
 verification; offline fallback never masquerades as a successful cached download.
+
+Startup performance improvements retain hash verification: downloads run in a
+bounded thread pool, failures have a five-minute per-pin retry cooldown, and
+unchanged fallback files are reused. Periodic release checks run in a detached
+worker; cached notices are displayed on a later launch. Native regressions cover
+worker detachment, literal arguments, closed terminal input, persisted results
+and nonblocking cache locks on Linux, macOS and Windows.

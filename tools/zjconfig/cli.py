@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import base64
 import json
+import os
 from pathlib import Path
 import signal
 import subprocess
@@ -43,6 +44,7 @@ def main(argv=None) -> int:
     verify.add_argument('--static', action='store_true')
     start = commands.add_parser('launch')
     start.add_argument('--argv64', help=argparse.SUPPRESS)
+    start.add_argument('--update-worker', type=Path, help=argparse.SUPPRESS)
     start.add_argument('arguments', nargs=argparse.REMAINDER)
     versions = commands.add_parser('versions').add_subparsers(dest='version_command', required=True)
     versions.add_parser('check')
@@ -72,6 +74,13 @@ def main(argv=None) -> int:
             from .check import check
             check(root, options.static)
         elif options.command == 'launch':
+            if options.update_worker:
+                if os.environ.get('ZJ_OFFLINE') or os.environ.get('ZJ_NO_UPDATE_CHECK'):
+                    return 0
+                from .launcher import cached_scan, locations
+                file = options.update_worker.resolve()
+                cached_scan(file, locations(file))
+                return 0
             from .launcher import launch
             arguments = options.arguments
             if options.argv64:

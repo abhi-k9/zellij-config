@@ -10,6 +10,9 @@ or why something is the way it is.
 
 ## 2026-10-23 — direct clones and download-first plugin fallback
 
+- Improved launcher startup: parallel missing downloads, a five-minute failure
+  cooldown, reuse of unchanged backup files, and detached background release
+  checks with cached notices. Live explicit update checks remain available.
 - Moved `config.kdl`, layouts and themes to the repository root so the checkout
   itself can be the active config directory on Linux, macOS and Windows.
 - Made the checked-in launcher prepare plugins at startup, without a setup step:

@@ -1,16 +1,17 @@
 """On-demand release notices; never edits pins or installed plugin files."""
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 import hashlib
 import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import time
 import urllib.parse
 
-from .common import ConfigError, FileLock, atomic_write, github_release, json_bytes, plugin_url, read_json
+from .common import ConfigError, FileLock, atomic_write, github_release, json_bytes, plugin_url, read_json, spawn_detached
 from .install import default_directory
 from .kdl import plugin_locations
 
@@ -105,26 +106,80 @@ def state_directory() -> Path:
     return Path(os.environ.get('XDG_STATE_HOME', Path.home() / '.local/state')) / 'zellij-config'
 
 
-def cached_scan(file: Path, urls: list[str], now: int | None = None) -> Scan | None:
-    now = int(time.time()) if now is None else now
+def scan_cache(file: Path, urls: list[str]) -> tuple[Path, Path]:
     key = hashlib.sha256(json_bytes([str(file.resolve()), urls])).hexdigest()
     directory = state_directory()
     if directory.is_symlink():
         raise ConfigError('Refusing a symlink for the update state directory')
     directory.mkdir(parents=True, mode=0o700, exist_ok=True)
-    stamp = directory / (key + '.json')
-    with FileLock(directory / (key + '.lock')):
-        if stamp.exists():
-            try:
-                data = read_json(stamp)
-                if isinstance(data.get('next'), int) and now < data['next']:
-                    return None
-            except (OSError, ValueError):
-                pass  # An invalid/partial old cache triggers a fresh check.
+    return directory / (key + '.json'), directory / (key + '.lock')
+
+
+def cache_data(stamp: Path) -> dict:
+    try:
+        data = read_json(stamp)
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def cached_scan(file: Path, urls: list[str], now: int | None = None) -> Scan | None:
+    now = int(time.time()) if now is None else now
+    stamp, lock = scan_cache(file, urls)
+    with FileLock(lock):
+        data = cache_data(stamp)
+        if isinstance(data.get('next'), int) and now < data['next']:
+            return None
         result = scan(file, urls)
         wait = 86400 if result.code == 2 else 2592000
-        atomic_write(stamp, json_bytes({'next': now + wait, 'complete': result.code != 2}))
+        atomic_write(stamp, json_bytes({'next': now + wait, 'complete': result.code != 2,
+                                      'notice': asdict(result), 'shown': False}))
         return result
+
+
+def background_updates(file: Path, urls: list[str], now=None) -> Scan | None:
+    """Only local cache I/O at startup; the detached worker owns network I/O."""
+    now = int(time.time()) if now is None else now
+    stamp, lock = scan_cache(file, urls)
+    result, command = None, None
+    try:
+        with FileLock(lock):
+            data = cache_data(stamp)
+            result = None
+            notice = data.get('notice')
+            if isinstance(notice, dict) and not data.get('shown'):
+                lines = notice.get('lines')
+                if (isinstance(lines, list) and all(isinstance(line, str) for line in lines)
+                        and isinstance(notice.get('checked'), int)
+                        and isinstance(notice.get('different'), bool)
+                        and isinstance(notice.get('incomplete'), bool)):
+                    result = Scan(**{key: notice[key] for key in ['lines', 'checked', 'different', 'incomplete']})
+                data['shown'] = True
+                atomic_write(stamp, json_bytes(data))
+            due = not isinstance(data.get('next'), int) or now >= data['next']
+            pending = isinstance(data.get('worker_until'), int) and now < data['worker_until'] <= now + 600
+            if due and not pending:
+                # Reserve before spawning; rapid launches don't create a worker
+                # per terminal. A crashed worker can be retried after 10 minutes.
+                data['worker_until'] = now + 600
+                atomic_write(stamp, json_bytes(data))
+                command = [sys.executable, str(Path(__file__).resolve().parents[1] / 'manage.py'),
+                           'launch', '--update-worker', str(file.resolve())]
+        # Release the reservation lock before the worker starts: a very fast
+        # child must be able to acquire the same lock to refresh the cache.
+        if command:
+            try:
+                spawn_detached(command)
+            except OSError:
+                with FileLock(lock):
+                    current = cache_data(stamp)
+                    if current.get('worker_until') == now + 600:
+                        current.pop('worker_until')
+                        atomic_write(stamp, json_bytes(current))
+    except OSError:
+        # Includes a worker holding the nonblocking cache lock: skip immediately.
+        pass
+    return result
 
 
 def launch(arguments: list[str]) -> int:
@@ -157,7 +212,7 @@ def launch(arguments: list[str]) -> int:
     if not os.environ.get('ZJ_NO_UPDATE_CHECK') and not os.environ.get('ZJ_OFFLINE') and file is not None:
         try:
             if file.is_file():
-                result = cached_scan(file, locations(file))
+                result = background_updates(file, locations(file))
                 if result and (result.different or result.incomplete):
                     print('\n'.join(result.lines), flush=True)
                     print('Pins are unchanged. Use the repository version command to review an upgrade.', flush=True)
