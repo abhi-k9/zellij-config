@@ -177,6 +177,25 @@ class InstallerTests(Workspace):
         self.assertEqual((self.target / 'config.kdl').read_text(), '// ORIGINAL CONFIG\n')
         self.assertFalse((self.base / '.config.zj-journal.json').exists())
 
+    def test_interrupt_after_publication_retains_previous_snapshot(self):
+        self.old()
+        replace = install.os.replace
+
+        def interrupt_after_rename(source, target):
+            result = replace(source, target)
+            if '.stage-' in Path(source).name and Path(target) == self.target:
+                raise KeyboardInterrupt('signal immediately after publication')
+            return result
+
+        with mock.patch.object(install.os, 'replace', side_effect=interrupt_after_rename), \
+                self.assertRaises(KeyboardInterrupt):
+            self.setup_config()
+        self.assertIn('location="file:', (self.target / 'config.kdl').read_text())
+        saved = install.snapshots(self.target)[-1][3]
+        self.assertEqual((saved / 'config.kdl').read_text(), '// ORIGINAL CONFIG\n')
+        self.setup_config(restore=True)
+        self.assertEqual((self.target / 'config.kdl').read_text(), '// ORIGINAL CONFIG\n')
+
     def test_interrupted_preparation_preserves_unrelated_parts(self):
         self.old()
         (self.target / 'unrelated.part').write_text('keep')

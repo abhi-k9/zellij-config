@@ -137,7 +137,10 @@ def publish(target: Path, stage: Path) -> Path | None:
             os.replace(backup / 'tree', target)
         if target.exists() or fresh:
             journal.unlink(missing_ok=True)
-            remove(backup)
+            # A signal can arrive after the final rename has succeeded. The
+            # new tree is then active; retain the old tree as a valid snapshot.
+            if not (backup / 'tree').exists():
+                remove(backup)
         raise
     try:
         journal.unlink()
