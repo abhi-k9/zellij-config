@@ -63,7 +63,10 @@ def arguments_for_config(arguments: list[str], file: Path, runtime: Path) -> lis
         index += 1
     prefix = ['--config', str(runtime)]
     if not directory:
-        prefix += ['--config-dir', str(file.parent)]
+        # An explicit environment directory may intentionally supply different
+        # layouts/themes from the selected config file's own directory.
+        selected = Path(os.environ['ZELLIJ_CONFIG_DIR']).expanduser() if os.environ.get('ZELLIJ_CONFIG_DIR') else file.parent
+        prefix += ['--config-dir', str(selected)]
     return [*prefix, *result, *arguments[index:]]
 
 

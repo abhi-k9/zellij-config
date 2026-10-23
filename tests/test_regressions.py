@@ -536,6 +536,23 @@ class RuntimeTests(Workspace):
         for arguments in [['--config-dir', 'elsewhere', 'setup', '--check'], ['ls'], ['options', '--clean']]:
             self.assertFalse(runtime.needs_plugins(arguments))
 
+    def test_explicit_environment_config_directory_is_preserved(self):
+        with mock.patch.dict(os.environ, {'ZELLIJ_CONFIG_DIR': str(self.base / 'other layouts')}):
+            args = runtime.arguments_for_config([], self.base / 'checkout/config.kdl', self.base / 'generated.kdl')
+        self.assertEqual(args, ['--config', str(self.base / 'generated.kdl'),
+                                '--config-dir', str(self.base / 'other layouts')])
+
+    def test_startup_notices_scan_source_pins_after_runtime_override(self):
+        _, config, pin, data = self.managed()
+        with mock.patch.dict(os.environ, {'ZJ_OFFLINE': '', 'ZJ_NO_UPDATE_CHECK': ''}), \
+                mock.patch.object(plugin_files, 'fetch_bytes', return_value=data), \
+                mock.patch.object(launcher, 'state_directory', return_value=self.base / 'state'), \
+                mock.patch.object(launcher.shutil, 'which', return_value=sys.executable), \
+                mock.patch.object(launcher.os, 'execv'), mock.patch.object(launcher.subprocess, 'call', return_value=0), \
+                mock.patch.object(launcher, 'cached_scan', return_value=None) as scan:
+            launcher.launch(['--config', str(config)])
+        scan.assert_called_once_with(config.resolve(), [common.plugin_url(pin)])
+
     def test_optional_install_also_prefers_downloads(self):
         data = [(ROOT / 'plugins' / pin['asset']).read_bytes() for pin in common.load_versions(ROOT)['plugins']]
         with mock.patch.object(plugin_files, 'fetch_bytes', side_effect=data) as fetch, \
