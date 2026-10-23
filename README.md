@@ -1,87 +1,121 @@
 # Zellij config
 
-Catppuccin Mocha, three layouts, matching swap layouts and three verified plugins.
-The configuration works with the Zellij version selected in
-[VERSIONS.md](VERSIONS.md). **Python 3.10+** is required for the shared setup,
-validation, launcher and explicit upgrade helpers; they use only the standard
-library. Zellij itself runs independently of those helpers.
+Catppuccin Mocha, three layouts, matching swap layouts and three pinned plugins.
+The repository root is a Zellij config directory: `config.kdl`, `layouts/`,
+`themes/` and backup `plugins/` are ready to use after cloning.
 
-## Install
+## Clone directly and start
 
-Install Python and Zellij, then clone this repository:
+Install Git, Zellij and Python 3.10+. Choose an **absent or empty** destination;
+move an existing config or nested checkout aside before cloning. Git will not
+merge a clone into a nonempty directory.
 
-```sh
-git clone https://github.com/abhi-k9/zellij-config.git
-cd zellij-config
-./setup.sh --dry-run
-./setup.sh --offline
-zj attach --create main
-```
-
-Linux/macOS setup installs the launcher in `~/.local/bin`; add that directory to
-PATH if needed. To install the selected Zellij binary with archive verification:
+Linux and macOS (this location takes precedence when present):
 
 ```sh
-python3 tools/manage.py install-zellij --bin-dir ~/.local/bin
+git clone https://github.com/abhi-k9/zellij-config.git "$HOME/.config/zellij"
+"$HOME/.config/zellij/launcher/zj" attach --create main
 ```
 
-On Windows, install Python 3.10+ and Zellij, then use Windows PowerShell 5.1+:
+Native Windows, using Windows PowerShell 5.1+:
 
 ```powershell
-./setup.ps1 -DryRun
-./setup.ps1 -Offline
+git clone https://github.com/abhi-k9/zellij-config.git "$env:APPDATA\Zellij\config"
+& "$env:APPDATA\Zellij\config\launcher\zj.ps1" attach --create main
 ```
 
-Windows setup puts the wrappers in
-`%LOCALAPPDATA%\Programs\zellij-config\bin`; add it to PATH. You can also run the
-shared helper directly with `python tools/manage.py install --offline`.
+The Windows `launcher\zj.cmd` entry point also works. WSL uses the Linux paths
+inside WSL. No setup script or launcher installation is required. You can add
+`launcher/` to PATH for the short `zj` command. For a custom checkout location,
+pass `--config-dir /path/to/checkout` to the launcher.
 
-All installation modes verify plugin hashes before activation. `--offline`
-forbids network downloads and uses the bundled files. Without it, missing pinned
-plugins can be downloaded and verified. Config and layouts are validated with
-your actual Zellij executable before the old configuration is moved.
+Zellij itself can be started directly using the root configuration. It uses the
+HTTPS aliases and its own download cache; **automatic bundled fallback is
+provided by `zj`**, not by Zellij's native plugin loader. Python is required for
+`zj` and the management helpers, not for plain Zellij.
+
+## Downloads and offline fallback
+
+At startup, `zj` selects plugins in this order:
+
+1. A previously downloaded file that still matches the pinned SHA-256.
+2. An HTTPS download of the pinned release, verified before use.
+3. The bundled backup, verified against the same hash, if downloading fails.
+
+A bad checksum, timeout or missing release triggers the verified backup. If
+neither source is valid, startup fails with a diagnostic instead of running
+unverified bytes. Download attempts have size, socket and elapsed-time limits.
+The launcher retries downloading on the next launch after using a backup.
+
+For a deliberately disconnected system, skip all startup network requests:
+
+```sh
+ZJ_OFFLINE=1 "$HOME/.config/zellij/launcher/zj" attach --create main
+```
+
+```powershell
+$env:ZJ_OFFLINE = '1'
+& "$env:APPDATA\Zellij\config\launcher\zj.ps1" attach --create main
+```
+
+Keep the entire checkout, including `plugins/`, when copying to an air-gapped
+machine. Downloads and generated runtime configs live in private per-user state,
+not in the checkout. Plugin preparation does not change tracked files. Each
+startup uses a snapshot of `config.kdl`; restart a session to apply source edits
+or a `git pull` when using `zj`. Old runtime generations remain available to
+running sessions. Plain Zellij can watch the root config directly.
 
 ## Choose when to upgrade
 
-Versions are pinned for repeatability. They are **not permanently fixed**:
+Versions are pinned in [VERSIONS.md](VERSIONS.md). From the checkout:
 
 ```sh
 python3 tools/manage.py versions check
 python3 tools/manage.py versions update --all
 # Or select a component/tag explicitly:
 python3 tools/manage.py versions update --plugin zjstatus=latest
-python3 tools/manage.py versions update --zellij latest
+python3 tools/manage.py versions update --zellij v0.45.1
 ```
 
-The update command changes the repository's selected pins and verified plugin
-files. Review `git diff`, run the checks, then explicitly install the selected
-Zellij executable and rerun setup. It never silently upgrades a running setup.
-Specific older tags work too. See [all version commands](VERSIONS.md).
-
-## Recovery and symlinks
+The updater verifies selected plugin artifacts and licenses and synchronizes
+root `config.kdl`, backup binaries, pins and generated references. Review the
+diff and run checks before committing. A direct checkout is the live source;
+`git pull` and version updates change it immediately. New `zj` sessions use those
+changes. The Zellij executable changes only through an explicit installation:
 
 ```sh
-./setup.sh --restore
-# Windows: ./setup.ps1 -Restore
+python3 tools/manage.py install-zellij --bin-dir ~/.local/bin
 ```
 
-Setup stages a complete tree privately, verifies it, retains the previous tree
-inside a private `zellij.backup-*/tree/` snapshot, and publishes the staged tree.
-It locks the target against another installer. Failed preparation leaves the
-active config alone; publication errors trigger rollback. An interruption between
-directory renames is recorded and recovered on the next setup invocation.
+On Windows use `python` and choose a binary directory on PATH. Updating helper
+copies installed by an older setup requires rerunning that optional installation;
+the checked-in launcher always uses the helper code from its own checkout.
 
-Managed file/directory symlinks are materialized in the new config; external
-dotfiles targets are never overwritten. A symlink of the entire config directory
-remains a symlink. Snapshots retain the old tree's links; later edits to an
-external link target are not an independent historical byte snapshot of that
-external file. Keep your dotfiles in version control as well.
+## Optional deployment to a separate directory
 
-Directory publication has a short rename gap; this is not an atomic exchange or
-a power-loss durability guarantee. Running sessions may need a reload/restart to
-notice a directory replacement; close Zellij on Windows if open handles prevent
-renaming. Restore first validates its staged snapshot and saves the current tree,
-so a second restore can undo the previous restore.
+A separate checkout can still deploy a verified copy with private backups:
+
+```sh
+./setup.sh --dry-run
+./setup.sh                       # Downloads first, bundled fallback on failure
+./setup.sh --offline             # Bundled files only; no downloads
+./setup.sh --restore
+```
+
+Windows equivalents are `./setup.ps1`, `-DryRun`, `-Offline` and `-Restore`.
+Setup requires Python 3.10+ and an installed Zellij executable. It validates
+plugins, config and layouts before activation. It refuses to replace its own
+checkout; a directly cloned config needs no deployment.
+
+Setup installs launchers in `~/.local/bin` on Unix or
+`%LOCALAPPDATA%\Programs\zellij-config\bin` on Windows. Use `--bin-dir` / `-BinDir`
+to override that, or `--no-launcher` / `-NoLauncher` for config only.
+
+Publication uses reversible directory renames, a per-target lock, private
+snapshots and an interruption recovery journal. It has a short name gap and is
+not a power-loss durability guarantee. Managed symlinks are materialized without
+writing external dotfiles; snapshots retain the original links. See the
+[configuration and recovery guide](docs/CONFIGURATION.md).
 
 ## Validate and contribute
 
@@ -89,13 +123,13 @@ so a second restore can undo the previous restore.
 ./check.sh
 python3 -m unittest discover -s tests -v
 git config core.hooksPath hooks
+zellij setup --check
 ```
 
-Full validation requires Zellij. `./check.sh --static` explicitly omits its parser
-checks. The optional hook validates staged content and fails when validation
-cannot run. CI exercises the same regression tests and real Zellij on Linux,
-macOS and Windows. Network-dependent checks run separately by manual dispatch.
+Full repository validation requires Zellij. `./check.sh --static` explicitly
+omits its parser checks. CI tests direct clones, optional deployment and native
+entry points on Linux, macOS and Windows. Network-dependent checks run separately.
 
-See the [configuration guide](config/README.md), printable
+See the [configuration guide](docs/CONFIGURATION.md), printable
 [cheatsheets](cheatsheets/), [audit resolution map](docs/AUDIT_FIXES.md) and
 [third-party notices](THIRD_PARTY_NOTICES.md).

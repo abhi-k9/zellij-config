@@ -11,6 +11,7 @@ import zipfile
 from urllib.parse import quote
 
 from .common import ConfigError, FileLock, atomic_write, fetch_bytes, github_release, json_bytes, load_versions, plugin_url
+from .kdl import replace_plugin_locations
 
 
 def checksums(pins: dict) -> bytes:
@@ -31,12 +32,14 @@ def documentation(pins: dict) -> bytes:
               'python3 tools/manage.py versions update --zellij latest',
               'python3 tools/manage.py versions update --zellij v0.45.1',
               'python3 tools/manage.py install-zellij --bin-dir ~/.local/bin',
-              './check.sh', './setup.sh --offline', '```', '',
-              'On Windows use `python` instead of `python3`, and `./setup.ps1 -Offline`.', '',
+              './check.sh', './launcher/zj attach --create main', '```', '',
+              'On Windows use `python` instead of `python3` and `launcher/zj.ps1` to start.', '',
               'Update checks never change files. Update downloads and verifies all selected artifacts',
               'before changing pins, bundled bytes, license notices and generated references.',
-              'Review `git diff` and run the checks before committing. Your installed Zellij executable',
-              'and configuration change only when you explicitly install them.', '',
+              'Review `git diff` and run the checks before committing. A direct checkout is the live',
+              'source configuration; new launcher sessions use its updated pins without setup.',
+              'A separately deployed copy needs setup again. The Zellij executable changes only',
+              'through the explicit install-zellij command (or your package manager).', '',
               'If a new plugin release has no published GitHub digest, provide a trusted digest with',
               '`--sha256 NAME=HEX`; the updater refuses to treat its own computed hash as independent',
               'verification. Updates never select prereleases through `latest`.', '']
@@ -103,7 +106,7 @@ def update(root: Path, selections: dict[str, str], zellij_tag: str | None,
         if not selections and not zellij_tag:
             raise ConfigError('Select --all, --plugin NAME=TAG, or --zellij TAG')
         changes: dict[Path, bytes] = {}
-        config = root / 'config/config.kdl'
+        config = root / 'config.kdl'
         original_config = config.read_bytes()
         text = original_config.decode('utf-8')
         for plugin in pins['plugins']:
@@ -126,7 +129,7 @@ def update(root: Path, selections: dict[str, str], zellij_tag: str | None,
             if license_terms(notice) != license_terms(previous_notice.read_bytes()):
                 raise ConfigError(f'Review the changed license for {plugin["name"]} before updating')
             plugin['tag'], plugin['sha256'] = tag, digest
-            text = text.replace(old_url, plugin_url(plugin))
+            text = replace_plugin_locations(text, {old_url: plugin_url(plugin)})
             changes[root / 'plugins' / plugin['asset']] = data
             changes[root / 'licenses' / (plugin['name'] + '.txt')] = notice
         if zellij_tag:

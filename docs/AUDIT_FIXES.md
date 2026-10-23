@@ -5,6 +5,11 @@ shell/PowerShell policy with one Python 3.10+ standard-library implementation.
 Shell and Windows entry points delegate literal arguments to that shared code.
 The Zellij configuration itself remains usable independently of Python.
 
+The 2026-10-23 direct-clone change places `config.kdl`, layouts and themes at the
+repository root. The checked-in launcher prefers verified downloads and only
+uses bundled plugins when a download is unavailable. It stores private runtime
+snapshots outside the checkout; plain Zellij continues to use HTTPS aliases.
+
 ## Priority 1: user data and publication safety
 
 | Audit ID | Resolution | Executable regression |
@@ -76,3 +81,10 @@ Native Windows/macOS results come from the hosted CI for this change; local
 development tests run in isolated Linux environments. Clipboard, terminal fonts,
 mouse behavior, permission prompts and crash/reboot recovery require native
 interactive checks. Parser success alone does not establish those behaviors.
+
+Automatic bundled fallback requires the checked-in `zj` launcher. The pinned
+[native loader](https://github.com/zellij-org/zellij/blob/v0.45.1/zellij-server/src/plugins/wasm_bridge.rs)
+does not provide an HTTPS-to-bundled-file fallback. Launcher sessions use an
+immutable startup config snapshot: source edits apply to a new session rather
+than being watched live. Downloaded plugin caches are reused only after hash
+verification; offline fallback never masquerades as a successful cached download.

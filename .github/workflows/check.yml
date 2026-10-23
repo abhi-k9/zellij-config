@@ -50,7 +50,7 @@ jobs:
         run: |
           zellij --version
           python tools/manage.py check
-      - name: Deterministic regressions and native entry points
+      - name: Direct-clone, fallback and deployment regressions
         run: python -m unittest discover -s tests -v
 
   lint:
@@ -99,4 +99,16 @@ jobs:
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.14"
-      - run: python tools/manage.py versions check
+      - run: |
+          python tools/manage.py versions check
+          PYTHONPATH=tools python - <<'PY'
+          from pathlib import Path
+          from zjconfig.common import load_versions
+          from zjconfig.plugin_files import acquire
+          root = Path('.')
+          for pin in load_versions(root)['plugins']:
+              _, origin = acquire(pin, root / 'plugins' / pin['asset'])
+              if origin != 'download':
+                  raise SystemExit(f'Live download failed for {pin["name"]}')
+              print(f'{pin["name"]}: live HTTPS download verified')
+          PY

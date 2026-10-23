@@ -10,8 +10,9 @@ import signal
 import subprocess
 import time
 
-from .common import ConfigError, FileLock, atomic_write, fetch_bytes, json_bytes, load_versions, plugin_url, private_tempdir, read_json, sha256, validate_versions
-from .kdl import plugin_locations, quote
+from .common import ConfigError, FileLock, atomic_write, json_bytes, load_versions, plugin_url, private_tempdir, read_json, sha256, validate_versions
+from .kdl import plugin_locations, quote, replace_plugin_locations
+from .plugin_files import acquire
 
 
 def default_directory() -> Path:
@@ -191,7 +192,7 @@ def install_launcher(root: Path, binary_dir: Path) -> None:
 
 def install(root: Path, *, target: Path | None = None, offline=False, restore=False,
             dry_run=False, bin_dir: Path | None = None, no_launcher=False) -> None:
-    source = (root / 'config').resolve()
+    source = root.resolve()
     requested = (target or default_directory()).expanduser()
     # resolve also normalizes trailing slashes and preserves a whole-directory
     # symlink by operating on its physical target, never on the link itself.
@@ -259,22 +260,15 @@ def install(root: Path, *, target: Path | None = None, offline=False, restore=Fa
                             if file.is_file():
                                 atomic_write(stage / directory / file.name, file.read_bytes())
                     text = (stage / 'config.kdl').read_text(encoding='utf-8')
+                    locations = {}
                     for plugin in pins['plugins']:
                         bundled = root / 'plugins' / plugin['asset']
                         output = stage / 'plugins' / plugin['asset']
-                        if bundled.exists():
-                            if sha256(bundled) != plugin['sha256']:
-                                raise ConfigError(f'Bundled plugin checksum mismatch: {bundled}')
-                            atomic_write(output, bundled.read_bytes())
-                        elif offline:
-                            raise ConfigError(f'Offline installation needs {bundled}; fetch pinned files before going offline')
-                        else:
-                            atomic_write(output, fetch_bytes(plugin_url(plugin)))
-                        if sha256(output) != plugin['sha256']:
-                            raise ConfigError(f'Plugin checksum mismatch: {plugin["name"]}')
-                        if not output.read_bytes().startswith(b'\0asm\x01\0\0\0'):
-                            raise ConfigError(f'Not a WebAssembly v1 plugin: {plugin["asset"]}')
-                        text = text.replace(quote(plugin_url(plugin)), quote('file:' + (target / 'plugins' / plugin['asset']).as_posix()))
+                        data, origin = acquire(plugin, bundled, offline=offline)
+                        atomic_write(output, data)
+                        print(f'{plugin["name"]}: verified {origin}')
+                        locations[plugin_url(plugin)] = 'file:' + (target / 'plugins' / plugin['asset']).as_posix()
+                    text = replace_plugin_locations(text, locations)
                     atomic_write(stage / 'config.kdl', text.encode('utf-8'))
                     atomic_write(stage / '.zellij-config-versions.json', json_bytes(pins))
                     license_dir = stage / 'third-party-licenses'

@@ -1,12 +1,27 @@
 # Changelog & verification record
 
-`config/README.md` is the how-to: install, use, troubleshoot. This file is the
+`docs/CONFIGURATION.md` is the how-to: install, use, troubleshoot. This file is the
 record behind it — what has been verified against the real zellij binary, what
 changed and why, and which bugs were found along the way. Nothing here is needed
 to *use* the config; it's for when you want to know how much to trust a claim,
 or why something is the way it is.
 
 ---
+
+## 2026-10-23 — direct clones and download-first plugin fallback
+
+- Moved `config.kdl`, layouts and themes to the repository root so the checkout
+  itself can be the active config directory on Linux, macOS and Windows.
+- Made the checked-in launcher prepare plugins at startup, without a setup step:
+  verified prior download, verified HTTPS download, then verified bundled backup.
+  Added `ZJ_OFFLINE=1` for deliberately disconnected systems.
+- Kept generated config snapshots and plugin downloads in private per-user state,
+  preserving tracked files and previous running sessions' selected generations.
+- Updated optional deployment, explicit upgrades, checks, docs and native CI for
+  the root layout. Optional online deployment also prefers downloads to backups.
+- Added regressions for direct Git clones without setup, real parser validation,
+  bad/unavailable downloads, offline operation, cache corruption, source edits,
+  literal arguments and KDL location rewriting.
 
 ## 2026-10-22 — audit fixes and explicit version upgrades
 

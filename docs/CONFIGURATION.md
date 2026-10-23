@@ -7,16 +7,22 @@ template. Files use **KDL v1**, not KDL v2. Inline blocks need semicolons:
 
 ## Installation and updates
 
-Use the shared, staged installer in the [root guide](../README.md). It requires
-Python 3.10+ and an installed Zellij executable. Linux/macOS use `../setup.sh`;
-Windows uses `../setup.ps1`. Run from the repository root, rather than copying
-files over an existing config by hand. The old Windows offline snippet has been
-replaced by the same fail-closed verification used on Unix.
+Clone directly into the chosen config directory and start the checked-in
+`launcher/zj` (Unix) or `launcher/zj.ps1` / `launcher/zj.cmd` (Windows), as shown
+in the [root guide](../README.md). No setup step is needed. Python 3.10+ is
+required for the launcher/helpers. Plain Zellij can use the root config with
+HTTPS aliases; the launcher implements automatic bundled fallback.
 
-The `config/` directory contains the config, layouts and theme template.
-`versions.json` is the canonical selected Zellij/plugin inventory;
-`plugins.sha256` and `VERSIONS.md` are generated references. All plugin binaries
-are checked against the pinned SHA-256 before installation, including downloads.
+The repository root contains `config.kdl`, `layouts/`, `themes/` and backup
+`plugins/`. `versions.json` selects the pinned artifacts; `plugins.sha256` and
+`VERSIONS.md` are generated references. `docs/` contains documentation only.
+
+The launcher first reuses a verified prior download, then attempts the pinned
+HTTPS release, then verifies and uses the bundled backup if fetching fails.
+Download/cache checksum errors cannot select unverified bytes. `ZJ_OFFLINE=1`
+skips startup network access and uses a verified download cache or bundled files.
+Private per-user runtime snapshots leave the checkout untouched; restart a
+session to apply source config edits when using `zj`.
 
 To change versions when you choose:
 
@@ -28,10 +34,11 @@ python3 tools/manage.py versions update --zellij latest
 ./check.sh
 ```
 
-Review the diff, install the selected Zellij executable if needed, then run setup
+Review the diff and install the selected Zellij executable if needed. A directly
+cloned checkout needs no reinstall. For a separately deployed copy, run setup
 again. The updater keeps pins, plugin bytes, notices and generated references
-together and refuses a new plugin artifact without a published or independently
-supplied digest. It checks the license notice at the exact selected tag.
+together and refuses a new artifact without a published or independently supplied
+digest. Changed license terms require review.
 
 ## Config directory selection
 
@@ -41,7 +48,7 @@ Otherwise Unix uses an existing `~/.config/zellij` first. Linux then uses
 `~/Library/Application Support/org.Zellij-Contributors.Zellij` directory. Fresh
 macOS installs use `~/.config/zellij`. Windows uses `%APPDATA%\Zellij\config`.
 
-Source and destination must be separate. Relative paths and trailing separators
+For optional setup deployment, source and destination must be separate. Relative paths and trailing separators
 are normalized. Quotes, backslashes, spaces and Unicode are escaped correctly in
 generated KDL. Paths containing control characters are rejected before mutation.
 Use `--bin-dir` to choose the launcher directory or `--no-launcher` for config
@@ -86,8 +93,9 @@ The three third-party aliases are `zjstatus`, `monocle` and `multitask`. Their
 versions, URLs and hashes are listed once in [VERSIONS.md](../VERSIONS.md).
 They load on demand rather than in a background `load_plugins` block.
 
-Installed aliases point to verified local files. An installed versions ledger
-retains the upstream pins, so the launcher can still check them for updates.
+The checked-in aliases use HTTPS. The launcher generates private config snapshots
+with verified file locations and retains source pins for update checks. Optional
+setup deployment records upstream pins in an installed versions ledger.
 Plugin permissions are granted by Zellij, not by the installer. Grant only the
 permissions needed for the features you intend to use. `RunCommands` permits
 host commands; WASM is not a reason to grant it indiscriminately.
@@ -116,13 +124,15 @@ zj --check-updates /path/to/config.kdl
 Exit status is 0 for current pins, 1 for a different latest release, and 2 for an
 incomplete/unavailable check. A different tag is not necessarily newer. No check
 changes files or interrupts startup for confirmation. `ZJ_NO_UPDATE_CHECK=1`
-skips startup notices. Both Windows wrappers use this same logic; tags and URLs
+skips startup notices; `ZJ_OFFLINE=1` also skips plugin downloads. Both Windows wrappers use this same logic; tags and URLs
 are compared case-sensitively. Requests follow bounded HTTPS redirects with
 timeouts; ordinary CI tests use deterministic fixtures instead of live releases.
 
 ## Recovery and backups
 
-Use setup's restore mode, described in the [root guide](../README.md).
+For a direct checkout, use Git history to review and revert tracked config changes.
+The optional setup installer provides the restore mode described in the
+[root guide](../README.md) for separately deployed copies.
 New snapshots contain `snapshot.json` metadata and the original `tree/` inside a
 private directory. Creation order comes from numeric metadata, independent of
 lexical filename ordering. Legacy `zellij.backup-YYYYMMDD-HHMMSS[-N]` snapshots
@@ -162,8 +172,8 @@ Read/checksum errors fail validation. The staged git hook also fails if its
 checker is missing and prints the actual diagnostic output.
 
 ```sh
-zellij --config-dir config setup --check
-zellij --config-dir config --layout dev setup --check
+zellij --config-dir . setup --check
+zellij --config-dir . --layout dev setup --check
 python3 -m unittest discover -s tests -v
 ```
 

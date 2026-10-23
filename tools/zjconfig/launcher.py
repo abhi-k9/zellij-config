@@ -131,6 +131,9 @@ def launch(arguments: list[str]) -> int:
     if arguments and arguments[0] == '--':
         arguments = arguments[1:]
     if arguments and arguments[0] == '--check-updates':
+        if os.environ.get('ZJ_OFFLINE'):
+            print('Plugin update checks are disabled by ZJ_OFFLINE.')
+            return 2
         if len(arguments) > 2:
             raise ConfigError('Usage: zj --check-updates [FILE]')
         file = Path(arguments[1]).expanduser().resolve() if len(arguments) == 2 else config_file([])
@@ -141,9 +144,18 @@ def launch(arguments: list[str]) -> int:
             return 2
         print('\n'.join(result.lines))
         return result.code
-    if not os.environ.get('ZJ_NO_UPDATE_CHECK'):
+    executable = shutil.which('zellij')
+    if not executable:
+        raise ConfigError('zellij is not on PATH')
+    from .runtime import needs_plugins, prepare
+    startup = needs_plugins(arguments)
+    file = None
+    if startup:
+        file = config_file(arguments)
+        if file.is_file():
+            arguments = prepare(file, arguments, state_directory(), offline=bool(os.environ.get('ZJ_OFFLINE')))
+    if not os.environ.get('ZJ_NO_UPDATE_CHECK') and not os.environ.get('ZJ_OFFLINE') and file is not None:
         try:
-            file = config_file(arguments)
             if file.is_file():
                 result = cached_scan(file, locations(file))
                 if result and (result.different or result.incomplete):
@@ -152,9 +164,6 @@ def launch(arguments: list[str]) -> int:
         except (ConfigError, OSError, ValueError) as error:
             # Update-notification trouble must not prevent opening the terminal.
             print(f'zj: update check skipped: {error}', flush=True)
-    executable = shutil.which('zellij')
-    if not executable:
-        raise ConfigError('zellij is not on PATH')
     if os.name == 'nt':
         return subprocess.call([executable, *arguments])
     os.execv(executable, [executable, *arguments])

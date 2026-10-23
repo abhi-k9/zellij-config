@@ -10,12 +10,13 @@
 //    Windows : %APPDATA%\Zellij\config\config.kdl
 //  (Or wherever $ZELLIJ_CONFIG_DIR / --config-dir point.)
 //
-//  Zellij watches this file live — most changes apply without a restart.
+//  Plain Zellij watches this file live. The zj launcher uses a private startup
+//  snapshot; restart a session to apply changes through that launcher.
 //  `zellij setup --check` validates it, but unknown keys are silently ignored:
 //  compare spellings against `zellij setup --dump-config`.
 //
 //  HOW TO READ IT: each comment says what a setting does and why it is set;
-//  longer rationale lives in config/README.md (the section is named). A
+//  longer rationale lives in docs/CONFIGURATION.md (the section is named). A
 //  trailing `// default` marks a line that restates zellij 0.45.1's own
 //  default — pinned so the file documents itself; deleting it changes nothing.
 // ═══════════════════════════════════════════════════════════════════════════
@@ -289,10 +290,11 @@ keybinds {
 //
 // VERSIONS ARE PINNED: zellij caches each .wasm by URL, so `releases/latest`
 // would give two machines different builds, and a future build may need a
-// newer zellij. To bump one, follow README "Updating a pinned plugin" (the tag
-// here, the docs, plugins.sha256, then a plugin-cache clear that keeps your
-// saved sessions). No network: README "Offline / air-gapped machines", or
-// `./setup.sh --offline`.
+// newer zellij. Use `tools/manage.py versions update` to change pins and backups.
+// The checked-in zj launcher prefers verified downloads and falls back to the
+// bundled plugins/ copies when fetching fails. ZJ_OFFLINE=1 skips network work.
+// Plain zellij uses these HTTPS aliases and its own cache; it has no bundled
+// fallback mechanism. See README.md for direct-clone startup commands.
 //
 // Copy each tag verbatim from its releases page — the formats differ upstream:
 // zjstatus and monocle use `vX.Y.Z`; multitask follows the zellij version.

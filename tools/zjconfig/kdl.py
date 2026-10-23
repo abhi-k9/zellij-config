@@ -17,6 +17,8 @@ from .common import ConfigError
 class Token:
     kind: str
     value: str
+    start: int = 0
+    end: int = 0
 
 
 @dataclass
@@ -25,6 +27,7 @@ class Node:
     properties: dict[str, str] = field(default_factory=dict)
     arguments: list[str] = field(default_factory=list)
     children: list['Node'] = field(default_factory=list)
+    property_spans: dict[str, tuple[int, int]] = field(default_factory=dict)
 
 
 def tokens(text: str) -> list[Token]:
@@ -66,6 +69,7 @@ def tokens(text: str) -> list[Token]:
             result.append(Token(c, c))
             i += 1
         elif c == '"' or (c == 'r' and re.match(r'r#*"', text[i:])):
+            literal_start = i
             raw = re.match(r'r(#+)?"', text[i:]) if c == 'r' else None
             if raw:
                 hashes = raw.group(1) or ''
@@ -109,7 +113,7 @@ def tokens(text: str) -> list[Token]:
                 if i >= len(text):
                     raise ConfigError('Unclosed KDL string')
                 i += 1
-            result.append(Token('value', value))
+            result.append(Token('value', value, literal_start, i))
         else:
             start = i
             while i < len(text) and text[i] not in ' \t\r\n;{}=()"\\':
@@ -118,7 +122,7 @@ def tokens(text: str) -> list[Token]:
                 i += 1
             if start == i:
                 raise ConfigError(f'Unsupported KDL character at offset {i}')
-            result.append(Token('value', text[start:i]))
+            result.append(Token('value', text[start:i], start, i))
     return result
 
 
@@ -174,6 +178,7 @@ def parse(text: str) -> list[Node]:
                     item = value()
                     if not discard:
                         node.properties[key] = item
+                        node.property_spans[key] = (stream[pos - 1].start, stream[pos - 1].end)
                 elif not discard:
                     node.arguments.append(key)
             if not omit:
@@ -189,6 +194,22 @@ def plugin_locations(text: str) -> list[str]:
     roots = parse(text)
     return sorted({node.properties['location'] for root in roots if root.name == 'plugins'
                    for node in root.children if 'location' in node.properties})
+
+
+def replace_plugin_locations(text: str, mapping: dict[str, str]) -> str:
+    """Edit only active alias location values, preserving comments and other KDL."""
+    edits = []
+    for root in parse(text):
+        if root.name != 'plugins':
+            continue
+        for node in root.children:
+            location = node.properties.get('location')
+            if location in mapping:
+                start, end = node.property_spans['location']
+                edits.append((start, end, quote(mapping[location])))
+    for start, end, replacement in sorted(edits, reverse=True):
+        text = text[:start] + replacement + text[end:]
+    return text
 
 
 def quote(value: str) -> str:

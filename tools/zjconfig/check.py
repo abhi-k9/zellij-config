@@ -17,20 +17,20 @@ from .versions import checksums, documentation
 
 
 REQUIRED = [
-    'README.md', 'VERSIONS.md', 'config/README.md', 'config/config.kdl',
-    'config/themes/example-custom.kdl.example', 'versions.json', 'plugins.sha256',
+    'README.md', 'VERSIONS.md', 'docs/CONFIGURATION.md', 'config.kdl',
+    'themes/example-custom.kdl.example', 'versions.json', 'plugins.sha256',
     'setup.sh', 'setup.ps1', 'check.sh', 'tools/manage.py',
     'launcher/zj', 'launcher/zj.cmd', 'launcher/zj.ps1',
     'hooks/pre-commit', '.github/workflows/check.yml', 'THIRD_PARTY_NOTICES.md',
     'ci-tools.json', 'tools/lint_workflow.py', 'requirements-dev.txt',
     'package.json', 'package-lock.json', 'pyproject.toml', 'tests/test_regressions.py',
     'docs/AUDIT_FIXES.md',
-    *['config/layouts/' + name + suffix for name in ['default', 'dev', 'zjstatus']
+    *['layouts/' + name + suffix for name in ['default', 'dev', 'zjstatus']
       for suffix in ['.kdl', '.swap.kdl']],
     *['cheatsheets/' + name + '.html' for name in
       ['zellij-cheatsheet', 'zellij-plugins-cheatsheet', 'kdl-syntax-cheatsheet', 'verification-checklist']],
     *['tools/zjconfig/' + name + '.py' for name in
-      ['__init__', 'cli', 'common', 'install', 'kdl', 'launcher', 'versions', 'check']],
+      ['__init__', 'cli', 'common', 'install', 'kdl', 'launcher', 'plugin_files', 'runtime', 'versions', 'check']],
 ]
 
 
@@ -68,7 +68,7 @@ def check(root: Path, static=False) -> None:
             raise ConfigError(f'Required file missing: {name}')
         path.read_bytes()  # Readability/I/O errors are failures, not skipped checks.
     pins = load_versions(root)
-    locations = plugin_locations((root / 'config/config.kdl').read_text(encoding='utf-8'))
+    locations = plugin_locations((root / 'config.kdl').read_text(encoding='utf-8'))
     expected = sorted(plugin_url(pin) for pin in pins['plugins'])
     if locations != expected:
         raise ConfigError('Config plugin pins differ from versions.json')
@@ -86,7 +86,7 @@ def check(root: Path, static=False) -> None:
         notice = (root / 'licenses' / (pin['name'] + '.txt')).read_text(encoding='utf-8')
         if 'Copyright' not in notice or 'Permission is hereby granted, free of charge' not in notice:
             raise ConfigError(f'Missing upstream MIT notice: {pin["name"]}')
-    for path in (root / 'config').rglob('*.kdl'):
+    for path in [root / 'config.kdl', *(root / 'layouts').glob('*.kdl'), *(root / 'themes').glob('*.kdl')]:
         parse(path.read_text(encoding='utf-8'))
     for path in (root / 'cheatsheets').glob('*.html'):
         parser = Tags()
@@ -95,7 +95,7 @@ def check(root: Path, static=False) -> None:
             raise ConfigError(f'Unclosed HTML tags in {path}')
         for destination in parser.links:
             local_link(root, path, destination)
-    for path in [*root.glob('*.md'), root / 'config/README.md', *root.glob('docs/*.md')]:
+    for path in [*root.glob('*.md'), *root.glob('docs/*.md')]:
         # Inline links used in this repository; fenced examples are not links.
         text = re.sub(r'(?ms)^```.*?^```[^\n]*$', '', path.read_text(encoding='utf-8'))
         for destination in re.findall(r'\[[^\]\n]*\]\(([^)\n]+)\)', text):
@@ -109,10 +109,10 @@ def check(root: Path, static=False) -> None:
     zellij = shutil.which('zellij')
     if not zellij:
         raise ConfigError('Zellij is required for full validation; use --static explicitly for static checks only')
-    validate(root / 'config', zellij)
+    validate(root, zellij)
     with tempfile.TemporaryDirectory(prefix='zellij-theme-') as directory:
         file = Path(directory) / 'theme.kdl'
-        file.write_text('theme "my-custom"\n' + (root / 'config/themes/example-custom.kdl.example').read_text(encoding='utf-8'), encoding='utf-8')
+        file.write_text('theme "my-custom"\n' + (root / 'themes/example-custom.kdl.example').read_text(encoding='utf-8'), encoding='utf-8')
         result = subprocess.run([zellij, '--config', str(file), 'setup', '--check'],
                                 capture_output=True, timeout=30)
         if result.returncode:

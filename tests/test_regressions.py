@@ -19,7 +19,7 @@ from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'tools'))
-from zjconfig import check, cli, common, install, kdl, launcher, versions
+from zjconfig import check, cli, common, install, kdl, launcher, plugin_files, runtime, versions
 
 
 class Workspace(unittest.TestCase):
@@ -70,7 +70,7 @@ class InstallerTests(Workspace):
         self.old()
         self.setup_config(root)
         (root / 'versions.json').unlink()
-        (root / 'config/config.kdl').unlink()
+        (root / 'config.kdl').unlink()
         self.setup_config(root, restore=True)
         self.assertEqual((self.target / 'config.kdl').read_text(), '// ORIGINAL CONFIG\n')
 
@@ -140,7 +140,7 @@ class InstallerTests(Workspace):
         root = self.clone()
         (root / 'plugins/monocle.wasm').write_bytes(b'corrupt')
         self.old()
-        with self.assertRaises(common.ConfigError), mock.patch.object(install, 'fetch_bytes') as fetch:
+        with self.assertRaises(common.ConfigError), mock.patch.object(plugin_files, 'fetch_bytes') as fetch:
             self.setup_config(root)
         fetch.assert_not_called()
         self.assertEqual((self.target / 'config.kdl').read_text(), '// ORIGINAL CONFIG\n')
@@ -264,7 +264,7 @@ class InstallerTests(Workspace):
                 install.install(ROOT, target=path, dry_run=True)
 
     def test_offline_does_not_download(self):
-        with mock.patch.object(install, 'fetch_bytes') as fetch:
+        with mock.patch.object(plugin_files, 'fetch_bytes') as fetch:
             self.setup_config()
         fetch.assert_not_called()
 
@@ -278,6 +278,17 @@ class InstallerTests(Workspace):
 
 
 class KDLTests(unittest.TestCase):
+    def test_replace_only_active_locations_including_raw_and_escaped_values(self):
+        text = ('// "https://example.com/a"\nplugins {\n'
+                '  /- dead location="https://example.com/a"\n'
+                '  active location=r#"https://example.com/a"#\n'
+                '  escaped location="https:\\/\\/example.com/a"\n}\n')
+        target = 'file:/path with "quote"/雪.wasm'
+        changed = kdl.replace_plugin_locations(text, {'https://example.com/a': target})
+        self.assertEqual(kdl.plugin_locations(changed), [target])
+        self.assertIn('/- dead location="https://example.com/a"', changed)
+        self.assertTrue(changed.startswith('// "https://example.com/a"'))
+
     def test_comments_raw_strings_and_slashdash(self):
         source = '''plugins {
         /* nested /* inner */ comment */
@@ -392,6 +403,148 @@ class LauncherTests(Workspace):
         run.assert_called_once_with(arguments)
 
 
+class RuntimeTests(Workspace):
+    def managed(self):
+        root = self.base / 'checkout with spaces 雪'
+        root.mkdir()
+        (root / 'plugins').mkdir()
+        pins = common.load_versions(ROOT)
+        pins['plugins'] = pins['plugins'][:1]
+        pin = pins['plugins'][0]
+        data = b'\0asm\x01\0\0\0verified fixture'
+        pin['sha256'] = hashlib.sha256(data).hexdigest()
+        (root / 'versions.json').write_bytes(common.json_bytes(pins))
+        (root / 'plugins' / pin['asset']).write_bytes(data)
+        config = root / 'config.kdl'
+        config.write_text('plugins { example location=' + kdl.quote(common.plugin_url(pin)) + '; }\n', encoding='utf-8')
+        return root, config, pin, data
+
+    def prepare(self, config, arguments=None, **kwargs):
+        args = runtime.prepare(config, arguments or [], self.base / 'state', **kwargs)
+        file = Path(args[1])
+        return args, file, kdl.plugin_locations(file.read_text(encoding='utf-8'))
+
+    def test_online_download_preferred_to_corrupt_bundle_without_editing_checkout(self):
+        root, config, pin, data = self.managed()
+        before = config.read_bytes()
+        (root / 'plugins' / pin['asset']).write_bytes(b'corrupt backup')
+        with mock.patch.object(plugin_files, 'fetch_bytes', return_value=data) as fetch:
+            args, generated, locations = self.prepare(config)
+        fetch.assert_called_once()
+        self.assertEqual(Path(locations[0][5:]).read_bytes(), data)
+        self.assertNotIn('.bundled.wasm', locations[0])
+        self.assertEqual(config.read_bytes(), before)
+        self.assertFalse(generated.is_relative_to(root))
+        self.assertIn(str(root), args)
+
+    def test_failed_download_uses_verified_bundle(self):
+        _, config, _, data = self.managed()
+        with mock.patch.object(plugin_files, 'fetch_bytes', side_effect=common.ConfigError('offline')):
+            _, _, locations = self.prepare(config)
+        self.assertIn('.bundled.wasm', locations[0])
+        self.assertEqual(Path(locations[0][5:]).read_bytes(), data)
+
+    def test_bad_download_checksum_uses_verified_bundle(self):
+        _, config, _, data = self.managed()
+        with mock.patch.object(plugin_files, 'fetch_bytes', return_value=b'wrong upstream bytes'):
+            _, _, locations = self.prepare(config)
+        self.assertEqual(Path(locations[0][5:]).read_bytes(), data)
+        self.assertIn('.bundled.wasm', locations[0])
+
+    def test_no_usable_download_or_bundle_fails_closed(self):
+        root, config, pin, _ = self.managed()
+        before = config.read_bytes()
+        (root / 'plugins' / pin['asset']).unlink()
+        with mock.patch.object(plugin_files, 'fetch_bytes', side_effect=common.ConfigError('offline')), \
+                self.assertRaisesRegex(common.ConfigError, 'no valid bundled fallback'):
+            self.prepare(config)
+        self.assertEqual(config.read_bytes(), before)
+
+    def test_explicit_offline_mode_never_fetches(self):
+        _, config, _, _ = self.managed()
+        with mock.patch.object(plugin_files, 'fetch_bytes') as fetch:
+            self.prepare(config, offline=True)
+        fetch.assert_not_called()
+
+    def test_verified_prior_download_is_reused_before_bundle(self):
+        root, config, pin, data = self.managed()
+        with mock.patch.object(plugin_files, 'fetch_bytes', return_value=data):
+            _, first, _ = self.prepare(config)
+        (root / 'plugins' / pin['asset']).unlink()
+        with mock.patch.object(plugin_files, 'fetch_bytes') as fetch:
+            _, again, _ = self.prepare(config, offline=True)
+        fetch.assert_not_called()
+        self.assertEqual(first, again)
+
+    def test_corrupt_download_cache_is_verified_and_repaired(self):
+        _, config, _, data = self.managed()
+        with mock.patch.object(plugin_files, 'fetch_bytes', return_value=data):
+            _, _, locations = self.prepare(config)
+        cache = Path(locations[0][5:])
+        cache.write_bytes(b'corrupted cache')
+        with mock.patch.object(plugin_files, 'fetch_bytes', return_value=data) as fetch:
+            self.prepare(config)
+        fetch.assert_called_once()
+        self.assertEqual(cache.read_bytes(), data)
+
+    def test_fallback_retries_download_next_launch_and_retains_old_generation(self):
+        _, config, _, data = self.managed()
+        with mock.patch.object(plugin_files, 'fetch_bytes', side_effect=common.ConfigError('offline')):
+            _, fallback, _ = self.prepare(config)
+        old = fallback.read_bytes()
+        with mock.patch.object(plugin_files, 'fetch_bytes', return_value=data) as fetch:
+            _, online, locations = self.prepare(config)
+        fetch.assert_called_once()
+        self.assertNotEqual(online, fallback)
+        self.assertNotIn('.bundled.wasm', locations[0])
+        self.assertEqual(fallback.read_bytes(), old)
+
+    def test_source_edits_during_download_are_not_overwritten(self):
+        _, config, _, data = self.managed()
+        edited = config.read_bytes() + b'// user edit\n'
+
+        def fetch(*args, **kwargs):
+            config.write_bytes(edited)
+            return data
+
+        with mock.patch.object(plugin_files, 'fetch_bytes', side_effect=fetch), \
+                self.assertRaisesRegex(common.ConfigError, 'changed during plugin preparation'):
+            self.prepare(config)
+        self.assertEqual(config.read_bytes(), edited)
+
+    def test_literal_arguments_and_config_directory_survive_override(self):
+        _, config, _, _ = self.managed()
+        original = ['--config=' + str(config), '--config-dir', 'other layouts 雪',
+                    'attach', 'session with spaces', '--', '', '--config', 'literal"argument']
+        args, generated, _ = self.prepare(config, original, offline=True)
+        self.assertEqual(args, ['--config', str(generated), *original[1:]])
+        self.assertEqual(runtime.arguments_for_config(['-c' + str(config), 'attach'], config, generated),
+                         ['--config', str(generated), '--config-dir', str(config.parent), 'attach'])
+
+    def test_help_version_and_validation_do_not_prepare_or_check_network(self):
+        with mock.patch.object(launcher.shutil, 'which', return_value=sys.executable), \
+                mock.patch.object(launcher.os, 'execv'), mock.patch.object(launcher.subprocess, 'call', return_value=0), \
+                mock.patch.object(runtime, 'prepare') as prepare, mock.patch.object(launcher, 'cached_scan') as scan:
+            for args in [['--version'], ['--help'], ['setup', '--check']]:
+                launcher.launch(args)
+        prepare.assert_not_called()
+        scan.assert_not_called()
+
+    def test_command_words_in_option_values_or_session_names_are_not_commands(self):
+        for arguments in [['--session', 'run'], ['--config-dir', 'setup'], ['attach', 'run']]:
+            self.assertTrue(runtime.needs_plugins(arguments))
+        for arguments in [['--config-dir', 'elsewhere', 'setup', '--check'], ['ls'], ['options', '--clean']]:
+            self.assertFalse(runtime.needs_plugins(arguments))
+
+    def test_optional_install_also_prefers_downloads(self):
+        data = [(ROOT / 'plugins' / pin['asset']).read_bytes() for pin in common.load_versions(ROOT)['plugins']]
+        with mock.patch.object(plugin_files, 'fetch_bytes', side_effect=data) as fetch, \
+                mock.patch.object(install, 'validate'), mock.patch.object(install.shutil, 'which', return_value=sys.executable):
+            install.install(ROOT, target=self.target, no_launcher=True)
+        self.assertEqual(fetch.call_count, 3)
+        self.assertTrue((self.target / 'config.kdl').is_file())
+
+
 class CheckerTests(Workspace):
     def test_broken_local_documentation_link_fails(self):
         root = self.clone()
@@ -441,29 +594,29 @@ class VersionTests(Workspace):
             versions.update(root, {pin['name']: 'latest'}, None)
         current = common.load_versions(root)
         self.assertEqual(current['plugins'][0]['tag'], 'v999')
-        self.assertIn('/v999/', (root / 'config/config.kdl').read_text())
+        self.assertIn('/v999/', (root / 'config.kdl').read_text())
         self.assertEqual((root / 'plugins.sha256').read_bytes(), versions.checksums(current))
         self.assertEqual((root / 'VERSIONS.md').read_bytes(), versions.documentation(current))
 
     def test_bad_download_leaves_pins_and_config_unchanged(self):
         root = self.clone()
         pin, _, release = self.release(root)
-        before = (root / 'versions.json').read_bytes(), (root / 'config/config.kdl').read_bytes()
+        before = (root / 'versions.json').read_bytes(), (root / 'config.kdl').read_bytes()
         with mock.patch.object(versions, 'github_release', return_value=release), \
                 mock.patch.object(versions, 'fetch_bytes', return_value=b'corrupt'), self.assertRaises(common.ConfigError):
             versions.update(root, {pin['name']: 'latest'}, None)
-        self.assertEqual(before, ((root / 'versions.json').read_bytes(), (root / 'config/config.kdl').read_bytes()))
+        self.assertEqual(before, ((root / 'versions.json').read_bytes(), (root / 'config.kdl').read_bytes()))
 
     def test_update_write_failure_restores_all_previous_bytes(self):
         root = self.clone()
         pin, data, release = self.release(root)
-        paths = ['versions.json', 'config/config.kdl', 'plugins.sha256', 'VERSIONS.md',
+        paths = ['versions.json', 'config.kdl', 'plugins.sha256', 'VERSIONS.md',
                  'plugins/' + pin['asset'], 'licenses/' + pin['name'] + '.txt']
         before = {path: (root / path).read_bytes() for path in paths}
         replace = versions.atomic_write
 
         def fail_config(path, *args):
-            if path == root / 'config/config.kdl':
+            if path == root / 'config.kdl':
                 raise OSError('injected config write failure')
             return replace(path, *args)
 
@@ -478,7 +631,7 @@ class VersionTests(Workspace):
         pin, data, release = self.release(root)
         before = (root / 'versions.json').read_bytes()
         notice = (root / 'licenses' / (pin['name'] + '.txt')).read_bytes()
-        config = root / 'config/config.kdl'
+        config = root / 'config.kdl'
         edited = config.read_bytes() + b'\n// concurrent user edit\n'
 
         def fetch(url, *args):
@@ -537,6 +690,39 @@ class VersionTests(Workspace):
 
 
 class RealBinaryTests(Workspace):
+    def test_direct_git_clone_and_offline_runtime_without_setup(self):
+        binary = shutil.which('zellij')
+        if not binary or not shutil.which('git'):
+            self.skipTest('Native Git and Zellij required')
+        source = self.clone()
+        subprocess.run(['git', 'init', '-q', str(source)], check=True, capture_output=True)
+        subprocess.run(['git', '-C', str(source), 'add', '.'], check=True, capture_output=True)
+        subprocess.run(['git', '-C', str(source), '-c', 'user.name=Test Fixture',
+                        '-c', 'user.email=fixture@example.invalid', '-c', 'commit.gpgsign=false',
+                        'commit', '-qm', 'direct clone fixture'], check=True, capture_output=True)
+        checkout = self.base / ('Zellij/config' if os.name == 'nt' else 'zellij')
+        subprocess.run(['git', 'clone', '-q', '--no-local', str(source), str(checkout)],
+                       check=True, capture_output=True)
+        self.assertTrue((checkout / 'config.kdl').is_file())
+        self.assertFalse((checkout / 'config').exists())
+        env = dict(os.environ, ZELLIJ_CONFIG_DIR=str(checkout), ZJ_OFFLINE='1',
+                   XDG_CACHE_HOME=str(self.base / 'cache'), XDG_DATA_HOME=str(self.base / 'data'),
+                   XDG_STATE_HOME=str(self.base / 'state'))
+        result = subprocess.run([binary, 'setup', '--check'], env=env, capture_output=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn(b'[CONFIG FILE]: Well defined.', result.stdout)
+        with mock.patch.object(plugin_files, 'fetch_bytes') as fetch:
+            args = runtime.prepare(checkout / 'config.kdl', [], self.base / 'runtime', offline=True)
+        fetch.assert_not_called()
+        result = subprocess.run([binary, *args, '--layout', 'dev', 'setup', '--check'],
+                                env=env, capture_output=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        result = subprocess.run([sys.executable, str(checkout / 'tools/manage.py'), 'check'],
+                                env=env, capture_output=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        status = subprocess.check_output(['git', '-C', str(checkout), 'status', '--porcelain'])
+        self.assertEqual(status, b'')
+
     def test_actual_config_and_unusual_path_install(self):
         binary = shutil.which('zellij')
         if not binary:
@@ -609,9 +795,9 @@ class HookTests(Workspace):
 
     def test_nonexecutable_checker_does_not_skip_broken_staged_input(self):
         root = self.staged()
-        with (root / 'config/config.kdl').open('a') as file:
+        with (root / 'config.kdl').open('a') as file:
             file.write('\nbroken {\n')
-        subprocess.run(['git', '-C', str(root), 'add', 'config/config.kdl'], check=True)
+        subprocess.run(['git', '-C', str(root), 'add', 'config.kdl'], check=True)
         subprocess.run(['git', '-C', str(root), 'update-index', '--chmod=-x', 'check.sh'], check=True)
         result = self.hook(root)
         self.assertNotEqual(result.returncode, 0)
@@ -626,17 +812,17 @@ class HookTests(Workspace):
 
     def test_staged_good_with_unstaged_break_passes(self):
         root = self.staged()
-        with (root / 'config/config.kdl').open('a') as file:
+        with (root / 'config.kdl').open('a') as file:
             file.write('\nbroken {\n')
         result = self.hook(root)
         self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_staged_break_with_unstaged_repair_fails(self):
         root = self.staged()
-        original = (root / 'config/config.kdl').read_bytes()
-        (root / 'config/config.kdl').write_bytes(original + b'\nbroken {\n')
-        subprocess.run(['git', '-C', str(root), 'add', 'config/config.kdl'], check=True)
-        (root / 'config/config.kdl').write_bytes(original)
+        original = (root / 'config.kdl').read_bytes()
+        (root / 'config.kdl').write_bytes(original + b'\nbroken {\n')
+        subprocess.run(['git', '-C', str(root), 'add', 'config.kdl'], check=True)
+        (root / 'config.kdl').write_bytes(original)
         self.assertNotEqual(self.hook(root).returncode, 0)
 
 

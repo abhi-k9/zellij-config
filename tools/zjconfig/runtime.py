@@ -1,0 +1,141 @@
+"""Prepare verified plugin locations at startup without modifying the checkout."""
+from __future__ import annotations
+
+import hashlib
+import os
+from pathlib import Path
+
+from .common import ConfigError, FileLock, atomic_write, plugin_url, private_tempdir, read_json, validate_versions
+from .kdl import plugin_locations, quote, replace_plugin_locations
+from .plugin_files import acquire, verified
+
+
+def needs_plugins(arguments: list[str]) -> bool:
+    prefix = arguments[:arguments.index('--')] if '--' in arguments else arguments
+    if any(item in ['--version', '-V', '--help', '-h', '--clean'] for item in prefix):
+        return False
+    # These commands inspect or control a server; they don't start a new one.
+    commands = {'setup', 'list-sessions', 'ls', 'list-aliases', 'la', 'kill-session', 'k',
+                'kill-all-sessions', 'ka', 'delete-session', 'd', 'delete-all-sessions', 'da',
+                'action', 'ac', 'plugin', 'p', 'pipe', 'edit', 'e', 'run', 'r',
+                'web', 'watch', 'w', 'subscribe', 'help'}
+    values = {'--config', '-c', '--config-dir', '--session', '-s', '--layout', '-l',
+              '--new-session-with-layout', '-n', '--data-dir', '--max-panes', '--layout-string'}
+    index = 0
+    while index < len(prefix):
+        item = prefix[index]
+        if item in values:
+            index += 2
+        elif item.startswith('-'):
+            index += 1
+        else:
+            return item not in commands
+    return True
+
+
+def arguments_for_config(arguments: list[str], file: Path, runtime: Path) -> list[str]:
+    """Replace the config-file selector, preserving layout/theme dir and argv."""
+    result = []
+    directory = False
+    index = 0
+    while index < len(arguments):
+        item = arguments[index]
+        if item == '--':
+            break
+        if item in ['--config', '-c']:
+            if index + 1 >= len(arguments):
+                raise ConfigError(f'Missing value for {item}')
+            index += 2
+            continue
+        if item.startswith('--config=') or (item.startswith('-c') and len(item) > 2):
+            index += 1
+            continue
+        if item == '--config-dir':
+            if index + 1 >= len(arguments):
+                raise ConfigError('Missing value for --config-dir')
+            result.extend(arguments[index:index + 2])
+            directory = True
+            index += 2
+            continue
+        if item.startswith('--config-dir='):
+            directory = True
+        result.append(item)
+        index += 1
+    prefix = ['--config', str(runtime)]
+    if not directory:
+        prefix += ['--config-dir', str(file.parent)]
+    return [*prefix, *result, *arguments[index:]]
+
+
+def prepare(file: Path, arguments: list[str], state: Path, *, offline=False) -> list[str]:
+    file = file.resolve()
+    manifest = next((path for path in [file.parent / 'versions.json',
+                                      file.parent / '.zellij-config-versions.json']
+                     if path.is_file() and not path.is_symlink()), None)
+    if manifest is None:
+        return arguments
+    pins = validate_versions(read_json(manifest))
+    text = file.read_text(encoding='utf-8')
+    active = set(plugin_locations(text))
+    selected = []
+    for pin in pins['plugins']:
+        aliases = {plugin_url(pin), 'file:' + (file.parent / 'plugins' / pin['asset']).as_posix()}
+        if active & aliases:
+            selected.append((pin, active & aliases))
+    if not selected:
+        return arguments
+    quote(str(file))  # Reject control characters before creating state.
+    if state.is_symlink():
+        raise ConfigError(f'Refusing an update/runtime state symlink: {state}')
+    state.mkdir(parents=True, mode=0o700, exist_ok=True)
+    key = hashlib.sha256(str(file).encode('utf-8')).hexdigest()
+    directory = state / ('runtime-' + key)
+    with FileLock(state / ('runtime-' + key + '.lock')):
+        if directory.is_symlink() or (directory.exists() and not directory.is_dir()):
+            raise ConfigError(f'Unsafe runtime directory: {directory}')
+        if not directory.exists():
+            temporary = private_tempdir(state, '.runtime-')
+            try:
+                os.replace(temporary, directory)
+            finally:
+                if temporary.exists():
+                    temporary.rmdir()
+        if os.name != 'nt':
+            if directory.stat().st_uid != os.getuid():
+                raise ConfigError(f'Runtime directory belongs to another user: {directory}')
+            directory.chmod(0o700)
+        replacements = {}
+        for pin, aliases in selected:
+            destination = directory / (pin['sha256'] + '.wasm')
+            try:
+                # A verified prior download is preferred over the bundled copy.
+                # Failed downloads/bundled fallbacks are never cached as online.
+                if destination.is_symlink():
+                    raise ConfigError('Refusing a plugin cache symlink')
+                verified(destination.read_bytes(), pin)
+                chosen = destination
+            except (OSError, ConfigError):
+                bundled = file.parent / 'plugins' / pin['asset']
+                data, origin = acquire(pin, bundled, offline=offline)
+                if origin == 'download':
+                    atomic_write(destination, data)
+                    chosen = destination
+                else:
+                    # Snapshot verified fallback bytes outside the checkout too;
+                    # later git pulls cannot change a running session's files.
+                    chosen = directory / (pin['sha256'] + '.bundled.wasm')
+                    atomic_write(chosen, data)
+                    print(f'zj: {pin["name"]}: using verified bundled fallback', flush=True)
+            for alias in aliases:
+                replacements[alias] = 'file:' + chosen.as_posix()
+        rendered = replace_plugin_locations(text, replacements).encode('utf-8')
+        # The source and pins can be edited while downloads are in flight.
+        if file.read_text(encoding='utf-8') != text or validate_versions(read_json(manifest)) != pins:
+            raise ConfigError('Config or pins changed during plugin preparation; rerun zj')
+        # Keep generations immutable: another launch must not switch the active
+        # session's plugin selection or replace the config it watches.
+        generation = hashlib.sha256(rendered).hexdigest()
+        output = directory / (generation + '.kdl')
+        if output.is_symlink() or not output.exists() or output.read_bytes() != rendered:
+            atomic_write(output, rendered)
+    return arguments_for_config(arguments, file, output)

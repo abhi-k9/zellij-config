@@ -169,20 +169,20 @@ class HTTPSRedirects(urllib.request.HTTPRedirectHandler):
         return super().redirect_request(request, fp, code, message, headers, newurl)
 
 
-def fetch_bytes(url: str, limit: int = 128 * 1024 * 1024) -> bytes:
+def fetch_bytes(url: str, limit: int = 128 * 1024 * 1024, *, timeout=10, budget=45, attempts=2) -> bytes:
     """Bounded HTTPS fetch; preserve inherited proxy and system CA settings."""
     if urllib.parse.urlsplit(url).scheme != 'https':
         raise ConfigError('Only HTTPS download URLs are supported')
     opener = urllib.request.build_opener(HTTPSRedirects())
-    for attempt in range(2):
+    for attempt in range(attempts):
         try:
             request = urllib.request.Request(url, headers={'User-Agent': 'zellij-config/1'})
-            deadline = time.monotonic() + 45
-            with opener.open(request, timeout=10) as response:
+            deadline = time.monotonic() + budget
+            with opener.open(request, timeout=timeout) as response:
                 result = bytearray()
                 while True:
                     if time.monotonic() > deadline:
-                        raise TimeoutError('Download exceeded 45 seconds')
+                        raise TimeoutError(f'Download exceeded {budget} seconds')
                     block = response.read(min(65536, limit - len(result) + 1))
                     if not block:
                         return bytes(result)
@@ -190,10 +190,10 @@ def fetch_bytes(url: str, limit: int = 128 * 1024 * 1024) -> bytes:
                     if len(result) > limit:
                         raise ConfigError('Download exceeds the size limit')
         except urllib.error.HTTPError as error:
-            if error.code < 500 or attempt:
+            if error.code < 500 or attempt + 1 == attempts:
                 raise ConfigError(f'HTTP {error.code} fetching {url}') from error
         except (OSError, urllib.error.URLError) as error:
-            if attempt:
+            if attempt + 1 == attempts:
                 raise ConfigError(f'Could not download {url}: {error}') from error
         time.sleep(0.25)
     raise ConfigError(f'Could not download {url}')
