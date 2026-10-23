@@ -826,7 +826,13 @@ class NativeBackgroundTests(Workspace):
             'started.write_text("ready")\n'
             'deadline = time.monotonic() + 10\n'
             'while not release.exists() and time.monotonic() < deadline: time.sleep(0.01)\n'
-            'result = {"arguments": sys.argv[4:], "stdin": sys.stdin.read(), "stdout_tty": sys.stdout.isatty()}\n'
+            'console = sys.stdout.isatty()\n'
+            'if os.name == "nt":\n'
+            '    import ctypes, msvcrt\n'
+            '    mode = ctypes.c_ulong()\n'
+            '    handle = ctypes.c_void_p(msvcrt.get_osfhandle(sys.stdout.fileno()))\n'
+            '    console = bool(ctypes.windll.kernel32.GetConsoleMode(handle, ctypes.byref(mode)))\n'
+            'result = {"arguments": sys.argv[4:], "stdin": sys.stdin.read(), "stdout_console": console}\n'
             'temporary = done.with_suffix(".tmp")\n'
             'temporary.write_text(json.dumps(result), encoding="utf-8")\n'
             'os.replace(temporary, done)\n', encoding='utf-8')
@@ -841,7 +847,9 @@ class NativeBackgroundTests(Workspace):
         result = common.read_json(done)
         self.assertEqual(result['arguments'], arguments)
         self.assertEqual(result['stdin'], '')
-        self.assertFalse(result['stdout_tty'])
+        # Windows CRT isatty() is also true for NUL; GetConsoleMode above
+        # distinguishes an actual console handle from that redirected device.
+        self.assertFalse(result['stdout_console'])
 
     def test_native_update_worker_persists_results_without_network(self):
         config = self.base / 'config with spaces 雪.kdl'
