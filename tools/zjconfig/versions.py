@@ -8,6 +8,7 @@ import platform
 import re
 import tarfile
 import zipfile
+from urllib.parse import quote
 
 from .common import ConfigError, FileLock, atomic_write, fetch_bytes, github_release, json_bytes, load_versions, plugin_url
 
@@ -69,6 +70,15 @@ def verified_asset(asset: dict, expected: str) -> bytes:
     return data
 
 
+def license_terms(notice: bytes) -> str:
+    """Allow copyright-holder/year changes; require review of changed terms."""
+    text = notice.decode('utf-8')
+    if 'Copyright' not in text or 'Permission is hereby granted, free of charge' not in text:
+        raise ConfigError('Expected the upstream MIT copyright and permission notice')
+    return ' '.join(' '.join(line for line in text.splitlines()
+                            if not line.lstrip().startswith('Copyright')).split())
+
+
 def check_versions(root: Path) -> int:
     pins = load_versions(root)
     for repository, tag in [('zellij-org/zellij', pins['zellij']['tag']),
@@ -111,9 +121,9 @@ def update(root: Path, selections: dict[str, str], zellij_tag: str | None,
             if not data.startswith(b'\0asm\x01\0\0\0'):
                 raise ConfigError('Downloaded plugin is not WebAssembly v1')
             # Retain the exact pinned upstream notice, rather than inventing one.
-            from urllib.parse import quote
             notice = fetch_bytes(f"https://raw.githubusercontent.com/{plugin['repository']}/{quote(tag, safe='')}/{plugin['license_path']}", 256 * 1024)
-            if 'Permission is hereby granted, free of charge' not in notice.decode('utf-8'):
+            previous_notice = root / 'licenses' / (plugin['name'] + '.txt')
+            if license_terms(notice) != license_terms(previous_notice.read_bytes()):
                 raise ConfigError(f'Review the changed license for {plugin["name"]} before updating')
             plugin['tag'], plugin['sha256'] = tag, digest
             text = text.replace(old_url, plugin_url(plugin))
@@ -161,7 +171,7 @@ def install_zellij(root: Path, binary_dir: Path) -> Path:
     name = f'zellij-{arch}-{target}.' + ('zip' if system == 'Windows' else 'tar.gz')
     if name not in pins['zellij']['assets']:
         raise ConfigError(f'No pinned Zellij artifact for {name}')
-    url = f"https://github.com/zellij-org/zellij/releases/download/{pins['zellij']['tag']}/{name}"
+    url = f"https://github.com/zellij-org/zellij/releases/download/{quote(pins['zellij']['tag'], safe='')}/{name}"
     data = verified_asset({'name': name, 'browser_download_url': url}, pins['zellij']['assets'][name])
     executable = 'zellij.exe' if system == 'Windows' else 'zellij'
     if system == 'Windows':

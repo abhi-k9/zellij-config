@@ -58,6 +58,11 @@ Ordinary tests use deterministic network fixtures. Live latest-release requests
 are a separate optional manual smoke job. CI has timeouts and cancellation of
 superseded runs, pinned action commits, locked npm dependencies, hash-locked Ruff
 wheels, verified actionlint, root README lint and HTML validation.
+Local Markdown/HTML file links are checked without network access. Restore also
+checks snapshot plugin hashes and works when the current source pins are damaged.
+Upgrade regressions cover write rollback, edits during downloads and changed
+license terms. Physical path normalization covers macOS temporary-directory
+aliases, Windows short paths and configs reached through directory symlinks.
 
 ## Boundaries
 

@@ -118,28 +118,42 @@ def load_versions(root: Path) -> dict:
 
 
 def validate_versions(pins: dict) -> dict:
-    if pins.get('schema') != 1 or not isinstance(pins.get('plugins'), list):
+    if not isinstance(pins, dict) or pins.get('schema') != 1 or not isinstance(pins.get('plugins'), list):
         raise ConfigError('Unsupported versions.json schema')
+
+    def text(value, label, pattern=None):
+        if (not isinstance(value, str) or not value or any(ord(c) < 32 for c in value)
+                or (pattern and not re.fullmatch(pattern, value))):
+            raise ConfigError(f'Invalid {label} in version metadata')
+        return value
+
     names, assets = set(), set()
     for plugin in pins['plugins']:
-        name, asset = plugin['name'], plugin['asset']
-        if not re.fullmatch(r'[A-Za-z0-9_-]+', name) or name in names:
+        if not isinstance(plugin, dict):
+            raise ConfigError('Invalid plugin metadata')
+        name = text(plugin.get('name'), 'plugin name', r'[A-Za-z0-9_-]+')
+        asset = text(plugin.get('asset'), 'plugin asset', r'[A-Za-z0-9_.-]+\.wasm')
+        if name in names:
             raise ConfigError(f'Invalid or duplicate plugin name: {name}')
-        if not re.fullmatch(r'[A-Za-z0-9_.-]+\.wasm', asset) or asset in assets:
+        if asset in assets:
             raise ConfigError(f'Invalid or duplicate plugin asset: {asset}')
-        if not re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+', plugin['repository']):
-            raise ConfigError('Invalid GitHub repository')
-        if not plugin['tag'] or not re.fullmatch(r'[0-9a-f]{64}', plugin['sha256']):
-            raise ConfigError(f'Invalid pin for {name}')
+        text(plugin.get('repository'), 'GitHub repository', r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+')
+        text(plugin.get('tag'), 'plugin tag')
+        text(plugin.get('sha256'), 'plugin digest', r'[0-9a-f]{64}')
+        notice = text(plugin.get('license_path'), 'upstream license path', r'[A-Za-z0-9_./-]+')
+        if notice.startswith('/') or any(part in ['', '.', '..'] for part in notice.split('/')):
+            raise ConfigError('Invalid upstream license path')
         if plugin.get('license') != 'MIT':
             raise ConfigError(f'Review redistribution permission before bundling {name}')
         names.add(name)
         assets.add(asset)
-    if not pins['zellij']['tag']:
-        raise ConfigError('Missing Zellij version')
-    for asset, digest in pins['zellij']['assets'].items():
-        if '/' in asset or not re.fullmatch(r'[0-9a-f]{64}', digest):
-            raise ConfigError('Invalid Zellij asset pin')
+    zellij = pins.get('zellij')
+    if not isinstance(zellij, dict) or not isinstance(zellij.get('assets'), dict) or not zellij['assets']:
+        raise ConfigError('Invalid Zellij metadata')
+    text(zellij.get('tag'), 'Zellij tag')
+    for asset, digest in zellij['assets'].items():
+        text(asset, 'Zellij asset name', r'[A-Za-z0-9_.-]+')
+        text(digest, 'Zellij digest', r'[0-9a-f]{64}')
     return pins
 
 

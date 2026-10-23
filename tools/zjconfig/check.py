@@ -4,9 +4,11 @@ from __future__ import annotations
 import ast
 from html.parser import HTMLParser
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import tempfile
+from urllib.parse import unquote, urlsplit
 
 from .common import ConfigError, load_versions, plugin_url, sha256
 from .install import validate
@@ -17,8 +19,12 @@ from .versions import checksums, documentation
 REQUIRED = [
     'README.md', 'VERSIONS.md', 'config/README.md', 'config/config.kdl',
     'config/themes/example-custom.kdl.example', 'versions.json', 'plugins.sha256',
-    'setup.sh', 'setup.ps1', 'launcher/zj', 'launcher/zj.cmd', 'launcher/zj.ps1',
+    'setup.sh', 'setup.ps1', 'check.sh', 'tools/manage.py',
+    'launcher/zj', 'launcher/zj.cmd', 'launcher/zj.ps1',
     'hooks/pre-commit', '.github/workflows/check.yml', 'THIRD_PARTY_NOTICES.md',
+    'ci-tools.json', 'tools/lint_workflow.py', 'requirements-dev.txt',
+    'package.json', 'package-lock.json', 'pyproject.toml', 'tests/test_regressions.py',
+    'docs/AUDIT_FIXES.md',
     *['config/layouts/' + name + suffix for name in ['default', 'dev', 'zjstatus']
       for suffix in ['.kdl', '.swap.kdl']],
     *['cheatsheets/' + name + '.html' for name in
@@ -32,8 +38,10 @@ class Tags(HTMLParser):
     def __init__(self):
         super().__init__()
         self.stack = []
+        self.links = []
 
-    def handle_starttag(self, tag, _attrs):
+    def handle_starttag(self, tag, attrs):
+        self.links.extend(value for key, value in attrs if key in ['href', 'src'] and value)
         if tag in ['div', 'table', 'tr', 'td']:
             self.stack.append(tag)
 
@@ -41,6 +49,16 @@ class Tags(HTMLParser):
         if tag in ['div', 'table', 'tr', 'td']:
             if not self.stack or self.stack.pop() != tag:
                 raise ConfigError(f'Mismatched HTML tag: {tag}')
+
+
+def local_link(root: Path, source: Path, destination: str) -> None:
+    parsed = urlsplit(destination)
+    if parsed.scheme or parsed.netloc or not parsed.path:
+        return
+    path = unquote(parsed.path)
+    target = root / path.lstrip('/') if path.startswith('/') else source.parent / path
+    if not target.exists():
+        raise ConfigError(f'Broken local link in {source.relative_to(root)}: {destination}')
 
 
 def check(root: Path, static=False) -> None:
@@ -75,9 +93,16 @@ def check(root: Path, static=False) -> None:
         parser.feed(path.read_text(encoding='utf-8'))
         if parser.stack:
             raise ConfigError(f'Unclosed HTML tags in {path}')
+        for destination in parser.links:
+            local_link(root, path, destination)
+    for path in [*root.glob('*.md'), root / 'config/README.md', *root.glob('docs/*.md')]:
+        # Inline links used in this repository; fenced examples are not links.
+        text = re.sub(r'(?ms)^```.*?^```[^\n]*$', '', path.read_text(encoding='utf-8'))
+        for destination in re.findall(r'\[[^\]\n]*\]\(([^)\n]+)\)', text):
+            local_link(root, path, destination.strip('<>'))
     for path in (root / 'tools').rglob('*.py'):
         ast.parse(path.read_text(encoding='utf-8'), filename=str(path))
-    print('Inventory, active KDL pins, checksums, licenses, generated docs, HTML and Python syntax passed.')
+    print('Inventory, active KDL pins, checksums, licenses, generated docs, local links, HTML and Python syntax passed.')
     if static:
         print('Static checks only; Zellij config/layout/theme validation was explicitly omitted.')
         return

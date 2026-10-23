@@ -26,7 +26,9 @@ class Workspace(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix='zj-regression-')
         self.addCleanup(self.temp.cleanup)
-        self.base = Path(self.temp.name)
+        # macOS /var and Windows short temp paths can name the same physical
+        # directory differently. Fault injection compares physical destinations.
+        self.base = Path(self.temp.name).resolve()
         self.target = self.base / 'config'
         self.bin = self.base / 'bin'
 
@@ -62,6 +64,26 @@ class InstallerTests(Workspace):
             install.install(ROOT, target=self.target, restore=True)
         self.assertEqual((self.target / 'config.kdl').read_text(), '// ORIGINAL CONFIG\n')
         self.assertFalse((self.target / '..stale').exists())
+
+    def test_restore_does_not_depend_on_current_source_pins(self):
+        root = self.clone()
+        self.old()
+        self.setup_config(root)
+        (root / 'versions.json').unlink()
+        (root / 'config/config.kdl').unlink()
+        self.setup_config(root, restore=True)
+        self.assertEqual((self.target / 'config.kdl').read_text(), '// ORIGINAL CONFIG\n')
+
+    def test_corrupt_snapshot_plugin_cannot_replace_active_config(self):
+        self.setup_config()
+        self.setup_config()
+        snapshot = install.snapshots(self.target)[-1][3]
+        (snapshot / 'plugins/monocle.wasm').write_bytes(b'corrupt snapshot')
+        active = (self.target / 'config.kdl').read_bytes()
+        with self.assertRaisesRegex(common.ConfigError, 'Snapshot plugin checksum'):
+            self.setup_config(restore=True)
+        self.assertEqual((self.target / 'config.kdl').read_bytes(), active)
+        self.assertFalse(list(self.base.glob('config.stage-*')))
 
     def test_file_symlink_never_overwrites_dotfiles(self):
         self.target.mkdir()
@@ -106,7 +128,7 @@ class InstallerTests(Workspace):
         target = self.base / 'path with "quote\\slash'
         self.setup_config(target=target)
         parsed = kdl.plugin_locations((target / 'config.kdl').read_text())
-        self.assertTrue(all(url.startswith('file:' + target.as_posix()) for url in parsed))
+        self.assertTrue(all(url.startswith('file:' + target.resolve().as_posix()) for url in parsed))
 
     def test_trailing_slash_reinstall(self):
         self.old()
@@ -322,6 +344,13 @@ class LauncherTests(Workspace):
         self.assertEqual(launcher.locations(self.target / 'config.kdl'),
                          sorted(common.plugin_url(p) for p in common.load_versions(ROOT)['plugins']))
 
+    def test_installed_update_metadata_through_directory_alias(self):
+        self.setup_config()
+        alias = self.base / 'config-alias'
+        self.link(alias, self.target, True)
+        self.assertEqual(launcher.locations(alias / 'config.kdl'),
+                         sorted(common.plugin_url(p) for p in common.load_versions(ROOT)['plugins']))
+
     def test_no_newer_claim_when_latest_is_older(self):
         file = self.config(tags=('v2.0.0',))
         with mock.patch.object(launcher, 'github_release', return_value={'tag_name': 'v1.9.0'}):
@@ -345,6 +374,19 @@ class LauncherTests(Workspace):
 
 
 class CheckerTests(Workspace):
+    def test_broken_local_documentation_link_fails(self):
+        root = self.clone()
+        with (root / 'README.md').open('a', encoding='utf-8') as stream:
+            stream.write('\n[Missing guide](docs/does-not-exist.md)\n')
+        with self.assertRaisesRegex(common.ConfigError, 'Broken local link'):
+            check.check(root, static=True)
+
+    def test_malformed_version_field_types_fail_cleanly(self):
+        for value in [None, [], {'schema': 1, 'plugins': [None]},
+                      {'schema': 1, 'plugins': [{'name': []}]}]:
+            with self.subTest(value=value), self.assertRaises(common.ConfigError):
+                common.validate_versions(value)
+
     def test_missing_sheet_is_failure(self):
         root = self.clone()
         (root / 'cheatsheets/kdl-syntax-cheatsheet.html').unlink()
@@ -393,6 +435,44 @@ class VersionTests(Workspace):
             versions.update(root, {pin['name']: 'latest'}, None)
         self.assertEqual(before, ((root / 'versions.json').read_bytes(), (root / 'config/config.kdl').read_bytes()))
 
+    def test_update_write_failure_restores_all_previous_bytes(self):
+        root = self.clone()
+        pin, data, release = self.release(root)
+        paths = ['versions.json', 'config/config.kdl', 'plugins.sha256', 'VERSIONS.md',
+                 'plugins/' + pin['asset'], 'licenses/' + pin['name'] + '.txt']
+        before = {path: (root / path).read_bytes() for path in paths}
+        replace = versions.atomic_write
+
+        def fail_config(path, *args):
+            if path == root / 'config/config.kdl':
+                raise OSError('injected config write failure')
+            return replace(path, *args)
+
+        with mock.patch.object(versions, 'github_release', return_value=release), \
+                mock.patch.object(versions, 'fetch_bytes', side_effect=[data, before['licenses/' + pin['name'] + '.txt']]), \
+                mock.patch.object(versions, 'atomic_write', side_effect=fail_config), self.assertRaises(OSError):
+            versions.update(root, {pin['name']: 'latest'}, None)
+        self.assertEqual(before, {path: (root / path).read_bytes() for path in paths})
+
+    def test_update_does_not_overwrite_edits_made_during_download(self):
+        root = self.clone()
+        pin, data, release = self.release(root)
+        before = (root / 'versions.json').read_bytes()
+        notice = (root / 'licenses' / (pin['name'] + '.txt')).read_bytes()
+        config = root / 'config/config.kdl'
+        edited = config.read_bytes() + b'\n// concurrent user edit\n'
+
+        def fetch(url, *args):
+            config.write_bytes(edited)
+            return notice if 'raw.githubusercontent.com' in url else data
+
+        with mock.patch.object(versions, 'github_release', return_value=release), \
+                mock.patch.object(versions, 'fetch_bytes', side_effect=fetch), \
+                self.assertRaisesRegex(common.ConfigError, 'changed during the download'):
+            versions.update(root, {pin['name']: 'latest'}, None)
+        self.assertEqual(config.read_bytes(), edited)
+        self.assertEqual((root / 'versions.json').read_bytes(), before)
+
     def test_missing_published_digest_needs_trusted_override(self):
         with self.assertRaises(common.ConfigError):
             versions.published_digest({'digest': None})
@@ -403,10 +483,20 @@ class VersionTests(Workspace):
         root = self.clone()
         pin, data, release = self.release(root)
         before = (root / 'versions.json').read_bytes()
-        with mock.patch.object(versions, 'github_release', return_value=release), \
-                mock.patch.object(versions, 'fetch_bytes', side_effect=[data, b'All rights reserved']), self.assertRaises(common.ConfigError):
-            versions.update(root, {pin['name']: 'latest'}, None)
-        self.assertEqual((root / 'versions.json').read_bytes(), before)
+        original = (root / 'licenses' / (pin['name'] + '.txt')).read_bytes()
+        for notice in [b'All rights reserved', original + b'\nCommercial use prohibited.\n']:
+            with self.subTest(notice=notice[-40:]), \
+                    mock.patch.object(versions, 'github_release', return_value=release), \
+                    mock.patch.object(versions, 'fetch_bytes', side_effect=[data, notice]), self.assertRaises(common.ConfigError):
+                versions.update(root, {pin['name']: 'latest'}, None)
+            self.assertEqual((root / 'versions.json').read_bytes(), before)
+
+    def test_added_license_restriction_requires_review(self):
+        notice = (ROOT / 'licenses/monocle.txt').read_bytes()
+        renamed = notice.replace(b'2023 Aram Drevekenin', b'2026 Example Contributors')
+        self.assertEqual(versions.license_terms(notice), versions.license_terms(renamed))
+        self.assertNotEqual(versions.license_terms(notice),
+                            versions.license_terms(notice + b'\nCommercial use prohibited.\n'))
 
     def test_zellij_archive_verified_before_payload_install(self):
         root = self.clone()
@@ -463,6 +553,27 @@ class RealBinaryTests(Workspace):
             result = subprocess.run(args, env=env, capture_output=True)
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn(b'zellij', result.stdout)
+
+    @unittest.skipUnless(os.name == 'nt', 'Native Windows PowerShell argument transport')
+    def test_powershell_literal_arguments_reach_helper(self):
+        self.bin.mkdir()
+        wrapper = self.bin / 'zj.ps1'
+        shutil.copy2(ROOT / 'launcher/zj.ps1', wrapper)
+        helper = self.bin / '.zellij-config'
+        helper.mkdir()
+        (helper / 'manage.py').write_text(
+            'import base64, json, sys\n'
+            'print(json.dumps(json.loads(base64.b64decode(sys.argv[-1])), ensure_ascii=True))\n', encoding='utf-8')
+        expected = ['', 'a"b', 'with spaces', 'back\\slash', '雪', '--config', "dollar$semi;tick`quote'"]
+
+        def quoted(value):
+            return "'" + value.replace("'", "''") + "'"
+
+        command = '& ' + quoted(str(wrapper)) + ' ' + ' '.join(map(quoted, expected))
+        result = subprocess.run(['powershell', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
+                                 '-Command', command], capture_output=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout), expected)
 
 
 class HookTests(Workspace):

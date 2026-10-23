@@ -46,6 +46,7 @@ def config_file(arguments: list[str]) -> Path:
 
 
 def locations(file: Path) -> list[str]:
+    file = file.resolve()
     found = plugin_locations(file.read_text(encoding='utf-8'))
     # Verified local installs retain their exact upstream pins for update checks.
     ledger = file.parent / '.zellij-config-versions.json'
