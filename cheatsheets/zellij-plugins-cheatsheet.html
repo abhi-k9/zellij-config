@@ -193,7 +193,7 @@ session {
     <tr><td><code>zjstatus</code> <span class="badge aliased">aliased</span></td><td>Customizable status bar (tmux-line style)</td></tr>
     <tr><td><code>monocle</code> <span class="badge aliased">aliased</span></td><td>Fuzzy file/content finder from the focused pane's directory — <kbd>Ctrl+o</kbd> <kbd>m</kbd></td></tr>
     <tr><td><code>multitask</code> <span class="badge aliased">aliased</span></td><td>Run several commands and watch all outputs</td></tr>
-    <tr><td><code>forgot</code> <span class="badge aliased">aliased</span></td><td>Keybinding popup — bound to <kbd>Ctrl+o</kbd> <kbd>h</kbd></td></tr>
+    <tr><td><code>configuration</code> <span class="badge builtin">built-in</span></td><td>Keybinding screen — bound to <kbd>Ctrl+o</kbd> <kbd>h</kbd></td></tr>
     <tr class="divider"><td colspan="2">Launching</td></tr>
     <tr><td colspan="2" class="note">Inside a session: <code>zellij plugin --floating -- monocle</code> — or wire to a keybind. See per-plugin cards below for setup details.</td></tr>
   </table>
@@ -316,30 +316,10 @@ cargo test            # step 2: only if step 1 succeeded</pre></td></tr>
 </div>
 
 <div class="card col-2">
-  <div class="card-header"><div class="dot" style="background:var(--teal)"></div><h2>zellij-forgot <span class="badge aliased">aliased</span></h2><span class="note" style="margin-left:8px">karimould/zellij-forgot &nbsp;·&nbsp; keybinding cheatsheet popup</span></div>
+  <div class="card-header"><div class="dot" style="background:var(--teal)"></div><h2>Built-in keybinding screen</h2></div>
   <table>
-    <tr class="divider"><td colspan="2">Why you want this</td></tr>
-    <tr><td colspan="2" class="note">A searchable floating popup — your in-terminal cheatsheet. We set <code>LOAD_ZELLIJ_BINDINGS "false"</code> and supply a curated list (in the <kbd style="font-size:9.5px">Ctrl+o</kbd> <kbd style="font-size:9.5px">h</kbd> bind), because auto-load renders ragged rows, de-dupes multi-key actions, and labels custom binds "Unknown Action".</td></tr>
-    <tr class="divider"><td colspan="2">Bound in our config.kdl</td></tr>
-    <tr><td colspan="2"><pre>plugins {
-    forgot location="https://github.com/karimould/zellij-forgot/releases/download/0.4.2/zellij_forgot.wasm"
-}
-keybinds {
-    session {
-        bind "h" {
-            LaunchOrFocusPlugin "forgot" {
-                floating true
-                LOAD_ZELLIJ_BINDINGS "false"
-                "Pane mode: enter" "Ctrl p"   // …+ curated list
-            }
-            SwitchToMode "Normal"
-        }
-    }
-}</pre></td></tr>
-    <tr class="divider"><td colspan="2">Use it</td></tr>
-    <tr><td><kbd>Ctrl+o</kbd> <kbd>h</kbd></td><td>Open the popup; <kbd>Esc</kbd> closes it</td></tr>
-    <tr class="divider"><td colspan="2">Why session mode</td></tr>
-    <tr><td colspan="2" class="note">It used to be a global <kbd>Ctrl+y</kbd>, which took readline's yank and nvim's <code>&lt;C-y&gt;</code> (scroll up, accept completion) whenever you forgot <kbd>F12</kbd>. <kbd>h</kbd> is free in session mode (0.45.1 already uses <kbd>f</kbd>, <kbd>s</kbd>, <kbd>[</kbd> and <kbd>]</kbd> there).</td></tr>
+    <tr><td><kbd>Ctrl+o</kbd> <kbd>h</kbd></td><td>Open the configuration/keybinding screen</td></tr>
+    <tr><td colspan="2" class="note">Uses Zellij's built-in configuration plugin and actual keybindings. The former third-party popup is no longer bundled because its redistribution permission was unestablished.</td></tr>
   </table>
 </div>
 
@@ -496,18 +476,18 @@ theme_light "catppuccin-latte"</pre></td>
     <tr class="divider"><td colspan="2">A few worth knowing</td></tr>
     <tr><td><code>room</code></td><td>Project / session switcher</td></tr>
     <tr><td><code>harpoon</code></td><td>Pin and jump to favorite panes (nvim harpoon style)</td></tr>
-    <tr><td><code>zellij-forgot</code></td><td>Searchable keybind cheatsheet inside zellij</td></tr>
     <tr><td><code>theme-tester</code></td><td>Live-edit a theme and see the result</td></tr>
     <tr class="divider"><td colspan="2">Install manually</td></tr>
-    <tr><td colspan="2" class="note">Pin its release URL in <code>config.kdl</code>'s <code>plugins {}</code> the same way our four plugins are aliased; <code>zj</code> then checks it for updates too. Add the URL to the README's offline table, its checksum to <code>plugins.sha256</code> and the file to <code>plugins/</code> — <code>./check.sh</code> flags whichever is missing. (On macOS and Windows, don't create <code>~/.config/zellij</code> to hold <code>.wasm</code> files: zellij would then ignore your real config.)</td></tr>
+    <tr><td colspan="2" class="note">Review redistribution permission, then add its source, tag, digest and notice to <code>versions.json</code> and <code>licenses/</code>. Use the explicit version updater and validate before installation. See <code>VERSIONS.md</code>; the checks reject stale metadata or missing plugin files.</td></tr>
   </table>
 </div>
 
 </div><!-- .grid -->
 
 <footer>
+  <span>Printable API reference snapshot: Zellij 0.45.1. Current selected pins and explicit upgrades: VERSIONS.md.</span>
   <span>Plugins are .wasm — sandboxed by default, no network or shell access without explicit zellij permission grants</span>
-  <span>Our 4 aliases: <code>zjstatus</code> &middot; <code>monocle</code> &middot; <code>multitask</code> &middot; <code>forgot</code> &nbsp;·&nbsp; <code>github.com/zellij-org/awesome-zellij</code></span>
+  <span>Our 3 aliases: <code>zjstatus</code> &middot; <code>monocle</code> &middot; <code>multitask</code> &nbsp;·&nbsp; <code>github.com/zellij-org/awesome-zellij</code></span>
 </footer>
 
 </body>

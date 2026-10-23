@@ -7,3 +7,5 @@
 * text=auto eol=lf
 *.cmd   text eol=crlf
 *.wasm  binary
+# Preserve exact upstream license text, including its final blank line.
+licenses/*.txt whitespace=-blank-at-eof

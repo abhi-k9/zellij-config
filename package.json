@@ -1,0 +1,10 @@
+{
+  "name": "zellij-config-tooling",
+  "private": true,
+  "scripts": {
+    "lint:markdown": "markdownlint README.md VERSIONS.md THIRD_PARTY_NOTICES.md config/README.md docs/*.md CHANGELOG.md"
+  },
+  "devDependencies": {
+    "markdownlint-cli": "0.49.1"
+  }
+}

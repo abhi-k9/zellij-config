@@ -234,58 +234,10 @@ keybinds {
             SwitchToMode "Normal"
         }
 
-        // KEYBINDING POPUP — Ctrl+o, h (zellij-forgot, floating; Esc closes it).
-        // The rows below ARE the popup's content, and the master copy of this
-        // config's key list: zellij config has no `include`, so it can't live in
-        // another file. Hand-kept mirror: cheatsheets/zellij-cheatsheet.html (the
-        // README lists only the keys this config changes). check.sh check 10
-        // verifies that every Alt/Ctrl/F-key any of them mentions is bound.
-        // Edit here first, then the cheatsheet.
-        // In session mode rather than on a global key: a global Ctrl+y used to
-        // take readline's yank and nvim's <C-y> whenever you forgot F12.
+        // Built-in keybinding/configuration screen. No third-party popup binary
+        // is needed; Ctrl+o, c remains Zellij's default entry point too.
         bind "h" {
-            LaunchOrFocusPlugin "forgot" {
-                floating true
-                // Auto-loading zellij's live bindings is OFF: it renders ragged
-                // "Mode: X, Action: Y" rows, de-dupes multi-key actions and shows
-                // custom binds as "Unknown Action". Set "true" to bring it back.
-                LOAD_ZELLIJ_BINDINGS "false"
-                // Searchable by label text — "pane", "scroll", "tab", etc.
-                "Global: new pane"                  "Alt n"
-                "Global: toggle floating panes"     "Alt f"
-                "Global: focus pane left / right"   "Alt h / Alt l  (switches tab at edge)"
-                "Global: focus pane down / up"      "Alt j / Alt k"
-                "Global: grow / shrink focused pane" "Alt =  /  Alt -"
-                "Global: move tab left / right"     "Alt i / Alt o"
-                "Global: prev / next swap layout"   "Alt [  /  Alt ]"
-                "Global: lock / unlock interface"   "F12  (manual; lock before entering nvim)"
-                "Pane mode: enter"                  "Ctrl p"
-                "Pane: new / split down / split right" "n / d / r"
-                "Pane: close / fullscreen / rename" "x / f / c"
-                "Pane: toggle floating / embed"     "w / e"
-                "Pane: toggle frames"               "z"
-                "Pane: focus"                       "h j k l  or arrows"
-                "Tab mode: enter"                   "Ctrl t"
-                "Tab: new / close / rename"         "n / x / r"
-                "Tab: switch / jump to N / sync"    "h l  /  1-9  /  s"
-                "Tab: break pane to new tab"        "b"
-                "Resize mode: enter"                "Ctrl n"
-                "Resize: grow / shrink / direction" "+  /  -  /  h j k l"
-                "Move mode: enter"                  "Ctrl h"
-                "Move: move pane"                   "h j k l  or  n / p"
-                "Scroll mode: enter"                "Ctrl s"
-                "Scroll: line / page"               "j k  or arrows  /  PageUp PageDown"
-                "Scroll: half page up / down"       "u / d"
-                "Scroll: jump to bottom (live)"     "Ctrl c"
-                "Scroll: edit buffer in editor"     "e   (needs EDITOR set)"
-                "Scroll: search"                    "s  then type;  n / p = next / prev match"
-                "Session mode: enter"               "Ctrl o"
-                "Session: detach / manager / layouts" "d / w / l"
-                "Session: keybinding popup"         "h   (custom; this list)"
-                "Session: monocle file finder"      "m   (custom)"
-                "Session: quit zellij"              "q   (custom; Ctrl+q is unbound)"
-                "Locked mode: unlock"               "F12"
-            }
+            LaunchOrFocusPlugin "configuration" { floating true; };
             SwitchToMode "Normal"
         }
 
@@ -343,7 +295,7 @@ keybinds {
 // `./setup.sh --offline`.
 //
 // Copy each tag verbatim from its releases page — the formats differ upstream:
-// zjstatus and monocle use `vX.Y.Z`, forgot `X.Y.Z`, multitask the zellij version.
+// zjstatus and monocle use `vX.Y.Z`; multitask follows the zellij version.
 plugins {
     // https://github.com/dj95/zjstatus — status bar used by layouts/zjstatus.kdl.
     // v0.25.0 needs zellij >= 0.45.0 (it fixes the 0.45 frame flicker).
@@ -356,8 +308,7 @@ plugins {
     // "mini-CI". Released in lockstep with zellij: bump it with every upgrade.
     multitask location="https://github.com/leakec/multitask/releases/download/v0.45.1/multitask.wasm"
 
-    // https://github.com/karimould/zellij-forgot — the Ctrl+o, h keybinding popup.
-    forgot location="https://github.com/karimould/zellij-forgot/releases/download/0.4.2/zellij_forgot.wasm"
+
 }
 
 // To start a plugin with every session (in the background), add a block like

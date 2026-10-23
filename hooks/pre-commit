@@ -10,9 +10,9 @@
 #  Disable it again:
 #      git config --unset core.hooksPath
 #
-#  If `zellij` is on your PATH, check.sh also runs its live checks (config,
-#  theme and every layout parse, documented shortcuts are bound, swap files
-#  match zellij's own); otherwise those are skipped. Works under Git Bash too.
+#  Python 3.10+ and Zellij are required: missing validation tools block the
+#  commit. Config, layouts/swaps and the example theme use Zellij's parser.
+#  Works under Git Bash too.
 # ─────────────────────────────────────────────────────────────────────────────
 
 # Check what is STAGED — exactly what the commit will contain — not the working
@@ -27,18 +27,17 @@ snap=$(mktemp -d "${TMPDIR:-/tmp}/zellij-precommit.XXXXXX") || exit 1
 trap 'rm -rf "$snap"' EXIT INT TERM
 git checkout-index --all --prefix="$snap/" || exit 1
 
-if [ ! -x "$snap/check.sh" ]; then
-    echo "pre-commit: check.sh isn't staged (or isn't executable) — skipping." >&2
-    exit 0
+if [ ! -f "$snap/check.sh" ]; then
+    echo "pre-commit: required check.sh is missing from the staged snapshot." >&2
+    exit 1
 fi
 
 # Show the full report only when something is wrong; stay quiet when clean.
-if out=$("$snap/check.sh" 2>&1); then
+if out=$(sh "$snap/check.sh" 2>&1); then
     exit 0
 fi
-# Print each flagged check's header plus its WARN lines (not the whole report).
-printf '%s\n' "$out" | grep -E '^[[:space:]]+WARN|^[0-9]+\. ' \
-    | grep -B1 -E '^[[:space:]]+WARN' | grep -v '^--$' >&2
+# Keep the complete diagnostic when validation fails.
+printf '%s\n' "$out" >&2
 echo "" >&2
 echo "pre-commit: check.sh found problems (above) — commit blocked." >&2
 echo "            Fix them, or commit anyway with: git commit --no-verify" >&2

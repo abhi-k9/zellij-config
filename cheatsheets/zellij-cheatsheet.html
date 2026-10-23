@@ -128,7 +128,7 @@
   <table>
     <tr><td><kbd class="red">Ctrl+q</kbd> <span class="badge active">unbound</span></td><td>Default quit removed (fat-finger guard)</td>
         <td><kbd class="mauve">Ctrl+o</kbd> <kbd class="mauve">q</kbd> <span class="badge active">added</span></td><td>Deliberate two-step quit (replaces it)</td></tr>
-    <tr><td><kbd class="mauve">Ctrl+o</kbd> <kbd class="mauve">h</kbd> <span class="badge active">added</span></td><td>zellij-forgot keybinding popup (floating; <kbd style="font-size:9.5px">Esc</kbd> closes)</td>
+    <tr><td><kbd class="mauve">Ctrl+o</kbd> <kbd class="mauve">h</kbd> <span class="badge active">added</span></td><td>Built-in configuration/keybinding screen (floating; <kbd style="font-size:9.5px">Esc</kbd> closes)</td>
         <td><kbd class="flamingo">F12</kbd> <span class="badge active">added</span></td><td>Lock toggle (Ctrl+g unbound — clashes with nvim)</td></tr>
     <tr><td><kbd class="mauve">Ctrl+o</kbd> <kbd class="mauve">m</kbd> <span class="badge active">added</span></td><td>monocle — find files &amp; contents from the focused pane's directory</td>
         <td><kbd class="mauve">Ctrl+o</kbd> <kbd class="mauve">t</kbd> / <kbd class="mauve">e</kbd> <span class="badge">opt-in</span></td><td>multitask / edit config — commented out in <code>config.kdl</code> (Unix-only)</td></tr>
@@ -139,7 +139,7 @@
     <tr><td>Resurrection <span class="badge active">on</span></td><td><code>session_serialization true</code> (zellij's default, kept on) — the two-tab layout keeps <code>:qa</code> in a resurrected nvim from ending the session</td>
         <td>Look</td><td><code>catppuccin-mocha</code>, <code>pane_frame_style "full"</code> (0.45 default is "titles") + <code>rounded_corners</code></td></tr>
     <tr><td><code>env</code></td><td><code>RUST_BACKTRACE "1"</code> for programs in panes</td>
-        <td>Plugin aliases</td><td>zjstatus, monocle, multitask, forgot — pinned, loaded on demand</td></tr>
+        <td>Plugin aliases</td><td>zjstatus, monocle, multitask — pinned, loaded on demand</td></tr>
     <tr><td colspan="4" class="note">Gotcha: scroll-mode <kbd style="font-size:9.5px">e</kbd> (edit scrollback) needs <code>$EDITOR</code> set in your environment, or it just returns to Normal.</td></tr>
   </table>
 </div>
@@ -267,7 +267,7 @@
     <tr><td><kbd class="mauve">f</kbd></td><td>Toggle host fullscreen (<code>ToggleHostFullscreen</code>, 0.45.1 default)</td></tr>
     <tr><td><kbd class="mauve">]</kbd> / <kbd class="mauve">[</kbd></td><td>Focus host / guest session (<code>FocusHostSession</code> / <code>FocusGuestSession</code>)</td></tr>
     <tr><td><kbd class="mauve">q</kbd></td><td>Quit zellij <span class="badge active">added</span> (replaces unbound Ctrl+q)</td></tr>
-    <tr><td><kbd class="mauve">h</kbd></td><td>Keybinding popup (zellij-forgot) <span class="badge active">added</span></td></tr>
+    <tr><td><kbd class="mauve">h</kbd></td><td>Built-in keybinding screen <span class="badge active">added</span></td></tr>
     <tr><td><kbd class="mauve">m</kbd></td><td>monocle — find files &amp; contents <span class="badge active">added</span></td></tr>
     <tr><td><kbd class="mauve">t</kbd> / <kbd class="mauve">e</kbd></td><td>multitask / edit config — <span class="badge">opt-in</span> commented out in <code>config.kdl</code> (Unix-only)</td></tr>
     <tr class="divider"><td colspan="2">Resurrection <span class="badge active">on</span></td></tr>
@@ -464,6 +464,7 @@
 </div><!-- .grid -->
 
 <footer>
+  <span>Printable API reference snapshot: Zellij 0.45.1. Current selected pins and explicit upgrades: VERSIONS.md.</span>
   <span>Targeting Zellij 0.45.1 &nbsp;·&nbsp; default keybinding preset (NOT non-colliding) &nbsp;·&nbsp; switch presets: <kbd style="font-size:9.5px">Ctrl+o</kbd> → <kbd style="font-size:9.5px">c</kbd></span>
   <span>OSC52 clipboard &nbsp;·&nbsp; Catppuccin Mocha built-in &nbsp;·&nbsp; Session resurrection ON</span>
 </footer>

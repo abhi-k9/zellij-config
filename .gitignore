@@ -17,3 +17,9 @@ Thumbs.db
 /offline.log
 /download.log
 /old.out
+__pycache__/
+*.pyc
+node_modules/
+.venv/
+/.versions.lock
+/.zj-*.lock

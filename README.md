@@ -1,12 +1,14 @@
 # Zellij config
 
-Configuration for **Zellij 0.45.1**, imported from
-`28_zellij_audited_2026-10-14.zip`. Uses Catppuccin Mocha, three layouts with
-matching swap layouts, and four pinned plugins.
+Catppuccin Mocha, three layouts, matching swap layouts and three verified plugins.
+The configuration works with the Zellij version selected in
+[VERSIONS.md](VERSIONS.md). **Python 3.10+** is required for the shared setup,
+validation, launcher and explicit upgrade helpers; they use only the standard
+library. Zellij itself runs independently of those helpers.
 
-## Get started
+## Install
 
-Install Zellij 0.45.1 first, then clone this repository:
+Install Python and Zellij, then clone this repository:
 
 ```sh
 git clone https://github.com/abhi-k9/zellij-config.git
@@ -16,48 +18,84 @@ cd zellij-config
 zj attach --create main
 ```
 
-On Linux and macOS, `setup.sh` backs up an existing configuration before copying
-the config, layouts and theme template into Zellij's config directory. It also
-installs the `zj` launcher. `--offline` uses the bundled plugins after verifying
-their SHA-256 checksums; it downloads a plugin only if its bundled copy is missing
-or fails verification. Run `./setup.sh` without `--offline` to load plugins from
-their pinned release URLs instead.
-
-For Windows installation, config discovery, recovery, and customization, see the
-[full configuration guide](config/README.md). The [changelog](CHANGELOG.md)
-preserves the archive's audit history.
-
-## Layouts and references
-
-- `config/config.kdl`: main settings and key bindings.
-- `config/layouts/`: default, development and zjstatus layouts, each with a swap
-  layout for changing pane arrangements.
-- `config/themes/`: an optional custom theme template; Catppuccin is built in.
-- `plugins/` and `plugins.sha256`: pinned WebAssembly plugins and checksums.
-- `launcher/`: the `zj` launcher for Linux, macOS and Windows; checks monthly for
-  plugin updates without changing pins.
-- `cheatsheets/`: HTML references and a checklist for terminal behavior.
-
-## Validate changes
+Linux/macOS setup installs the launcher in `~/.local/bin`; add that directory to
+PATH if needed. To install the selected Zellij binary with archive verification:
 
 ```sh
-./check.sh
-git config core.hooksPath hooks
+python3 tools/manage.py install-zellij --bin-dir ~/.local/bin
 ```
 
-`check.sh` checks consistency and bundled plugin hashes. With Zellij on `PATH`,
-it also parses the config, layouts and example theme and checks documented
-shortcuts. The optional pre-commit hook checks staged files. GitHub Actions runs
-the supplied Linux, macOS and Windows checks.
+On Windows, install Python 3.10+ and Zellij, then use Windows PowerShell 5.1+:
 
-Clipboard, rendering, mouse input and session recovery still need verification
-in your own terminal; use [the checklist](cheatsheets/verification-checklist.html).
+```powershell
+./setup.ps1 -DryRun
+./setup.ps1 -Offline
+```
 
-## Restore
+Windows setup puts the wrappers in
+`%LOCALAPPDATA%\Programs\zellij-config\bin`; add it to PATH. You can also run the
+shared helper directly with `python tools/manage.py install --offline`.
+
+All installation modes verify plugin hashes before activation. `--offline`
+forbids network downloads and uses the bundled files. Without it, missing pinned
+plugins can be downloaded and verified. Config and layouts are validated with
+your actual Zellij executable before the old configuration is moved.
+
+## Choose when to upgrade
+
+Versions are pinned for repeatability. They are **not permanently fixed**:
+
+```sh
+python3 tools/manage.py versions check
+python3 tools/manage.py versions update --all
+# Or select a component/tag explicitly:
+python3 tools/manage.py versions update --plugin zjstatus=latest
+python3 tools/manage.py versions update --zellij latest
+```
+
+The update command changes the repository's selected pins and verified plugin
+files. Review `git diff`, run the checks, then explicitly install the selected
+Zellij executable and rerun setup. It never silently upgrades a running setup.
+Specific older tags work too. See [all version commands](VERSIONS.md).
+
+## Recovery and symlinks
 
 ```sh
 ./setup.sh --restore
+# Windows: ./setup.ps1 -Restore
 ```
 
-Restores the most recent configuration backup and backs up the current config
-first. See the full guide for launcher removal and Windows recovery.
+Setup stages a complete tree privately, verifies it, retains the previous tree
+inside a private `zellij.backup-*/tree/` snapshot, and publishes the staged tree.
+It locks the target against another installer. Failed preparation leaves the
+active config alone; publication errors trigger rollback. An interruption between
+directory renames is recorded and recovered on the next setup invocation.
+
+Managed file/directory symlinks are materialized in the new config; external
+dotfiles targets are never overwritten. A symlink of the entire config directory
+remains a symlink. Snapshots retain the old tree's links; later edits to an
+external link target are not an independent historical byte snapshot of that
+external file. Keep your dotfiles in version control as well.
+
+Directory publication has a short rename gap; this is not an atomic exchange or
+a power-loss durability guarantee. Running sessions may need a reload/restart to
+notice a directory replacement; close Zellij on Windows if open handles prevent
+renaming. Restore first validates its staged snapshot and saves the current tree,
+so a second restore can undo the previous restore.
+
+## Validate and contribute
+
+```sh
+./check.sh
+python3 -m unittest discover -s tests -v
+git config core.hooksPath hooks
+```
+
+Full validation requires Zellij. `./check.sh --static` explicitly omits its parser
+checks. The optional hook validates staged content and fails when validation
+cannot run. CI exercises the same regression tests and real Zellij on Linux,
+macOS and Windows. Network-dependent checks run separately by manual dispatch.
+
+See the [configuration guide](config/README.md), printable
+[cheatsheets](cheatsheets/), [audit resolution map](docs/AUDIT_FIXES.md) and
+[third-party notices](THIRD_PARTY_NOTICES.md).

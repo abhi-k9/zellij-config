@@ -1,0 +1,42 @@
+{
+  "schema": 1,
+  "zellij": {
+    "tag": "v0.45.1",
+    "assets": {
+      "zellij-aarch64-apple-darwin.tar.gz": "c029ba4fe1927b79ad9f0cdd59155c4dff80777863c85857d4d09b88b56f9891",
+      "zellij-aarch64-unknown-linux-musl.tar.gz": "05f0802afadd53f8db9514e7cae53c9ae8432fed1b35b8294aa816ee3044a16b",
+      "zellij-x86_64-apple-darwin.tar.gz": "8e8bea22737d1652278c51fc5c26c7c22c9855d0ebb9634a84b8873823093114",
+      "zellij-x86_64-pc-windows-msvc.zip": "b854e7b223e67d0705c5f685ef50541c38a57981b13624d09c92bed419b6f80d",
+      "zellij-x86_64-unknown-linux-musl.tar.gz": "40bcc2e03f5d5ae8e054e39f676081fe12ab70871506996ba595834c3718eefc"
+    }
+  },
+  "plugins": [
+    {
+      "name": "zjstatus",
+      "repository": "dj95/zjstatus",
+      "tag": "v0.25.0",
+      "asset": "zjstatus.wasm",
+      "sha256": "282ceab219e56e1908c9fac33907241fe6c3e1ef7d85faab3e5f438cef87b8fe",
+      "license": "MIT",
+      "license_path": "LICENSE"
+    },
+    {
+      "name": "monocle",
+      "repository": "imsnif/monocle",
+      "tag": "v0.100.2",
+      "asset": "monocle.wasm",
+      "sha256": "4cb7e2cc912d975b4e755c93e44e7f0de62ef9240a09a89b735490cf4713792c",
+      "license": "MIT",
+      "license_path": "LICENSE.md"
+    },
+    {
+      "name": "multitask",
+      "repository": "leakec/multitask",
+      "tag": "v0.45.1",
+      "asset": "multitask.wasm",
+      "sha256": "d2c6dadef431065efcc307cd573550031a9d11348ffde9d331f96136b7d60a9d",
+      "license": "MIT",
+      "license_path": "LICENSE.md"
+    }
+  ]
+}

@@ -8,6 +8,28 @@ or why something is the way it is.
 
 ---
 
+## 2026-10-22 — audit fixes and explicit version upgrades
+
+- Replaced duplicated installer/launcher policy with shared Python 3.10+
+  standard-library helpers and retained shell/PowerShell/cmd entry points.
+- Staged and validated the full installation before publication; added private
+  snapshots, exclusive OS locks, rollback, interruption recovery, safe symlink
+  handling, exact restores and numeric legacy backup ordering.
+- Made hashing/input failures fatal and removed fail-open hook/CI paths.
+- Fixed config selection, comment parsing, case-sensitive tag identity,
+  per-config/pinset cache keys, redirect handling and incomplete-scan retries.
+- Included upstream MIT notices. Removed the unlicensed zellij-forgot binary
+  and opened Zellij's built-in keybinding screen from the same shortcut.
+- Added canonical versions.json, generated references and explicit verified
+  upgrade/install commands. Existing app/plugin version pins remain selected
+  until an update command is run deliberately.
+- Added deterministic fault-path tests, real binary/entry-point tests and
+  native Linux/macOS/Windows CI with Python 3.10 and 3.14. Tooling dependencies
+  are locked; network smoke checks are separated from regression tests.
+
+The following verification records describe historical archive versions. Current
+checks and platform boundaries are documented in `docs/AUDIT_FIXES.md` and CI.
+
 ## Verification status — zellij 0.45.1
 
 Everything below was run against the real 0.45.1 binary, not reasoned about.
