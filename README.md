@@ -74,6 +74,15 @@ above, put this in `~/.bashrc` (Bash) or `~/.zshrc` (Zsh):
 export PATH="$HOME/.config/zellij/launcher:$PATH"
 ```
 
+For Fish, run this once to persistently add the launcher directory:
+
+```fish
+fish_add_path "$HOME/.config/zellij/launcher"
+```
+
+Run `./setup.sh` and `zj` normally from Fish. Their `#!/bin/sh` interpreter
+line handles shell compatibility; do not source them or run `fish setup.sh`.
+
 On Windows, add `%APPDATA%\Zellij\config\launcher` to your **user Path** through
 Environment Variables. Open a new terminal after changing PATH, then run:
 
@@ -84,6 +93,31 @@ zj attach --create main
 For a custom clone destination, add that destination's `launcher` subdirectory
 instead. Keep the directory containing the actual `zellij` executable on PATH
 as well; `zj` launches it.
+
+Alternatively, install standalone launcher helpers from your checkout:
+
+```sh
+./setup.sh --launcher-only                    # Defaults to ~/.local/bin
+./setup.sh --launcher-only --bin-dir ~/bin    # Choose another directory
+```
+
+This leaves your configuration untouched and requires only Python 3.10+ to
+install. Running `zj` still requires Zellij. Add the chosen directory to PATH;
+for a custom config location, pass `zj --config-dir /path/to/checkout`.
+On Windows, use `./setup.ps1 -LauncherOnly` and optionally `-BinDir`; its default
+is `%LOCALAPPDATA%\Programs\zellij-config\bin`. Rerun the command after updating
+the checkout to refresh the installed helper copies. Use `--dry-run` / `-DryRun`
+to preview without writing files.
+
+From Fish, installing the helpers and adding their default directory is:
+
+```fish
+./setup.sh --launcher-only
+fish_add_path "$HOME/.local/bin"
+zj attach --create main
+```
+
+Use your chosen directory with `fish_add_path` when passing `--bin-dir`.
 
 ## Downloads and offline fallback
 

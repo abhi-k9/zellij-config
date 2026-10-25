@@ -156,6 +156,11 @@ def publish(target: Path, stage: Path) -> Path | None:
     return backup
 
 
+def default_binary_directory() -> Path:
+    return (Path(os.environ.get('LOCALAPPDATA', Path.home() / 'AppData/Local')) / 'Programs/zellij-config/bin'
+            if os.name == 'nt' else Path.home() / '.local/bin')
+
+
 def install_launcher(root: Path, binary_dir: Path) -> None:
     binary_dir.mkdir(parents=True, exist_ok=True)
     with FileLock(binary_dir / '.zj-helper.lock'):
@@ -278,8 +283,7 @@ def install(root: Path, *, target: Path | None = None, offline=False, restore=Fa
                 validate(stage, zellij)
                 if not restore and not no_launcher:
                     if bin_dir is None:
-                        bin_dir = (Path(os.environ.get('LOCALAPPDATA', Path.home() / 'AppData/Local')) / 'Programs/zellij-config/bin'
-                                   if os.name == 'nt' else Path.home() / '.local/bin')
+                        bin_dir = default_binary_directory()
                     install_launcher(root, bin_dir.expanduser().resolve())
                 backup = publish(target, stage)
                 if backup:

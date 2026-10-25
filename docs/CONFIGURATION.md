@@ -65,6 +65,17 @@ generated KDL. Paths containing control characters are rejected before mutation.
 Use `--bin-dir` to choose the launcher directory or `--no-launcher` for config
 only. PowerShell equivalents are `-ConfigDir`, `-BinDir` and `-NoLauncher`.
 
+For a direct clone, `./setup.sh --launcher-only` installs just the `zj` helpers
+into `~/.local/bin`, leaving the configuration untouched. Choose another location
+with `--bin-dir /path/to/bin`, or preview with `--dry-run`. Python 3.10+ is needed
+for installation; Zellij is needed when launching. Windows uses `-LauncherOnly`
+and defaults to `%LOCALAPPDATA%\Programs\zellij-config\bin`.
+
+Fish can execute `./setup.sh` and `zj` directly using their `#!/bin/sh`
+interpreter line. Do not source these scripts or invoke them with `fish`.
+Use `fish_add_path "$HOME/.local/bin"` after installing the helpers, or
+`fish_add_path "$HOME/.config/zellij/launcher"` for the direct-clone launcher.
+
 ## Layouts
 
 | Layout | Behavior |

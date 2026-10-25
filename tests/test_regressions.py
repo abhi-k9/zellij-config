@@ -55,6 +55,31 @@ class Workspace(unittest.TestCase):
 
 
 class InstallerTests(Workspace):
+    def test_launcher_only_installs_helpers_without_touching_config(self):
+        self.old()
+        with mock.patch.object(install, 'default_directory', return_value=ROOT), \
+                mock.patch.object(install.shutil, 'which', return_value=None):
+            self.assertEqual(cli.main(['install', '--launcher-only', '--bin-dir', str(self.bin)]), 0)
+        self.assertEqual((self.target / 'config.kdl').read_text(), '// ORIGINAL CONFIG\n')
+        for name in ['zj', 'zj.cmd', 'zj.ps1']:
+            self.assertEqual((self.bin / name).read_bytes(), (ROOT / 'launcher' / name).read_bytes())
+        # Execute the copied Python helper, proving its imports and pins are present.
+        result = subprocess.run([sys.executable, str(self.bin / '.zellij-config/manage.py'),
+                                 'launch', '--help'], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('usage:', result.stdout)
+        self.assertFalse((self.bin / 'config.kdl').exists())
+
+    def test_launcher_only_default_dry_run_and_conflicts(self):
+        with mock.patch.object(install, 'default_binary_directory', return_value=self.bin):
+            self.assertEqual(cli.main(['install', '--launcher-only', '--dry-run']), 0)
+            self.assertFalse(self.bin.exists())
+            for args in [['--restore'], ['--no-launcher'], ['--config-dir', str(self.target)]]:
+                self.assertEqual(cli.main(['install', '--launcher-only', *args]), 1)
+            self.assertFalse(self.bin.exists())
+            self.assertEqual(cli.main(['install', '--launcher-only']), 0)
+        self.assertTrue((self.bin / 'zj').is_file())
+
     def test_install_restore_and_double_dot_cleanup(self):
         self.old()
         self.setup_config()

@@ -40,6 +40,7 @@ def main(argv=None) -> int:
     setup.add_argument('--config-dir', type=Path)
     setup.add_argument('--bin-dir', type=Path)
     setup.add_argument('--no-launcher', action='store_true')
+    setup.add_argument('--launcher-only', action='store_true', help='Install only zj helpers; leave configuration untouched')
     verify = commands.add_parser('check')
     verify.add_argument('--static', action='store_true')
     start = commands.add_parser('launch')
@@ -64,7 +65,17 @@ def main(argv=None) -> int:
     try:
         root = root_directory()
         if options.command == 'install':
-            from .install import install
+            from .install import default_binary_directory, install, install_launcher
+            if options.launcher_only:
+                if options.restore or options.no_launcher or options.config_dir is not None:
+                    raise ConfigError('--launcher-only cannot be combined with --restore, --no-launcher or --config-dir')
+                directory = (options.bin_dir or default_binary_directory()).expanduser().resolve()
+                if options.dry_run:
+                    print(f'Would install launcher helpers in {directory}')
+                    print('No files, locks, backups or downloads created.')
+                else:
+                    install_launcher(root, directory)
+                return 0
             if options.offline and options.restore:
                 raise ConfigError('--restore and --offline cannot be combined')
             install(root, target=options.config_dir, offline=options.offline,
