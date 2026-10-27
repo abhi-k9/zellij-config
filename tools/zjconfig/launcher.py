@@ -11,7 +11,7 @@ import sys
 import time
 import urllib.parse
 
-from .common import ConfigError, FileLock, atomic_write, github_release, json_bytes, plugin_url, read_json, spawn_detached
+from .common import ConfigError, FileLock, atomic_write, github_release, json_bytes, plugin_url, read_json, spawn_detached, zellij_executable
 from .install import default_directory
 from .kdl import plugin_locations
 
@@ -101,6 +101,8 @@ def scan(file: Path, urls: list[str] | None = None) -> Scan:
 
 
 def state_directory() -> Path:
+    if os.environ.get('ZJ_STATE_DIR'):
+        return Path(os.environ['ZJ_STATE_DIR']).expanduser()
     if os.name == 'nt':
         return Path(os.environ.get('LOCALAPPDATA', Path.home() / 'AppData/Local')) / 'zellij-config'
     return Path(os.environ.get('XDG_STATE_HOME', Path.home() / '.local/state')) / 'zellij-config'
@@ -199,9 +201,7 @@ def launch(arguments: list[str]) -> int:
             return 2
         print('\n'.join(result.lines))
         return result.code
-    executable = shutil.which('zellij')
-    if not executable:
-        raise ConfigError('zellij is not on PATH')
+    executable = zellij_executable(shutil.which)
     from .runtime import needs_plugins, prepare
     startup = needs_plugins(arguments)
     file = None

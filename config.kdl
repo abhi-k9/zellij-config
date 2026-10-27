@@ -65,11 +65,11 @@ show_release_notes true                 // default — shown once per new zellij
 // ─── Behavior ──────────────────────────────────────────────────────────────
 
 // "normal": zellij's keys are live. "locked": every key goes to the app until
-// you unlock (F12 in this config — see Keybindings).
+// you unlock (Ctrl+g by default — see Keybindings).
 default_mode "normal"                   // default
 
 // Terminal window closed: "detach" keeps the session running (come back with
-// `zellij attach --create main`); "quit" ends it.
+// `zellij attach --create NAME`); "quit" ends it.
 on_force_close "detach"                 // default
 
 // Resolved against layouts/ first, then zellij's built-ins (compact, welcome,
@@ -128,8 +128,8 @@ mouse_click_through false               // default — true lets the focusing cl
 // "Session recovery". zellij 0.45.1 caveats: README "Known issues (0.45.1)".
 
 // Save each session (tabs, panes, cwds, running commands) and resurrect it.
-// After a crash or reboot use `zellij attach --create main` — plain `zellij`
-// starts a fresh main and discards the saved one. A resurrected nvim has no
+// After a crash or reboot use `zellij attach --create NAME` for a named session.
+// Plain `zellij` starts a fresh session. A resurrected nvim has no
 // shell under it; layouts/default.kdl's extra "shell" tab keeps `:qa` from
 // ending the session.
 session_serialization true              // default
@@ -147,13 +147,12 @@ scrollback_lines_to_serialize 0
 // Seconds between saves.
 serialization_interval 60
 
-// Singleton "main" session (like `tmux new -A -s main`): plain `zellij` joins a
-// RUNNING main, else creates one. Project sessions: `zellij -s proj -n dev`, not
-// `--session proj --layout dev` (that adds tabs to an existing session). A bare
-// `zellij --layout dev` joins a running main and ignores the layout. Details:
-// README "Layouts".
-session_name "main"
-attach_to_session true
+// No shared session name is forced: independent launches can have independent
+// working directories. Use `zellij attach --create NAME` for intentional reuse,
+// or select the local "classic" profile to restore the singleton "main" workflow.
+// Project sessions: `zellij -s proj -n dev`, not `--session proj --layout dev`
+// (that adds tabs to an existing session). See docs/CONFIGURATION.md.
+attach_to_session false
 
 osc8_hyperlinks true                    // default — clickable OSC8 links in pane output
 
@@ -185,7 +184,7 @@ support_kitty_keyboard_protocol true    // default
 // already sets $ZELLIJ and $ZELLIJ_SESSION_NAME — don't set ZELLIJ here, it
 // would shadow the internal value.
 env {
-    RUST_BACKTRACE "1"                  // backtraces from Rust programs you run in panes
+    // RUST_BACKTRACE "1"               // optional Rust diagnostics; classic profile enables it
     // EDITOR "nvim"
 }
 
@@ -207,20 +206,16 @@ keybinds {
     // Ctrl+o, q (below), or detach with Ctrl+o, d. Delete this line to keep it.
     unbind "Ctrl q"
 
-    // LOCK TOGGLE on F12 instead of Ctrl+g, which nvim and many TUIs use (and
-    // which an app could never receive while locked). One key, both directions;
-    // locking is manual — press F12 entering nvim/a TUI, again on leaving.
-    // The unbinds sit INSIDE each block on purpose: a top-level `unbind "Ctrl g"`
-    // doesn't work, because the default binds Ctrl+g in two contexts (verified
-    // on 0.45.1; README "Debugging"). If your terminal eats F12, re-add
-    // `bind "Ctrl g"` in both blocks.
+    // LOCK TOGGLE uses Zellij's standard Ctrl+g. Locking is manual: press it
+    // entering a full-screen application, and again on leaving. If your app
+    // needs Ctrl+g, choose lock_key "F12" in local preferences (the classic
+    // profile does this). Both contexts are rendered together so either key
+    // works consistently; confirm your terminal forwards the selected key.
     locked {
-        unbind "Ctrl g"                       // default Ctrl+g → Normal (unlock)
-        bind "F12" { SwitchToMode "Normal"; }
+        bind "Ctrl g" { SwitchToMode "Normal"; }
     }
     shared_except "locked" {
-        unbind "Ctrl g"                       // default Ctrl+g → Locked (lock)
-        bind "F12" { SwitchToMode "Locked"; }
+        bind "Ctrl g" { SwitchToMode "Locked"; }
     }
 
     // Session mode (Ctrl+o) additions, next to zellij's own launchers. 0.45.1
@@ -242,42 +237,10 @@ keybinds {
             SwitchToMode "Normal"
         }
 
-        // OPT-IN, UNIX-ONLY — Ctrl+o, t: multitask ("mini-CI": commands you write
-        // into a .multitask file run in parallel steps) for the focused pane's
-        // directory. multitask needs that directory (its `ccwd` setting) at
-        // launch, which a plugin bind can't pass, so this runs multitask's
-        // documented launch command in a short-lived floating pane. Commented out
-        // because it needs a Unix `sh` and $SHELL (multitask runs the file as a
-        // shell script; on Windows `sh` may be missing or a different program).
-        //   - A second press RESTARTS a running multitask (start-or-reload).
-        //   - A comma in the directory name cuts the path (the setting is a
-        //     comma-separated key=value list); spaces are fine.
-        //   (Verified on 0.45.1: opens a new tab with $EDITOR on the .multitask
-        //   template, like the command in multitask's README.)
-        // bind "t" {
-        //     Run "sh" "-c" "zellij action start-or-reload-plugin multitask --configuration \"shell=${SHELL:-/bin/sh},ccwd=$(pwd)\"" {
-        //         floating true
-        //         close_on_exit true
-        //         name "multitask launcher"
-        //     }
-        //     SwitchToMode "Normal"
-        // }
-
-        // OPT-IN, UNIX-ONLY — Ctrl+o, e: open this config in $EDITOR (falls back
-        // to vi) in a floating pane; zellij hot-reloads on save. `Run` doesn't
-        // expand env vars or `~`, hence the bash wrapper. It opens
-        // $ZELLIJ_CONFIG_FILE, else $ZELLIJ_CONFIG_DIR/config.kdl, else
-        // ~/.config/zellij/config.kdl — a `zellij --config other.kdl` flag can't
-        // be followed (zellij doesn't tell panes which file it loaded).
-        // (Verified on 0.45.1: opens in a floating pane named "config".)
-        // bind "e" {
-        //     Run "bash" "-c" "\"${EDITOR:-vi}\" \"${ZELLIJ_CONFIG_FILE:-${ZELLIJ_CONFIG_DIR:-$HOME/.config/zellij}/config.kdl}\"" {
-        //         floating true
-        //         close_on_exit true
-        //         name "config"
-        //     }
-        //     SwitchToMode "Normal"
-        // }
+        // Task runners and config editors remain explicit local choices. KDL
+        // Run actions do not expand environment variables or ~, and shell
+        // wrappers are platform-specific. See docs/CONFIGURATION.md for local
+        // preferences and plugin caveats before adding application launchers.
     }
 }
 

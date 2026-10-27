@@ -8,9 +8,10 @@ import re
 import shutil
 import signal
 import subprocess
+import tempfile
 import time
 
-from .common import ConfigError, FileLock, atomic_write, json_bytes, load_versions, plugin_url, private_tempdir, read_json, sha256, validate_versions
+from .common import ConfigError, FileLock, atomic_write, json_bytes, load_versions, plugin_url, private_tempdir, read_json, sha256, validate_versions, zellij_executable
 from .kdl import plugin_locations, quote, replace_plugin_locations
 from .plugin_files import acquire
 
@@ -38,6 +39,22 @@ def remove(path: Path) -> None:
 
 
 def validate(directory: Path, zellij: str) -> None:
+    """Check shipped files and effective preferences without baking local values."""
+    validate_kdl(directory, zellij)
+    from .preferences import read_settings, render_directory
+    settings = read_settings(directory)
+    if settings is not None:
+        with tempfile.TemporaryDirectory(prefix='zj-preferences-') as temporary:
+            staged = Path(temporary)
+            shutil.copy2(directory / 'config.kdl', staged / 'config.kdl')
+            for name in ['layouts', 'themes']:
+                if (directory / name).is_dir():
+                    shutil.copytree(directory / name, staged / name)
+            render_directory(staged, settings)
+            validate_kdl(staged, zellij)
+
+
+def validate_kdl(directory: Path, zellij: str) -> None:
     for layout in [None, *sorted((directory / 'layouts').glob('*.kdl'))]:
         if layout and layout.name.endswith('.swap.kdl'):
             continue
@@ -221,14 +238,16 @@ def install(root: Path, *, target: Path | None = None, offline=False, restore=Fa
     try:
         with FileLock(target.parent / ('.' + target.name + '.zj-install.lock')):
             recover(target)
-            zellij = shutil.which('zellij')
-            if not zellij:
-                raise ConfigError('Install Zellij first, then run setup (tools/manage.py install-zellij can install the pinned version).')
+            zellij = zellij_executable(shutil.which)
             if not restore:
                 pins = load_versions(root)
                 source_text = (source / 'config.kdl').read_text(encoding='utf-8')
                 if plugin_locations(source_text) != sorted(plugin_url(pin) for pin in pins['plugins']):
                     raise ConfigError('Source config pins differ from versions.json; update the canonical inventory first')
+                # Reject invalid target-owned preferences before acquiring any
+                # plugins. The source checkout's machine settings are not copied.
+                from .preferences import read_settings
+                read_settings(target)
                 notices = {}
                 for pin in pins['plugins']:
                     notice = (root / 'licenses' / (pin['name'] + '.txt')).read_bytes()

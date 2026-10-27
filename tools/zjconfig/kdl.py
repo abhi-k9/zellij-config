@@ -28,6 +28,9 @@ class Node:
     arguments: list[str] = field(default_factory=list)
     children: list['Node'] = field(default_factory=list)
     property_spans: dict[str, tuple[int, int]] = field(default_factory=dict)
+    argument_spans: list[tuple[int, int]] = field(default_factory=list)
+    start: int = 0
+    end: int = 0
 
 
 def tokens(text: str) -> list[Token]:
@@ -57,7 +60,7 @@ def tokens(text: str) -> list[Token]:
             if depth:
                 raise ConfigError('Unclosed KDL block comment')
         elif text.startswith('/-', i):
-            result.append(Token('skip', '/-'))
+            result.append(Token('skip', '/-', i, i + 2))
             i += 2
         elif c == '\\':
             end = text.find('\n', i)
@@ -66,7 +69,7 @@ def tokens(text: str) -> list[Token]:
                 raise ConfigError('Invalid KDL line continuation')
             i = end + 1
         elif c in '\n;{}=()':
-            result.append(Token(c, c))
+            result.append(Token(c, c, i, i + 1))
             i += 1
         elif c == '"' or (c == 'r' and re.match(r'r#*"', text[i:])):
             literal_start = i
@@ -161,7 +164,8 @@ def parse(text: str) -> list[Node]:
             omit = stream[pos].kind == 'skip'
             if omit:
                 pos += 1
-            node = Node(value())
+            start = stream[pos].start
+            node = Node(value(), start=start)
             while pos < len(stream) and stream[pos].kind not in ['\n', ';', '}']:
                 discard = stream[pos].kind == 'skip'
                 if discard:
@@ -172,6 +176,7 @@ def parse(text: str) -> list[Node]:
                     if not discard:
                         node.children.extend(children)
                     break
+                entry_start = stream[pos].start
                 key = value()
                 if pos < len(stream) and stream[pos].kind == '=':
                     pos += 1
@@ -181,6 +186,8 @@ def parse(text: str) -> list[Node]:
                         node.property_spans[key] = (stream[pos - 1].start, stream[pos - 1].end)
                 elif not discard:
                     node.arguments.append(key)
+                    node.argument_spans.append((entry_start, stream[pos - 1].end))
+            node.end = stream[pos - 1].end
             if not omit:
                 found.append(node)
         if nested:

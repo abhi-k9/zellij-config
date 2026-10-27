@@ -9,13 +9,13 @@
 //              Then plain `zellij` uses this bar.
 //
 //  ⚠ FIRST RUN — GRANT PERMISSION. On first launch zjstatus asks to allow
-//  ReadApplicationState, ChangeApplicationState and RunCommands, shown as a prompt
+//  ReadApplicationState and ChangeApplicationState, shown as a prompt
 //  IN the one-row bar — so it looks truncated, e.g. just `…Allow? (y/n)` or even
 //  only `/n)`. Pressing y from your shell won't work (the keystroke goes to the
 //  shell). CLICK on the status bar to focus it (mouse_mode is on), then press y.
 //  The bar renders immediately after. You must re-grant after a zjstatus version
-//  bump (the wasm changes). RunCommands is only needed by the git-branch widget —
-//  delete the command_git_branch_* lines below to avoid requesting it.
+//  bump (the wasm changes). The optional local git_status setting additionally
+//  needs git on PATH and RunCommands permission; it is disabled by default.
 //
 //  ⚠ FRAMES — zjstatus manages pane frames itself (hide_frame_for_single_pane),
 //  and its docs require pane_frames OFF globally or zellij and zjstatus fight over
@@ -67,7 +67,7 @@ layout {
 
                 format_left   "{mode}#[fg=$mauve,bg=$bg,bold] {session} "
                 format_center "{tabs}"
-                format_right  "{swap_layout}{command_git_branch}#[fg=$dim,bg=$bg] {datetime} "
+                format_right  "{swap_layout}#[fg=$dim,bg=$bg] {datetime} "
                 format_space  "#[bg=$bg]"
 
                 hide_frame_for_single_pane "true"
@@ -98,22 +98,17 @@ layout {
                 swap_layout_format        "#[fg=$peach,bg=$bg] {name} "
                 swap_layout_hide_if_empty "true"
 
-                // git branch of the directory zellij was STARTED in (blank
-                // outside a repo). zjstatus can't follow the focused pane — its
-                // only cwd option takes a fixed absolute path.
-                // To pin one repo:  command_git_branch_cwd "/abs/path/to/repo"
-                // Every tab's bar is its own plugin instance, so each tab runs
-                // git on this interval (seconds); 15 keeps N tabs cheap.
-                command_git_branch_command    "git rev-parse --abbrev-ref HEAD"
-                command_git_branch_format     "#[fg=$green,bg=$bg]  {stdout} "
-                command_git_branch_interval   "15"
-                command_git_branch_rendermode "static"
+                // The git widget is an optional local preference. When enabled,
+                // it runs git rev-parse --abbrev-ref HEAD every 15 seconds per
+                // tab, using Zellij's startup directory, not the focused pane.
+                // Outside a repository its label is blank. See the configuration
+                // guide for git_status and the classic profile.
 
                 datetime        "{format}"
                 datetime_format "%a %d %b  %H:%M"
-                // ⚠ set this to YOUR IANA timezone (e.g. "Europe/Paris",
-                //   "America/New_York"); zjstatus doesn't read the system zone.
-                datetime_timezone "America/Denver"
+                // An explicit portable default: zjstatus does not read the
+                // system timezone. Set timezone locally to an IANA zone.
+                datetime_timezone "UTC"
             }
         }
     }

@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shutil
 import stat
 import subprocess
 import tempfile
@@ -19,6 +20,18 @@ import urllib.request
 
 class ConfigError(Exception):
     """An actionable error suitable for the command line."""
+
+
+def zellij_executable(which=None) -> str:
+    """Resolve one literal executable, without shell parsing or override fallback."""
+    requested = os.environ.get('ZJ_ZELLIJ_BIN')
+    candidate = os.path.expanduser(requested) if requested else 'zellij'
+    executable = (which or shutil.which)(candidate)
+    if not executable:
+        if requested:
+            raise ConfigError(f'ZJ_ZELLIJ_BIN is not an executable: {requested}')
+        raise ConfigError('zellij is not on PATH; install it or set ZJ_ZELLIJ_BIN to its executable path')
+    return executable
 
 
 def spawn_detached(command: list[str]) -> None:

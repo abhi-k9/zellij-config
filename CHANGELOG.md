@@ -8,6 +8,24 @@ or why something is the way it is.
 
 ---
 
+## 2026-10-26 — portable defaults and local preferences
+
+- Removed the shared singleton `main` session, `RUST_BACKTRACE` pane export,
+  F12 lock override, Denver timezone and Git status command. Standard `Ctrl+g`
+  locking and a UTC zjstatus clock are the portable defaults.
+- Added schema-1 `.zellij-config-local.json` preferences with a `configure`
+  command, preview/reset support and a `classic` compatibility preset. The
+  launcher renders private config/layout snapshots; setup preserves and validates
+  the target's preferences without baking them into deployed KDL or importing
+  source preferences. Plain Zellij always ignores local JSON.
+- Added a single-shell `minimal` layout with matching swaps, and explicit
+  `ZJ_PYTHON`, `ZJ_ZELLIJ_BIN` and `ZJ_STATE_DIR` overrides. Restored
+  `check.sh --updates [CONFIG_FILE]` forwarding.
+- Added portability/preference/entry-point regressions and a migration checklist.
+  Native interactive behavior remains an on-machine validation task.
+- Checked current stable plugin releases and freshly downloaded artifacts.
+  Existing zjstatus, monocle and multitask pins and checksums remain unchanged.
+
 ## 2026-10-23 — direct clones and download-first plugin fallback
 
 - Improved launcher startup: parallel missing downloads, a five-minute failure

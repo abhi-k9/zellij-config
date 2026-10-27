@@ -204,10 +204,11 @@ session {
   <div class="card-header"><div class="dot" style="background:var(--yellow)"></div><h2>zjstatus <span class="badge aliased">aliased</span></h2><span class="note" style="margin-left:8px">dj95/zjstatus &nbsp;·&nbsp; v0.25.0+ for zellij 0.45 &nbsp;·&nbsp; wants <code>pane_frames false</code> (or <kbd style="font-size:9.5px">Ctrl+p</kbd> <kbd style="font-size:9.5px">z</kbd> per session)</span></div>
   <table>
     <tr class="divider"><td colspan="2">Purpose</td></tr>
-    <tr><td colspan="2" class="note">Replacement for <code>compact-bar</code>: mode, session, tabs, swap layout, git branch, clock and more, all configured inside the layout file. Ours is <code>layouts/zjstatus.kdl</code> — Catppuccin Mocha, the same <strong>main</strong> + <strong>shell</strong> tabs as the default layout, and its own <code>zjstatus.swap.kdl</code>.</td></tr>
+    <tr><td colspan="2" class="note">Replacement for <code>compact-bar</code>: mode, session, tabs, swap layout and UTC clock. The Git branch widget is opt-in. Ours is <code>layouts/zjstatus.kdl</code> — Catppuccin Mocha, the same <strong>main</strong> + <strong>shell</strong> tabs as the default layout, and its own <code>zjstatus.swap.kdl</code>.</td></tr>
     <tr class="divider"><td colspan="2">Use it</td></tr>
-    <tr><td><code>zellij -s zjs -n zjstatus</code></td><td>Try it in a new session (first run: click the bar, then <kbd>y</kbd> to grant permissions)</td></tr>
-    <tr><td><code>default_layout "zjstatus"</code></td><td>Adopt it in <code>config.kdl</code> — and set <code>pane_frames false</code></td></tr>
+    <tr><td><code>zj -s zjs -n zjstatus</code></td><td>Try it in a new session; focus the bar to read and respond to any permission prompt</td></tr>
+    <tr><td><code>configure --layout zjstatus --pane-frames off</code></td><td>Arguments to <code>python3 tools/manage.py configure --config-dir .</code>; saves local preferences for <code>zj</code></td></tr>
+    <tr><td><code>configure --timezone Europe/Paris --git-status on</code></td><td>Optional local preferences. Git must be on PATH; its widget reports the startup directory, not the focused pane</td></tr>
     <tr class="divider"><td colspan="2">Excerpt of layouts/zjstatus.kdl</td></tr>
     <tr><td colspan="2"><pre>pane size=1 borderless=true {
     plugin location="zjstatus" {
@@ -218,7 +219,7 @@ session {
 
         format_left   "{mode}#[fg=$mauve,bg=$bg,bold] {session} "
         format_center "{tabs}"
-        format_right  "{swap_layout}{command_git_branch}#[fg=$dim,bg=$bg] {datetime} "
+        format_right  "{swap_layout}#[fg=$dim,bg=$bg] {datetime} "
         format_space  "#[bg=$bg]"
 
         mode_normal "#[bg=$blue,fg=$bg,bold] NORMAL "
@@ -232,7 +233,7 @@ session {
 
         datetime          "{format}"
         datetime_format   "%a %d %b  %H:%M"
-        datetime_timezone "America/Denver"   // your IANA zone
+        datetime_timezone "UTC"              // portable default
     }
 }</pre></td></tr>
     <tr class="divider"><td colspan="2">Widget tokens</td></tr>
@@ -288,14 +289,15 @@ cargo test            # step 2: only if step 1 succeeded</pre></td></tr>
 
 <!-- ═══════════════════════ MANUAL LOCKING ═══════════════════════ -->
 <div class="card col-2">
-  <div class="card-header"><div class="dot" style="background:var(--pink)"></div><h2>Locking is manual <span class="badge active">by design</span></h2><span class="note" style="margin-left:8px">no autolock plugin &nbsp;·&nbsp; <kbd style="font-size:9.5px">F12</kbd> toggles both ways</span></div>
+  <div class="card-header"><div class="dot" style="background:var(--pink)"></div><h2>Locking is manual <span class="badge active">by design</span></h2><span class="note" style="margin-left:8px">no autolock plugin &nbsp;·&nbsp; <kbd style="font-size:9.5px">Ctrl+g</kbd> toggles both ways</span></div>
   <table>
     <tr class="divider"><td colspan="2">The problem locking solves</td></tr>
     <tr><td colspan="2" class="note">Zellij's <kbd style="font-size:9.5px">Alt</kbd>-based shortcuts collide with editor and readline bindings (<code>Alt+h/j/k/l</code> pane focus vs nvim/readline, <code>Alt+f</code> floating panes vs readline word-forward, <code>Alt+n</code> new pane). Locked mode passes every key straight through to the running program.</td></tr>
-    <tr class="divider"><td colspan="2">How we do it</td></tr>
-    <tr><td><kbd class="pink">F12</kbd></td><td>Press on entering nvim / helix / lazygit</td></tr>
-    <tr><td><kbd class="pink">F12</kbd></td><td>Press again on leaving. Status bar shows <strong>LOCKED</strong></td></tr>
-    <tr><td colspan="2"><pre>keybinds {
+    <tr class="divider"><td colspan="2">Default and optional F12 mapping</td></tr>
+    <tr><td><kbd class="pink">Ctrl+g</kbd></td><td>Press before and after an application that needs Zellij's shortcuts; status bar shows <strong>LOCKED</strong></td></tr>
+    <tr><td><kbd class="pink">F12</kbd></td><td>Opt-in: <code>python3 tools/manage.py configure --config-dir . --lock-key F12</code>, or select the classic local profile</td></tr>
+    <tr><td colspan="2"><pre>// Optional F12 mapping; the portable config retains Ctrl+g.
+keybinds {
     locked {
         unbind "Ctrl g"                    // default: Ctrl+g → unlock
         bind "F12" { SwitchToMode "Normal"; }
@@ -308,7 +310,7 @@ cargo test            # step 2: only if step 1 succeeded</pre></td></tr>
 // ⚠ A single top-level  unbind "Ctrl g"  does NOT work — the default binds
 //   Ctrl+g in both blocks, so unbind it inside each (verified on 0.45.1).</pre></td></tr>
     <tr class="divider"><td colspan="2">Why not fresh2dev/zellij-autolock</td></tr>
-    <tr><td colspan="2" class="note">It auto-locks by reading the focused pane's running command — and forces <code>Normal</code> whenever it <em>doesn't</em> match a trigger. A pane restored by session resurrection doesn't report back as <code>nvim</code>, so it drags you out of Locked mode a fraction of a second after you press F12. A plain toggle always does what you pressed.</td></tr>
+    <tr><td colspan="2" class="note">Autolock depends on correctly identifying the focused application, including resurrected panes. This config keeps a manual toggle so locking does not depend on application detection. Any editor integration needs its own native recovery checks.</td></tr>
     <tr class="divider"><td colspan="2">If manual gets old</td></tr>
     <tr><td>From nvim</td><td><code>VimEnter</code> / <code>VimLeave</code> autocmds calling <code>zellij action switch-mode locked</code> / <code>normal</code></td></tr>
     <tr><td>Preset swap</td><td><kbd>Ctrl+o</kbd> <kbd>c</kbd> → non-colliding preset (moves defaults off <code>Alt</code>)</td></tr>
@@ -330,7 +332,7 @@ cargo test            # step 2: only if step 1 succeeded</pre></td></tr>
     <tr>
       <td style="width:33%;vertical-align:top;padding:8px 12px;border-right:1px solid var(--overlay)">
         <strong style="color:var(--teal);display:block;margin-bottom:6px"><code>default.kdl</code> <span class="badge active">default</span></strong>
-        <div class="note" style="margin-bottom:8px">Loaded automatically by plain <code>zellij</code>. A single-line compact-bar and two tabs: <strong>main</strong> to work in, <strong>shell</strong> as the safety net that keeps a resurrected nvim's <code>:qa</code> from ending the session.</div>
+        <div class="note" style="margin-bottom:8px">Default unless a local preference selects another layout. A single-line compact-bar and two tabs: <strong>main</strong> to work in, <strong>shell</strong> to keep a session alive after an application exits. These tab names do not force a session named main.</div>
         <pre style="font-size:9.5px">layout {
     default_tab_template {
         children
@@ -383,7 +385,7 @@ tab name="logs" split_direction="vertical" {
       </td>
       <td style="width:33%;vertical-align:top;padding:8px 12px">
         <strong style="color:var(--teal);display:block;margin-bottom:6px"><code>zjstatus.kdl</code> <span class="badge aliased">opt-in</span></strong>
-        <div class="note" style="margin-bottom:8px">The default layout's two tabs with the zjstatus bar (see the zjstatus card). <code>zellij -s zjs -n zjstatus</code> to try it; set <code>pane_frames false</code> to adopt it.</div>
+        <div class="note" style="margin-bottom:8px">The default layout's two tabs with the zjstatus bar (see the zjstatus card). <code>zj -s zjs -n zjstatus</code> to try it; disable pane frames if needed. UTC clock, no Git command by default.</div>
         <pre style="font-size:9.5px">layout {
     default_tab_template {
         children
@@ -404,7 +406,8 @@ tab name="logs" split_direction="vertical" {
           <strong style="color:var(--text);font-style:normal">Session picker (built-in, no file needed)</strong>
         </div>
         <table style="margin-top:6px">
-          <tr><td><code>zellij -n welcome</code></td><td>zellij's own welcome layout — it already sets <code>session_serialization false</code>, so launches don't leave junk sessions</td></tr>
+          <tr><td><code>zj -s scratch -n minimal</code></td><td>Shipped minimal layout: one shell pane and the built-in compact bar; no application commands, matching swap layout included</td></tr>
+          <tr><td><code>zellij -n welcome</code></td><td>zellij's own welcome layout — it sets <code>session_serialization false</code></td></tr>
           <tr><td><kbd>Ctrl+o</kbd> <kbd>w</kbd></td><td>Session manager from any session</td></tr>
           <tr><td><kbd>Enter</kbd></td><td>Attach (or resurrect)</td></tr>
         </table>

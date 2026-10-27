@@ -10,7 +10,7 @@ import subprocess
 import tempfile
 from urllib.parse import unquote, urlsplit
 
-from .common import ConfigError, load_versions, plugin_url, sha256
+from .common import ConfigError, load_versions, plugin_url, sha256, zellij_executable
 from .install import validate
 from .kdl import parse, plugin_locations
 from .versions import checksums, documentation
@@ -24,13 +24,14 @@ REQUIRED = [
     'hooks/pre-commit', '.github/workflows/check.yml', 'THIRD_PARTY_NOTICES.md',
     'ci-tools.json', 'tools/lint_workflow.py', 'requirements-dev.txt',
     'package.json', 'package-lock.json', 'pyproject.toml', 'tests/test_regressions.py',
-    'docs/AUDIT_FIXES.md',
-    *['layouts/' + name + suffix for name in ['default', 'dev', 'zjstatus']
+    'tests/test_portability.py', 'tests/test_preferences.py', 'tests/test_entrypoints.py',
+    'docs/AUDIT_FIXES.md', 'docs/GENERALIZATION.md', 'tests/test_configuration.py',
+    *['layouts/' + name + suffix for name in ['minimal', 'default', 'dev', 'zjstatus']
       for suffix in ['.kdl', '.swap.kdl']],
     *['cheatsheets/' + name + '.html' for name in
       ['zellij-cheatsheet', 'zellij-plugins-cheatsheet', 'kdl-syntax-cheatsheet', 'verification-checklist']],
     *['tools/zjconfig/' + name + '.py' for name in
-      ['__init__', 'cli', 'common', 'install', 'kdl', 'launcher', 'plugin_files', 'runtime', 'versions', 'check']],
+      ['__init__', 'cli', 'common', 'install', 'kdl', 'launcher', 'plugin_files', 'runtime', 'versions', 'check', 'preferences']],
 ]
 
 
@@ -88,6 +89,11 @@ def check(root: Path, static=False) -> None:
             raise ConfigError(f'Missing upstream MIT notice: {pin["name"]}')
     for path in [root / 'config.kdl', *(root / 'layouts').glob('*.kdl'), *(root / 'themes').glob('*.kdl')]:
         parse(path.read_text(encoding='utf-8'))
+    layout_files = {path.name for path in (root / 'layouts').glob('*.kdl')}
+    for name in sorted(layout_files):
+        companion = name[:-9] + '.kdl' if name.endswith('.swap.kdl') else name[:-4] + '.swap.kdl'
+        if companion not in layout_files:
+            raise ConfigError(f'Layout/swap pair is incomplete: {name} needs {companion}')
     for path in (root / 'cheatsheets').glob('*.html'):
         parser = Tags()
         parser.feed(path.read_text(encoding='utf-8'))
@@ -106,10 +112,23 @@ def check(root: Path, static=False) -> None:
     if static:
         print('Static checks only; Zellij config/layout/theme validation was explicitly omitted.')
         return
-    zellij = shutil.which('zellij')
-    if not zellij:
-        raise ConfigError('Zellij is required for full validation; use --static explicitly for static checks only')
+    try:
+        zellij = zellij_executable(shutil.which)
+    except ConfigError as error:
+        raise ConfigError(f'{error}; use --static explicitly for static checks only') from error
     validate(root, zellij)
+    from .preferences import PRESETS, render_directory, validate_settings
+    with tempfile.TemporaryDirectory(prefix='zellij-profiles-') as directory:
+        staged = Path(directory)
+        shutil.copytree(root / 'layouts', staged / 'layouts')
+        shutil.copytree(root / 'themes', staged / 'themes')
+        for profile in PRESETS:
+            # Begin from the source on each pass so one profile cannot mask
+            # another profile's missing/invalid transformations.
+            shutil.copy2(root / 'config.kdl', staged / 'config.kdl')
+            shutil.copytree(root / 'layouts', staged / 'layouts', dirs_exist_ok=True)
+            render_directory(staged, validate_settings({'schema': 1, 'profile': profile}))
+            validate(staged, zellij)
     with tempfile.TemporaryDirectory(prefix='zellij-theme-') as directory:
         file = Path(directory) / 'theme.kdl'
         file.write_text('theme "my-custom"\n' + (root / 'themes/example-custom.kdl.example').read_text(encoding='utf-8'), encoding='utf-8')
@@ -117,4 +136,4 @@ def check(root: Path, static=False) -> None:
                                 capture_output=True, timeout=30)
         if result.returncode:
             raise ConfigError('The example custom theme failed to parse')
-    print('Real Zellij config, every layout/swap pair and example theme validation passed.')
+    print('Real Zellij config, portable/classic profiles, every layout/swap pair and example theme validation passed.')

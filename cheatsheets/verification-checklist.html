@@ -73,14 +73,12 @@
 <!-- Each checkbox is named by its item title via aria-labelledby, so screen
      readers announce e.g. "Local clipboard (copy-on-select), checkbox". -->
 <div class="intro">
-  Much of this config was validated against the real zellij 0.45.1 binary
-  (parsing, option keys, enum values, keybinds, plugin loading, live keystroke
-  behavior, protocol emission, crash recovery). <code>CHANGELOG.md</code> records
-  exactly what was run, and which doc claims later audits corrected — not every
-  sentence in the docs has been tested. <strong>These items can't be tested
-  in a headless sandbox</strong> — they need a real terminal, GUI, clipboard, or a
-  reboot. Tick each once you've confirmed it in your actual setup. If one fails,
-  it's most likely a terminal-emulator capability gap rather than a config bug.
+  Automated checks cover configuration parsing and helper regressions against
+  the selected Zellij binary. They do not establish interactive behavior for
+  your terminal. <code>CHANGELOG.md</code> records validation and limitations.
+  <strong>Run these checks on your own machine</strong> — they need a real
+  terminal, GUI, clipboard, or a reboot. Tick each once confirmed; investigate
+  configuration, application and terminal capabilities when a check fails.
 </div>
 
 <!-- 1 -->
@@ -139,16 +137,16 @@
 <div class="item">
   <div class="item-head"><input type="checkbox" aria-labelledby="item-6"><h2 id="item-6">Crash → reattach → nvim <code>:qa</code> safety <span class="opt key">the important one</span></h2></div>
   <div class="item-body">
-    <div class="row"><span class="lbl">Tests</span><span class="val"><code>session_serialization true</code> + the two-tab default (the whole nvim design)</span></div>
+    <div class="row"><span class="lbl">Tests</span><span class="val"><code>session_serialization true</code> + the two-tab default; use a disposable named test session</span></div>
     <div class="row"><span class="lbl">Do</span><span class="val">
-      1. Run <code>zellij</code> → lands in <code>main</code> with <kbd>main</kbd> + <kbd>shell</kbd> tabs.<br>
+      1. Run <code>zj -s recovery-test -n default</code> → a named session with <kbd>main</kbd> + <kbd>shell</kbd> tabs.<br>
       2. In the <kbd>main</kbd> tab, open nvim and edit something.<br>
-      3. Simulate a crash: from <em>another</em> terminal run <code>pkill -9 -f 'zellij --server'</code> (or just reboot).<br>
-      4. Reattach: <code>zellij attach --create main</code>.<br>
-      5. If the <kbd>main</kbd> tab comes back running nvim (no parent shell), type <code>:qa</code>. (If it comes back as a plain shell, zellij didn't save the nvim — see the 0.45.1 note in README "Session recovery"; the test can't run.)
+      3. Save your work. Simulate a crash only for this disposable session using your platform's process tools, or reboot when convenient.<br>
+      4. Reattach: <code>zj attach --create recovery-test</code>.<br>
+      5. If the <kbd>main</kbd> tab returns running nvim without a parent shell, type <code>:qa</code>. Record whether the editor/application state was restored; a plain shell cannot verify this case.
     </span></div>
     <div class="row pass"><span class="lbl">Pass</span><span class="val"><code>:qa</code> closes nvim's tab and drops you into the <kbd>shell</kbd> tab — the session stays alive. (Closing the last pane in a single-tab session would instead end it.)</span></div>
-    <div class="row"><span class="lbl">Note</span><span class="val" style="color:var(--muted)">Soft guarantee — holds while the <kbd>shell</kbd> tab exists. For a hard guarantee, add an nvim session plugin (persistence.nvim / auto-session); then even an ended session restores your buffers on relaunch. See README "Session recovery".</span></div>
+    <div class="row"><span class="lbl">Note</span><span class="val" style="color:var(--muted)">The extra tab helps only while it exists. Editor session plugins and backups can provide separate recovery, but must be tested too. See <code>docs/CONFIGURATION.md</code>.</span></div>
   </div>
 </div>
 
@@ -157,8 +155,8 @@
   <div class="item-head"><input type="checkbox" aria-labelledby="item-7"><h2 id="item-7">Reboot recovery</h2></div>
   <div class="item-body">
     <div class="row"><span class="lbl">Tests</span><span class="val"><code>session_serialization</code> across a full machine restart</span></div>
-    <div class="row"><span class="lbl">Do</span><span class="val">With a session running, reboot the machine. After login, run <code>zellij attach --create main</code> (not plain <code>zellij</code> — that would start a fresh session and discard the saved one).</span></div>
-    <div class="row pass"><span class="lbl">Pass</span><span class="val">The session comes back with its <kbd>main</kbd> and <kbd>shell</kbd> tabs. Recent changes may be missing — zellij 0.45.1 doesn't reliably keep the saved copy current (issue #4536; see README "Session recovery"). Panes redraw blank (<code>serialize_pane_viewport</code> is off by design).</span></div>
+    <div class="row"><span class="lbl">Do</span><span class="val">Save work in the <code>recovery-test</code> session, reboot when convenient, then run <code>zj attach --create recovery-test</code>. Use your own session name for normal recovery; no singleton name is configured by default.</span></div>
+    <div class="row pass"><span class="lbl">Pass</span><span class="val">The expected tabs and panes return. Compare application state and recent structure changes with what you recorded before reboot. Panes redraw blank because <code>serialize_pane_viewport</code> is off. Record any recovery limitations.</span></div>
   </div>
 </div>
 
@@ -166,10 +164,10 @@
 <div class="item">
   <div class="item-head"><input type="checkbox" aria-labelledby="item-8"><h2 id="item-8">zjstatus status bar renders <span class="opt">if you adopt zjstatus</span></h2></div>
   <div class="item-body">
-    <div class="row"><span class="lbl">Tests</span><span class="val"><code>layouts/zjstatus.kdl</code> (loads verified; colors/git/clock are visual)</span></div>
-    <div class="row"><span class="lbl">Do</span><span class="val">Run <code>zellij -s zjs -n zjstatus</code>. On first run the bar shows a truncated permission prompt (e.g. <code>/n)</code>) — click the bar to focus it, then press <kbd>y</kbd>. Optionally set <code>pane_frames false</code> first (see the layout's header).</span></div>
-    <div class="row pass"><span class="lbl">Pass</span><span class="val">The bottom bar shows a colored mode indicator, session, tabs, git branch (if you started zellij inside a repo), and the clock; with 2+ panes, the swap layout name (e.g. <code>vertical</code>) appears and changes as you press <kbd>Alt+]</kbd> — no frame flicker. The tab list shows <kbd>main</kbd> and <kbd>shell</kbd> — the same nvim <code>:qa</code> safety as the default layout.</span></div>
-    <div class="row"><span class="lbl">Note</span><span class="val" style="color:var(--muted)">The layout ships with <code>datetime_timezone "America/Denver"</code> — change it to your IANA zone if the clock is off.</span></div>
+    <div class="row"><span class="lbl">Tests</span><span class="val"><code>layouts/zjstatus.kdl</code>; clock, colors, frame behavior and optional Git widget need visual checks</span></div>
+    <div class="row"><span class="lbl">Do</span><span class="val">Run <code>zj -s zjs -n zjstatus</code>. Focus the bar to read and respond to any permission prompt. Toggle frames with <kbd>Ctrl+p</kbd>, then <kbd>z</kbd> if needed, or save <code>--pane-frames off</code> through the configure helper.</span></div>
+    <div class="row pass"><span class="lbl">Pass</span><span class="val">The bar shows mode, session, tabs and UTC clock. With 2+ panes, the swap layout name changes when cycling <kbd>Alt+]</kbd>, without frame flicker. Git appears only when explicitly enabled and Git is available; verify it against the session's startup directory.</span></div>
+    <div class="row"><span class="lbl">Note</span><span class="val" style="color:var(--muted)">UTC and no Git command are the portable defaults. Configure <code>--timezone Europe/Paris --git-status on</code> locally if wanted, then start a new <code>zj</code> session. Plain <code>zellij</code> ignores the local JSON preferences.</span></div>
   </div>
 </div>
 

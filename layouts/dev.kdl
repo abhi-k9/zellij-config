@@ -8,11 +8,10 @@
 //  ⚠ `-n` (--new-session-with-layout) is REQUIRED to start a NEW session from a
 //  layout. `zellij --session proj --layout dev` does NOT work: when --session is
 //  given, --layout means "add these tabs to session proj" and errors with "no
-//  active session" if proj doesn't exist. Also, because config.kdl sets
-//  session_name "main" + attach_to_session, a bare `zellij --layout dev` never
-//  makes a new session: it creates "main" with this layout if main isn't
-//  running, but if main IS running it just attaches and ignores the layout.
-//  Use -s/-n above for a separate session.
+//  active session" if proj doesn't exist. With the local classic profile's
+//  session_name "main" + attach_to_session, a bare `zellij --layout dev` can
+//  attach to a running main and ignore the layout. Use -s/-n above for a
+//  separate session with either profile.
 //  (All verified against zellij 0.45.1.)
 //
 //  Layout:

@@ -10,6 +10,27 @@ repository root. The checked-in launcher prefers verified downloads and only
 uses bundled plugins when a download is unavailable. It stores private runtime
 snapshots outside the checkout; plain Zellij continues to use HTTPS aliases.
 
+## Portable configuration and preferences
+
+The portability review used `8e6cc29` as its baseline. Shared defaults no longer
+force a singleton session, a pane debug export, an editor-specific lock key, a
+personal timezone or a Git command widget. The new `minimal` layout offers a
+single-shell alternative to the two-tab default. A gitignored schema-1 local
+preferences file restores the previous workflow through `--profile classic` or
+records individual choices without editing shared KDL.
+
+The launcher renders private config/layout snapshots. Setup preserves the
+target's local preferences and validates a separately rendered temporary tree;
+source preferences are not imported and deployed KDL retains shared defaults.
+Plain Zellij always ignores local JSON. `ZJ_PYTHON`, `ZJ_ZELLIJ_BIN` and `ZJ_STATE_DIR` make executable
+and state choices explicit. External symlink entry points are unsupported.
+
+Validation includes preference schema and rendering tests, selector and state
+precedence, literal executable paths, entry-point argument transport, and real
+Zellij parsing. Native Windows/Fish tests skip when those runtimes are absent;
+parser success does not establish interactive correctness. See the
+[migration and validation checklist](GENERALIZATION.md#migration-and-validation-checklist).
+
 ## Priority 1: user data and publication safety
 
 | Audit ID | Resolution | Executable regression |
@@ -77,8 +98,9 @@ a power-loss durability guarantee. External snapshot symlinks remain references
 to their targets, which this installer never overwrites. Concurrent user edits
 are not serialized by the installer lock.
 
-Native Windows/macOS results come from the hosted CI for this change; local
-development tests run in isolated Linux environments. Clipboard, terminal fonts,
+The workflow defines native Windows/macOS jobs; inspect the relevant CI run for
+their current results. Local development checks run in isolated Linux environments.
+Clipboard, terminal fonts,
 mouse behavior, permission prompts and crash/reboot recovery require native
 interactive checks. Parser success alone does not establish those behaviors.
 

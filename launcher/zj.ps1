@@ -3,6 +3,7 @@
 $ErrorActionPreference = 'Stop'
 $helper = Join-Path $PSScriptRoot '.zellij-config\manage.py'
 if (-not (Test-Path -LiteralPath $helper)) { $helper = Join-Path $PSScriptRoot '..\tools\manage.py' }
+if (-not (Test-Path -LiteralPath $helper -PathType Leaf)) { throw "zj helper is missing: $helper. Keep the launcher beside its installed .zellij-config helpers or inside the checkout's launcher directory." }
 $forward = @($args)
 if ($args.Count -gt 0 -and $args[0] -eq '-CheckUpdates') {
     $forward = @('--check-updates')
@@ -15,6 +16,11 @@ if ($args.Count -gt 0 -and $args[0] -eq '-CheckUpdates') {
 # or stdin redirection; the actual Zellij child inherits the terminal normally.
 $json = ConvertTo-Json -InputObject $forward -Compress
 $encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($json))
-if (Get-Command py -ErrorAction SilentlyContinue) { & py -3 $helper launch --argv64 $encoded }
-else { & python $helper launch --argv64 $encoded }
+if ($env:ZJ_PYTHON) {
+    if (-not (Test-Path -LiteralPath $env:ZJ_PYTHON -PathType Leaf) -and -not (Get-Command -Name ([System.Management.Automation.WildcardPattern]::Escape($env:ZJ_PYTHON)) -CommandType Application -ErrorAction SilentlyContinue)) { throw "ZJ_PYTHON executable is unavailable: $env:ZJ_PYTHON. Set one Python 3.10+ executable path without arguments." }
+    & $env:ZJ_PYTHON $helper launch --argv64 $encoded
+}
+elseif (Get-Command py -CommandType Application -ErrorAction SilentlyContinue) { & py -3 $helper launch --argv64 $encoded }
+elseif (Get-Command python -CommandType Application -ErrorAction SilentlyContinue) { & python $helper launch --argv64 $encoded }
+else { throw 'Python 3.10+ is required for zj. Set ZJ_PYTHON to its executable path if it is installed under another name.' }
 exit $LASTEXITCODE

@@ -105,7 +105,7 @@
   <div class="card-header"><div class="dot" style="background:var(--lavender)"></div><h2>Mode System</h2><span class="note" style="margin-left:8px">Modal interface — <kbd style="font-size:9.5px">Ctrl</kbd>+letter enters a mode; single keys act inside it; <kbd style="font-size:9.5px">Esc</kbd>/<kbd style="font-size:9.5px">Enter</kbd> returns to Normal</span></div>
   <table style="border-collapse:collapse">
     <tr>
-      <td style="width:11%"><kbd class="lavender">F12</kbd></td><td style="padding-right:16px">→ <strong>Locked</strong> — all keys pass through (manual toggle)</td>
+      <td style="width:11%"><kbd class="lavender">Ctrl+g</kbd></td><td style="padding-right:16px">→ <strong>Locked</strong> — keys pass through (manual toggle; classic uses F12)</td>
       <td style="width:11%"><kbd class="blue">Ctrl+p</kbd></td><td style="padding-right:16px">→ <strong>Pane</strong> — create, close, focus, resize, float</td>
       <td style="width:11%"><kbd class="green">Ctrl+t</kbd></td><td>→ <strong>Tab</strong> — create, close, rename, reorder</td>
     </tr>
@@ -129,16 +129,16 @@
     <tr><td><kbd class="red">Ctrl+q</kbd> <span class="badge active">unbound</span></td><td>Default quit removed (fat-finger guard)</td>
         <td><kbd class="mauve">Ctrl+o</kbd> <kbd class="mauve">q</kbd> <span class="badge active">added</span></td><td>Deliberate two-step quit (replaces it)</td></tr>
     <tr><td><kbd class="mauve">Ctrl+o</kbd> <kbd class="mauve">h</kbd> <span class="badge active">added</span></td><td>Built-in configuration/keybinding screen (floating; <kbd style="font-size:9.5px">Esc</kbd> closes)</td>
-        <td><kbd class="flamingo">F12</kbd> <span class="badge active">added</span></td><td>Lock toggle (Ctrl+g unbound — clashes with nvim)</td></tr>
+        <td><kbd class="flamingo">Ctrl+g</kbd> <span class="badge">default</span></td><td>Lock toggle; choose F12 with a local preference if it conflicts with your application</td></tr>
     <tr><td><kbd class="mauve">Ctrl+o</kbd> <kbd class="mauve">m</kbd> <span class="badge active">added</span></td><td>monocle — find files &amp; contents from the focused pane's directory</td>
         <td><kbd class="mauve">Ctrl+o</kbd> <kbd class="mauve">t</kbd> / <kbd class="mauve">e</kbd> <span class="badge">opt-in</span></td><td>multitask / edit config — commented out in <code>config.kdl</code> (Unix-only)</td></tr>
-    <tr><td>Locking <span class="badge active">manual</span></td><td>No autolock plugin — press F12 entering nvim, F12 leaving</td>
+    <tr><td>Locking <span class="badge active">manual</span></td><td>No autolock plugin — press Ctrl+g before and after an application that needs all keys</td>
         <td colspan="2" class="note">Forget, and zellij eats your Alt+hjkl / Alt+f keystrokes.</td></tr>
-    <tr><td>Session <code>main</code></td><td><code>session_name "main"</code> + <code>attach_to_session true</code> — plain <code>zellij</code> joins or creates one persistent session</td>
+    <tr><td>Sessions</td><td>No fixed name or automatic attachment; choose an explicit name per project. The classic local profile restores the shared <code>main</code> workflow</td>
         <td>Default layout</td><td>Two tabs, <strong>main</strong> + <strong>shell</strong>, with the 1-line <code>compact-bar</code></td></tr>
     <tr><td>Resurrection <span class="badge active">on</span></td><td><code>session_serialization true</code> (zellij's default, kept on) — the two-tab layout keeps <code>:qa</code> in a resurrected nvim from ending the session</td>
         <td>Look</td><td><code>catppuccin-mocha</code>, <code>pane_frame_style "full"</code> (0.45 default is "titles") + <code>rounded_corners</code></td></tr>
-    <tr><td><code>env</code></td><td><code>RUST_BACKTRACE "1"</code> for programs in panes</td>
+    <tr><td>Pane environment</td><td>No debug environment exported by default; <code>RUST_BACKTRACE</code> is opt-in</td>
         <td>Plugin aliases</td><td>zjstatus, monocle, multitask — pinned, loaded on demand</td></tr>
     <tr><td colspan="4" class="note">Gotcha: scroll-mode <kbd style="font-size:9.5px">e</kbd> (edit scrollback) needs <code>$EDITOR</code> set in your environment, or it just returns to Normal.</td></tr>
   </table>
@@ -271,8 +271,8 @@
     <tr><td><kbd class="mauve">m</kbd></td><td>monocle — find files &amp; contents <span class="badge active">added</span></td></tr>
     <tr><td><kbd class="mauve">t</kbd> / <kbd class="mauve">e</kbd></td><td>multitask / edit config — <span class="badge">opt-in</span> commented out in <code>config.kdl</code> (Unix-only)</td></tr>
     <tr class="divider"><td colspan="2">Resurrection <span class="badge active">on</span></td></tr>
-    <tr><td colspan="2" class="note"><code>session_serialization true</code> + <code>serialization_interval 60</code> — the session is saved and resurrected with <code>zellij attach --create main</code> (not plain <code>zellij</code>). ⚠ on zellij 0.45.1 the saved copy isn't reliably kept current (issue #4536), so it may come back older than you left it. A resurrected nvim comes back with no parent shell, but the default layout's separate "shell" tab means <code>:qa</code> closes nvim's pane/tab, not the session (soft: holds while the shell tab exists).</td></tr>
-    <tr><td colspan="2" class="note">Saved sessions live in <code>contract_version_1/</code> inside the cache dir (<code>~/.cache/zellij/</code> on Linux) — keep it when clearing the plugin cache (README "Clearing the plugin cache") · <code>on_force_close "detach"</code> keeps the session alive if your terminal window closes</td></tr>
+    <tr><td colspan="2" class="note"><code>session_serialization true</code> + <code>serialization_interval 60</code> saves session structure. Reattach with <code>zj attach --create &lt;name&gt;</code> using your actual session name. Verify crash/reboot recovery on your machine; parser checks do not prove recovery. A restored application may have no parent shell; the default layout's separate "shell" tab keeps the session alive while that tab exists.</td></tr>
+    <tr><td colspan="2" class="note">Keep saved sessions when clearing caches. <code>on_force_close "detach"</code> keeps a running session alive if the terminal window closes; unsaved editor buffers still need their own recovery strategy.</td></tr>
   </table>
 </div>
 
@@ -280,9 +280,9 @@
 <div class="card">
   <div class="card-header"><div class="dot" style="background:var(--flamingo)"></div><h2>Locked &amp; Tmux</h2></div>
   <table>
-    <tr class="divider"><td colspan="2">Locked mode — <kbd class="flamingo" style="font-size:9.5px">F12</kbd></td></tr>
-    <tr><td colspan="2" class="note">All bindings disabled — every key passes to the running program. Enter it by hand with F12 before starting nvim/helix/lazygit, and F12 again to leave. Status bar shows <strong>LOCKED</strong>.</td></tr>
-    <tr><td><kbd class="flamingo">F12</kbd> <span class="badge active">added</span></td><td>Toggle lock on/off (Ctrl+g unbound — it clashed with nvim)</td></tr>
+    <tr class="divider"><td colspan="2">Locked mode — <kbd class="flamingo" style="font-size:9.5px">Ctrl+g</kbd></td></tr>
+    <tr><td colspan="2" class="note">Locked mode forwards keys to the running program except the unlock key. Press Ctrl+g before an application that needs Zellij's shortcuts, then again to leave. Status bar shows <strong>LOCKED</strong>.</td></tr>
+    <tr><td><kbd class="flamingo">Ctrl+g</kbd></td><td>Toggle lock; the optional classic local profile uses F12 and frees Ctrl+g for applications</td></tr>
     <tr class="divider"><td colspan="2">Tmux mode — <kbd class="sapphire" style="font-size:9.5px">Ctrl+b</kbd></td></tr>
     <tr><td colspan="2" class="note">Tmux-compatible layer for muscle memory. Press <kbd class="sapphire" style="font-size:9.5px">Ctrl+b</kbd> then:</td></tr>
     <tr><td><kbd class="sapphire">%</kbd> / <kbd class="sapphire">"</kbd></td><td>Vertical split / horizontal split</td></tr>
@@ -299,10 +299,10 @@
   <div class="card-header"><div class="dot" style="background:var(--sky)"></div><h2>CLI Reference</h2></div>
   <table>
     <tr class="divider"><td colspan="2">Start</td></tr>
-    <tr><td><code>zellij</code></td><td>Join a <em>running</em> <strong>main</strong>, else start a fresh one (this config; stock zellij = random name)</td></tr>
-    <tr><td><code>zellij attach --create main</code></td><td><strong>Use after a crash/reboot</strong> — resurrects the saved main (plain <code>zellij</code> would replace it), joins or creates otherwise</td></tr>
+    <tr><td><code>zellij</code></td><td>Start without a configured singleton session. Use <code>zj</code> for local preferences and verified plugin fallback</td></tr>
+    <tr><td><code>zj attach --create &lt;name&gt;</code></td><td>Reattach/resurrect the named session, or create it when absent</td></tr>
     <tr><td><code>zellij -s &lt;name&gt;</code></td><td>Named session</td></tr>
-    <tr><td><code>zellij -s &lt;name&gt; -n &lt;layout&gt;</code></td><td>New named session with a layout. (<code>-l</code> alone is ignored if <code>main</code> is already running)</td></tr>
+    <tr><td><code>zj -s &lt;name&gt; -n &lt;layout&gt;</code></td><td>New named session with a layout; use a distinct project name when you want a separate session</td></tr>
     <tr><td><code>zellij --config &lt;file&gt;</code></td><td>Use a specific config file</td></tr>
     <tr class="divider"><td colspan="2">Attach / list / kill</td></tr>
     <tr><td><code>zellij attach &lt;name&gt;</code> (<code>a</code>)</td><td>Attach to existing</td></tr>
@@ -323,12 +323,15 @@
     <tr><td><code>$ZELLIJ</code></td><td>Set inside any zellij pane — detect "am I in zellij?"</td></tr>
     <tr><td><code>$ZELLIJ_SESSION_NAME</code></td><td>Current session name</td></tr>
     <tr><td><code>$ZELLIJ_CONFIG_DIR</code></td><td>Override config dir</td></tr>
+    <tr><td><code>$ZJ_PYTHON</code> / <code>$ZJ_ZELLIJ_BIN</code></td><td>Literal interpreter / Zellij executable path for helpers</td></tr>
+    <tr><td><code>$ZJ_STATE_DIR</code></td><td>Override the private helper state directory</td></tr>
+    <tr><td colspan="2" class="note">From the checkout: <code>python3 tools/manage.py configure --config-dir . --profile classic</code> saves optional local preferences. Plain <code>zellij</code> ignores that JSON; <code>zj</code> renders a private config/layout snapshot. See <code>docs/CONFIGURATION.md</code>.</td></tr>
   </table>
 </div>
 
 <!-- ═══════════════════════ LAYOUTS ═══════════════════════ -->
 <div class="card col-2">
-  <div class="card-header"><div class="dot" style="background:var(--peach)"></div><h2>Layouts — KDL Format</h2><span class="note" style="margin-left:8px"><code>~/.config/zellij/layouts/*.kdl</code> &nbsp;·&nbsp; launch: <code>zellij -s &lt;session&gt; -n &lt;layout&gt;</code> &nbsp;·&nbsp; apply at runtime: <kbd style="font-size:9.5px">Ctrl+o</kbd> <kbd style="font-size:9.5px">l</kbd></span></div>
+  <div class="card-header"><div class="dot" style="background:var(--peach)"></div><h2>Layouts — KDL Format</h2><span class="note" style="margin-left:8px"><code>&lt;config directory&gt;/layouts/*.kdl</code> &nbsp;·&nbsp; launch: <code>zj -s &lt;session&gt; -n &lt;layout&gt;</code> &nbsp;·&nbsp; apply at runtime: <kbd style="font-size:9.5px">Ctrl+o</kbd> <kbd style="font-size:9.5px">l</kbd></span></div>
   <table>
     <tr>
       <td style="width:48%;vertical-align:top;padding:8px 12px">
@@ -337,6 +340,7 @@
           <tr><td style="color:var(--teal)"><code>default.kdl</code> <span class="badge active">default</span></td><td>2 tabs: <strong>main</strong> + <strong>shell</strong> (nvim <code>:qa</code> safety), 1-line <code>compact-bar</code> at bottom</td></tr>
           <tr><td style="color:var(--teal)"><code>dev.kdl</code></td><td>3 tabs: <strong>code</strong> (editor 75% + shell 25%), <strong>git</strong>, <strong>logs</strong> (split)</td></tr>
           <tr><td style="color:var(--teal)"><code>zjstatus.kdl</code></td><td>Opt-in: the same 2 tabs with a zjstatus bar (wants <code>pane_frames false</code>)</td></tr>
+          <tr><td style="color:var(--teal)"><code>minimal.kdl</code></td><td>One shell pane with the built-in compact bar; no application commands</td></tr>
           <tr><td colspan="2" class="note">Each has a <code>*.swap.kdl</code> for <kbd style="font-size:9.5px">Alt+[</kbd> / <kbd style="font-size:9.5px">Alt+]</kbd>. <code>zellij -n welcome</code> uses zellij's built-in welcome screen.</td></tr>
         </table>
         <pre style="margin-top:12px">layout {                                  // dev.kdl, condensed

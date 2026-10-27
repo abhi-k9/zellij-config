@@ -21,8 +21,8 @@ The launcher first reuses a verified prior download, then attempts the pinned
 HTTPS release, then verifies and uses the bundled backup if fetching fails.
 Download/cache checksum errors cannot select unverified bytes. `ZJ_OFFLINE=1`
 skips startup network access and uses a verified download cache or bundled files.
-Private per-user runtime snapshots leave the checkout untouched; restart a
-session to apply source config edits when using `zj`.
+Private per-user config/layout snapshots leave the checkout untouched; restart a
+session to apply source config edits or local preferences when using `zj`.
 Missing downloads run concurrently, with at most three requests in flight.
 Failed downloads have a five-minute per-pin cooldown, during which backups are
 still hash-verified. Changed pins and unusable backups bypass the cooldown.
@@ -76,6 +76,43 @@ interpreter line. Do not source these scripts or invoke them with `fish`.
 Use `fish_add_path "$HOME/.local/bin"` after installing the helpers, or
 `fish_add_path "$HOME/.config/zellij/launcher"` for the direct-clone launcher.
 
+`ZJ_PYTHON` selects one literal Python interpreter path for every wrapper;
+`ZJ_ZELLIJ_BIN` selects one literal Zellij executable path for launch, setup and
+full checks. Neither accepts command arguments. Unix tries `python3` then
+`python`; Windows uses `py -3`/`python`. An unusable
+Windows Python alias can be bypassed with `ZJ_PYTHON`. `ZJ_STATE_DIR` overrides
+the private launcher state directory; otherwise platform state conventions apply.
+Use real script paths or installed helpers, since external symlink entry points
+are unsupported.
+
+## Local preferences
+
+The shared config leaves session names and pane environment variables unset,
+keeps the standard `Ctrl+g` lock toggle, and gives zjstatus a UTC clock without
+command widgets. Save personal choices separately with:
+
+```sh
+python3 tools/manage.py configure --config-dir . --timezone Europe/Paris --layout dev
+```
+
+This creates a gitignored `.zellij-config-local.json` in the selected directory.
+It changes no shared KDL or version pins. The launcher renders private snapshots
+from preferences beside the selected config file for new sessions. Plain Zellij
+does not read this JSON. Optional setup deployment preserves the target's local
+file, revalidates it against the updated config, and ignores the source checkout's
+preferences. Deployed KDL retains portable defaults; use `zj` to apply preferences
+to either direct or deployed configs.
+
+For the previous workflow, use `configure --config-dir . --profile classic`.
+It restores session `main` with automatic attachment, F12 locking, Denver time,
+the startup-directory Git widget, and `RUST_BACKTRACE=1` in panes. Individual
+options can override the preset. `--project-sessions` clears the singleton
+session choice, `--reset` removes the local file, and `--dry-run` previews without
+writing. Individual options retain unspecified existing choices, including
+explicit overrides when changing profiles. Running `configure --config-dir .`
+without changes prints effective settings without writing. See the
+[options and migration checklist](GENERALIZATION.md).
+
 ## Layouts
 
 | Layout | Behavior |
@@ -83,11 +120,13 @@ Use `fish_add_path "$HOME/.local/bin"` after installing the helpers, or
 | `default` | Two tabs: `main` for work/editor and `shell` as a safety net |
 | `dev` | Editor, terminal and log-oriented development tabs |
 | `zjstatus` | Optional rich status bar; read the comments about frames and permissions |
+| `minimal` | One shell with a compact bar, without a separate safety tab |
 
 Every layout has a matching `.swap.kdl`, enabling `Alt+[` and `Alt+]`.
 Create a separate project session with `zellij -s project -n dev`.
-`--session project --layout dev` adds tabs to an existing session; a bare
-`--layout dev` may join the configured `main` session instead.
+`--session project --layout dev` adds tabs to an existing session. The shared
+config has no forced session name; `classic` or an explicit local session name
+can make a bare `--layout dev` attach to that configured session instead.
 
 ## Keybindings
 
@@ -95,13 +134,16 @@ Zellij's defaults remain active except for the explicit customizations:
 
 | Key | Action |
 | --- | --- |
-| `F12` | Lock/unlock; locking forwards keys to the focused application |
-| `Ctrl+g` | Unbound in normal and locked contexts; applications can receive it |
+| `Ctrl+g` | Standard lock/unlock toggle; locking forwards other keys to the focused application |
 | `Ctrl+q` | Unbound to prevent accidental quits |
 | `Ctrl+o`, then `q` | Quit deliberately |
 | `Ctrl+o`, then `d` | Detach and leave the session running |
 | `Ctrl+o`, then `m` | Open/focus the monocle file finder |
 | `Ctrl+o`, then `h` | Open the built-in configuration/keybinding screen |
+
+`configure --lock-key F12` opts into F12 locking and releases `Ctrl+g` to the
+application. The `classic` preset selects that behavior too. There is no
+application-specific automatic locking.
 
 The former third-party keybinding popup was removed because its redistribution
 permission was unestablished. The built-in screen uses Zellij's actual bindings.
@@ -122,13 +164,18 @@ Plugin permissions are granted by Zellij, not by the installer. Grant only the
 permissions needed for the features you intend to use. `RunCommands` permits
 host commands; WASM is not a reason to grant it indiscriminately.
 
-The optional zjstatus layout requests state access and command execution for its
-git widget. Its one-row permission prompt can be truncated: click the bar to
-focus it before responding. Remove the `command_git_branch_*` settings if you do
-not want that widget. Set `pane_frames false` or toggle frames for that session
-with `Ctrl+p`, then `z` to avoid competing frame management. Its git directory is
-the startup directory, not the focused pane. Its clock uses the explicit IANA
-timezone in the layout; set it to your own timezone.
+The optional zjstatus layout uses state access for its bar. Its one-row permission
+prompt can be truncated: click the bar to focus it before responding. Set
+`pane_frames false` or toggle frames for that session with `Ctrl+p`, then `z` to
+avoid competing frame management. The clock defaults to UTC. Use
+`configure --timezone Europe/Paris` for another IANA timezone; see the
+[timezone dependency note](GENERALIZATION.md#timezones-and-optional-commands).
+
+The Git widget is an explicit `configure --git-status on` opt-in, also selected
+by `classic`. It requires Git on PATH and command-execution permission. Its
+directory is the layout's startup directory, not the focused pane; changing
+panes does not retarget it. No editor, log viewer or native clipboard command is
+launched by default; platform-specific command examples remain opt-ins.
 
 ## Update notices
 
@@ -146,6 +193,7 @@ pins or the configuration. Explicit checks below run live in the foreground.
 ```sh
 zj --check-updates
 zj --check-updates /path/to/config.kdl
+./check.sh --updates /path/to/config.kdl
 ```
 
 Exit status is 0 for current pins, 1 for a different latest release, and 2 for an
@@ -154,6 +202,8 @@ changes files or interrupts startup for confirmation. `ZJ_NO_UPDATE_CHECK=1`
 skips startup notices; `ZJ_OFFLINE=1` also skips plugin downloads. Both Windows wrappers use this same logic; tags and URLs
 are compared case-sensitively. Requests follow bounded HTTPS redirects with
 timeouts; ordinary CI tests use deterministic fixtures instead of live releases.
+These two environment switches treat every nonempty value, including `0`, as
+enabled. Unset the variable or set an empty value to disable it.
 
 ## Recovery and backups
 
@@ -176,13 +226,15 @@ snapshot while an installer is running.
 `session_serialization true` saves the session structure once per minute.
 `serialize_pane_viewport false` keeps restored screens clean; the similarly
 named `pane_viewport_serialization` is not the parser key. Use
-`zellij attach --create main` after a crash/reboot. Plain `zellij` can create a
+`zj attach --create project` with your actual session name after a crash/reboot.
+Plain `zellij` can create a
 fresh session instead of resurrecting the saved one.
 
 Restored applications may have no shell beneath them; the extra `shell` tab
 helps keep the session alive after an editor exits. This is not a substitute for
 an editor session plugin or backups of unsaved work. Verify crash/reboot recovery
 in your own environment rather than inferring it from config parser success.
+The `minimal` layout has one tab and does not provide the extra safety shell.
 
 Clipboard copy defaults to OSC52 so it can work through SSH. Terminal support
 still matters; the commented `pbcopy`, `wl-copy`, `xclip` and `clip.exe` examples

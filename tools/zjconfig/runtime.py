@@ -5,10 +5,11 @@ import hashlib
 import os
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
+import shutil
 import time
 
 from .common import ConfigError, FileLock, atomic_write, json_bytes, plugin_url, private_tempdir, read_json, validate_versions
-from .kdl import plugin_locations, quote, replace_plugin_locations
+from .kdl import parse, plugin_locations, quote, replace_plugin_locations
 from .plugin_files import acquire, verified
 
 
@@ -75,6 +76,60 @@ def arguments_for_config(arguments: list[str], file: Path, runtime: Path) -> lis
 RETRY_SECONDS = 300
 
 
+def resource_directory(arguments: list[str], file: Path) -> Path:
+    """Follow native config-directory selection without changing its argv."""
+    selected = os.environ.get('ZELLIJ_CONFIG_DIR')
+    index = 0
+    while index < len(arguments):
+        item = arguments[index]
+        if item == '--':
+            break
+        if item == '--config-dir':
+            if index + 1 >= len(arguments):
+                raise ConfigError('Missing value for --config-dir')
+            index += 1
+            selected = arguments[index]
+        elif item.startswith('--config-dir='):
+            selected = item.split('=', 1)[1]
+        index += 1
+    return Path(selected).expanduser().resolve() if selected else file.parent
+
+
+def snapshot_layouts(text: str, arguments: list[str], file: Path, directory: Path, settings: dict) -> str:
+    """Render complete layout pairs once; older sessions keep their generation."""
+    from .preferences import render_layout, set_root_nodes
+    source = resource_directory(arguments, file) / 'layouts'
+    configured = [node for node in parse(text) if node.name == 'layout_dir']
+    if configured and configured[-1].arguments:
+        source = Path(configured[-1].arguments[0]).expanduser().resolve()
+    rendered = {}
+    for path in sorted(source.glob('*.kdl')):
+        if path.is_file():
+            rendered[path.name] = render_layout(path.read_text(encoding='utf-8'), path.name, settings).encode('utf-8')
+    if settings['layout'] in ['dev', 'zjstatus', 'minimal'] and settings['layout'] + '.kdl' not in rendered:
+        raise ConfigError(f'Layout {settings["layout"]} is missing from {source}')
+    identity = hashlib.sha256(json_bytes({name: hashlib.sha256(data).hexdigest()
+                                         for name, data in rendered.items()})).hexdigest()
+    destination = directory / ('layouts-' + identity)
+    if destination.is_symlink() or (destination.exists() and not destination.is_dir()):
+        raise ConfigError(f'Unsafe runtime layout directory: {destination}')
+    if not destination.exists():
+        stage = private_tempdir(directory, '.layouts-')
+        try:
+            for name, data in rendered.items():
+                atomic_write(stage / name, data)
+            os.replace(stage, destination)
+        finally:
+            if stage.exists():
+                shutil.rmtree(stage)
+    else:
+        for name, data in rendered.items():
+            path = destination / name
+            if path.is_symlink() or not path.is_file() or path.read_bytes() != data:
+                raise ConfigError(f'Runtime layout snapshot changed: {path}')
+    return set_root_nodes(text, {'layout_dir': 'layout_dir ' + quote(destination.as_posix())})
+
+
 def store_if_changed(path: Path, data: bytes) -> None:
     if path.is_symlink() or not path.exists() or path.read_bytes() != data:
         atomic_write(path, data)
@@ -91,14 +146,20 @@ def retry_later(path: Path, pin: dict, now: int) -> bool:
 
 
 def prepare(file: Path, arguments: list[str], state: Path, *, offline=False, now=None) -> list[str]:
+    from .preferences import LOCAL_FILE, settings_snapshot, render_config
     now = int(time.time()) if now is None else now
     file = file.resolve()
+    settings_file = file.parent / LOCAL_FILE
+    settings, settings_bytes = settings_snapshot(file.parent)
+    if settings is not None and settings['git_status'] and not shutil.which('git'):
+        print('zj: Git status disabled for this launch: git is not on PATH.', flush=True)
+        settings = {**settings, 'git_status': False}
     manifest = next((path for path in [file.parent / 'versions.json',
                                       file.parent / '.zellij-config-versions.json']
                      if path.is_file() and not path.is_symlink()), None)
-    if manifest is None:
+    if manifest is None and settings is None:
         return arguments
-    pins = validate_versions(read_json(manifest))
+    pins = validate_versions(read_json(manifest)) if manifest else {'plugins': []}
     text = file.read_text(encoding='utf-8')
     active = set(plugin_locations(text))
     selected = []
@@ -106,7 +167,7 @@ def prepare(file: Path, arguments: list[str], state: Path, *, offline=False, now
         aliases = {plugin_url(pin), 'file:' + (file.parent / 'plugins' / pin['asset']).as_posix()}
         if active & aliases:
             selected.append((pin, active & aliases))
-    if not selected:
+    if not selected and settings is None:
         return arguments
     quote(str(file))  # Reject control characters before creating state.
     if state.is_symlink():
@@ -180,9 +241,16 @@ def prepare(file: Path, arguments: list[str], state: Path, *, offline=False, now
                     print(f'zj: {pin["name"]}: using verified bundled fallback', flush=True)
                 for alias in aliases:
                     replacements[alias] = 'file:' + chosen.as_posix()
-        rendered = replace_plugin_locations(text, replacements).encode('utf-8')
+        configured = replace_plugin_locations(text, replacements)
+        if settings is not None:
+            configured = render_config(configured, settings)
+            configured = snapshot_layouts(configured, arguments, file, directory, settings)
+        rendered = configured.encode('utf-8')
         # The source and pins can be edited while downloads are in flight.
-        if file.read_text(encoding='utf-8') != text or validate_versions(read_json(manifest)) != pins:
+        current_settings = settings_file.read_bytes() if settings_file.is_file() else None
+        if (file.read_text(encoding='utf-8') != text
+                or (manifest is not None and validate_versions(read_json(manifest)) != pins)
+                or current_settings != settings_bytes):
             raise ConfigError('Config or pins changed during plugin preparation; rerun zj')
         # Keep generations immutable: another launch must not switch the active
         # session's plugin selection or replace the config it watches.

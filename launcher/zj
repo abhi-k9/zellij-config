@@ -4,7 +4,11 @@ set -eu
 bin=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 helper=$bin/.zellij-config/manage.py
 if [ ! -f "$helper" ]; then helper=$bin/../tools/manage.py; fi
-if command -v python3 >/dev/null 2>&1; then python=python3
+if [ ! -f "$helper" ]; then echo "zj helper is missing: $helper. Keep the launcher beside its installed .zellij-config helpers or inside the checkout's launcher directory." >&2; exit 1; fi
+if [ -n "${ZJ_PYTHON:-}" ]; then
+    python=$ZJ_PYTHON
+    if ! command -v "$python" >/dev/null 2>&1; then echo "ZJ_PYTHON executable is unavailable: $python. Set one Python 3.10+ executable path without arguments." >&2; exit 1; fi
+elif command -v python3 >/dev/null 2>&1; then python=python3
 elif command -v python >/dev/null 2>&1; then python=python
 else echo 'Python 3.10+ is required for zj; zellij itself can still be run directly.' >&2; exit 1; fi
 exec "$python" "$helper" launch -- "$@"

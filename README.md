@@ -1,6 +1,6 @@
 # Zellij config
 
-Catppuccin Mocha, three layouts, matching swap layouts and three pinned plugins.
+Catppuccin Mocha, four layouts, matching swap layouts and three pinned plugins.
 The repository root is a Zellij config directory: `config.kdl`, `layouts/`,
 `themes/` and backup `plugins/` are ready to use after cloning.
 
@@ -14,19 +14,24 @@ Linux and macOS (this location takes precedence when present):
 
 ```sh
 git clone https://github.com/abhi-k9/zellij-config.git "$HOME/.config/zellij"
-"$HOME/.config/zellij/launcher/zj" attach --create main
+"$HOME/.config/zellij/launcher/zj" -s project -n default
 ```
 
 Native Windows, using Windows PowerShell 5.1+:
 
 ```powershell
 git clone https://github.com/abhi-k9/zellij-config.git "$env:APPDATA\Zellij\config"
-& "$env:APPDATA\Zellij\config\launcher\zj.ps1" attach --create main
+& "$env:APPDATA\Zellij\config\launcher\zj.ps1" -s project -n default
 ```
 
 The Windows `launcher\zj.cmd` entry point also works. WSL uses the Linux paths
 inside WSL. No setup script or launcher installation is required. For a custom
 checkout location, pass `--config-dir /path/to/checkout` to the launcher.
+
+The shared defaults create independent sessions, keep Zellij's `Ctrl+g` lock
+toggle, leave pane environments alone, and use a UTC clock without a Git widget
+in the optional zjstatus layout. The `main` and `shell` names are tabs, not a
+forced session name. Choose `minimal` for a single shell with a compact bar.
 
 Zellij itself can be started directly using the root configuration. It uses the
 HTTPS aliases and its own download cache; **automatic bundled fallback is
@@ -87,7 +92,7 @@ On Windows, add `%APPDATA%\Zellij\config\launcher` to your **user Path** through
 Environment Variables. Open a new terminal after changing PATH, then run:
 
 ```sh
-zj attach --create main
+zj -s project -n default
 ```
 
 For a custom clone destination, add that destination's `launcher` subdirectory
@@ -114,10 +119,54 @@ From Fish, installing the helpers and adding their default directory is:
 ```fish
 ./setup.sh --launcher-only
 fish_add_path "$HOME/.local/bin"
-zj attach --create main
+zj -s project -n default
 ```
 
 Use your chosen directory with `fish_add_path` when passing `--bin-dir`.
+
+## Personal preferences
+
+From the checkout, preview or save choices for its config directory:
+
+```sh
+python3 tools/manage.py configure --config-dir . --timezone Europe/Paris --dry-run
+python3 tools/manage.py configure --config-dir . --timezone Europe/Paris --layout dev
+./launcher/zj --config-dir . -s project -n dev
+```
+
+`configure` saves choices in the gitignored `.zellij-config-local.json`. It leaves
+shared KDL and plugin pins unchanged. `zj` applies those choices to private
+config/layout snapshots for new sessions. Plain `zellij` reads KDL directly and
+does not read this JSON. Use `python` in place of `python3` on Windows.
+
+To restore the previous singleton-session workflow, F12 lock key, Denver clock,
+Git widget and pane debug export, opt into the compatibility preset:
+
+```sh
+python3 tools/manage.py configure --config-dir . --profile classic
+./launcher/zj --config-dir . attach --create main
+```
+
+`--project-sessions` clears the fixed session name and automatic attachment.
+`--reset` removes the local preferences file. Both support `--dry-run`.
+Individual options preserve existing choices; switching profiles keeps explicit
+overrides. Use `--reset` first to discard those overrides.
+See the [preference options and migration checklist](docs/GENERALIZATION.md).
+
+### Executable and state overrides
+
+| Variable | Purpose |
+| --- | --- |
+| `ZJ_PYTHON` | Literal Python 3.10+ interpreter path for the shell/Windows wrappers |
+| `ZJ_ZELLIJ_BIN` | Literal Zellij executable path, shared by launch, setup and full checks |
+| `ZJ_STATE_DIR` | Directory for private launcher runtime files and update-check state |
+
+These executable overrides accept a path without command arguments. They are
+useful for virtual environments, multiple installed versions, and Windows Python
+aliases. Otherwise Unix tries `python3` then `python`; Windows uses `py -3`/`python`
+discovery, and Zellij is found on PATH. Run checked-in scripts from their real
+location or install helpers with `--launcher-only`; external symlink entry
+points are unsupported.
 
 ## Downloads and offline fallback
 
@@ -151,20 +200,23 @@ parallel plugin downloads; a verified download cache avoids that work.
 For a deliberately disconnected system, skip all startup network requests:
 
 ```sh
-ZJ_OFFLINE=1 "$HOME/.config/zellij/launcher/zj" attach --create main
+ZJ_OFFLINE=1 "$HOME/.config/zellij/launcher/zj" -s project -n default
 ```
 
 ```powershell
 $env:ZJ_OFFLINE = '1'
-& "$env:APPDATA\Zellij\config\launcher\zj.ps1" attach --create main
+& "$env:APPDATA\Zellij\config\launcher\zj.ps1" -s project -n default
 ```
 
 Keep the entire checkout, including `plugins/`, when copying to an air-gapped
 machine. Downloads and generated runtime configs live in private per-user state,
 not in the checkout. Plugin preparation does not change tracked files. Each
 startup uses a snapshot of `config.kdl`; restart a session to apply source edits
-or a `git pull` when using `zj`. Old runtime generations remain available to
+or local preference changes when using `zj`. Old runtime generations remain available to
 running sessions. Plain Zellij can watch the root config directly.
+
+`ZJ_OFFLINE` and `ZJ_NO_UPDATE_CHECK` are enabled by any nonempty value,
+including `0`; unset them or use an empty value to disable them.
 
 ## Choose when to upgrade
 
@@ -208,6 +260,11 @@ Setup requires Python 3.10+ and an installed Zellij executable. It validates
 plugins, config and layouts before activation. It refuses to replace its own
 checkout; a directly cloned config needs no deployment.
 
+Deployment keeps the target directory's local preferences and revalidates them
+against the updated config. It does not import the source checkout's preferences
+or bake choices into deployed KDL. Use `zj` for local preferences with either a
+direct checkout or a deployed copy; plain `zellij` always ignores the JSON.
+
 Setup installs launchers in `~/.local/bin` on Unix or
 `%LOCALAPPDATA%\Programs\zellij-config\bin` on Windows. Use `--bin-dir` / `-BinDir`
 to override that, or `--no-launcher` / `-NoLauncher` for config only.
@@ -222,6 +279,7 @@ writing external dotfiles; snapshots retain the original links. See the
 
 ```sh
 ./check.sh
+./check.sh --updates                 # Optional live release check
 python3 -m unittest discover -s tests -v
 git config core.hooksPath hooks
 zellij setup --check
