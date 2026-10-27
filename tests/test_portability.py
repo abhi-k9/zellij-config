@@ -124,7 +124,10 @@ class ExecutableTests(Workspace):
         with mock.patch.dict(os.environ, {'ZJ_ZELLIJ_BIN': '~/bin/custom', 'HOME': str(self.base), 'USERPROFILE': str(self.base)}), \
                 mock.patch.object(common.shutil, 'which', return_value=sys.executable) as which:
             self.assertEqual(common.zellij_executable(), sys.executable)
-            which.assert_called_once_with(str(self.base / 'bin/custom'))
+            which.assert_called_once_with(mock.ANY)
+            # Windows expanduser preserves the suffix's forward slashes;
+            # compare the selected location rather than separator spelling.
+            self.assertEqual(Path(which.call_args.args[0]), self.base / 'bin/custom')
         with mock.patch.dict(os.environ, {'ZJ_ZELLIJ_BIN': ''}), \
                 mock.patch.object(common.shutil, 'which', return_value=None) as which, \
                 self.assertRaisesRegex(common.ConfigError, 'not on PATH'):
