@@ -91,6 +91,14 @@ nonempty value, including `0`, enables them. Unset them or use an empty value
 to turn them off. `./check.sh --updates [CONFIG_FILE]` performs an explicit live
 release check; ordinary checks remain deterministic and use the selected pins.
 
+On native Windows, use PowerShell inside Windows Terminal if the older console
+host prints `[111;5u`/`[112;5u` for `Ctrl+o`/`Ctrl+p` without changing Zellij's
+mode. Confirm NORMAL rather than LOCKED first; portable unlocks with `Ctrl+g`,
+classic with `F12`. PowerShell is the shell, and Windows Terminal supplies the
+terminal host. See the [keyboard checks](CONFIGURATION.md#ctrl-keys-print-keyboard-reports-in-a-windows-console)
+for a fresh-session test and actual executable-version check. The reported setup
+works in Windows Terminal without preference or global keyboard-setting changes.
+
 ## Timezones and optional commands
 
 UTC and the `classic` Denver zone work without an extra Python package. Other

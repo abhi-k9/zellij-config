@@ -175,10 +175,22 @@
 <div class="item">
   <div class="item-head"><input type="checkbox" aria-labelledby="item-9"><h2 id="item-9">multitask runs commands on save <span class="opt">if you use multitask (Linux/macOS)</span></h2></div>
   <div class="item-body">
-    <div class="row"><span class="lbl">Tests</span><span class="val">The opt-in <kbd>Ctrl+o</kbd> <kbd>t</kbd> binding — uncomment it in <code>config.kdl</code> first (launch verified; running on save couldn't be confirmed headless — not even with multitask's own documented command)</span></div>
-    <div class="row"><span class="lbl">Do</span><span class="val"><code>cd</code> into a project, press <kbd>Ctrl+o</kbd> then <kbd>t</kbd> (grant the permission prompt the first time). In the new tab, add <code>pwd &gt; /tmp/mt.txt</code> as its own line below the comments, and save.</span></div>
-    <div class="row pass"><span class="lbl">Pass</span><span class="val">A pane runs the command, and <code>/tmp/mt.txt</code> contains your project directory (not your home directory).</span></div>
-    <div class="row"><span class="lbl">If it fails</span><span class="val" style="color:var(--muted)">Try multitask's own README command in a pane: <code>zellij action start-or-reload-plugin multitask --configuration "shell=$SHELL,ccwd=$(pwd)"</code>. If that fails too, it's multitask, not this config.</span></div>
+    <div class="row"><span class="lbl">Tests</span><span class="val">Explicit opt-in multitask invocation; no <kbd>Ctrl+o</kbd> <kbd>t</kbd> binding is shipped</span></div>
+    <div class="row"><span class="lbl">Do</span><span class="val"><code>cd</code> into a project in a Unix shell and run <code>zellij action start-or-reload-plugin multitask --configuration "shell=$SHELL,ccwd=$(pwd)"</code>. Respond to any permission prompt. In the file opened by your configured editor, add <code>pwd</code> as its own command line and save.</span></div>
+    <div class="row pass"><span class="lbl">Pass</span><span class="val">A pane runs the command and displays the project directory. Verify command-on-save behavior on your machine.</span></div>
+    <div class="row"><span class="lbl">If it fails</span><span class="val" style="color:var(--muted)">Record the plugin error, permissions, <code>EDITOR</code> and <code>SHELL</code>; compare your invocation with the pinned plugin's documentation.</span></div>
+  </div>
+</div>
+
+<!-- 10 -->
+<div class="item">
+  <div class="item-head"><input type="checkbox" aria-labelledby="item-10"><h2 id="item-10">Ctrl keys and the Windows terminal host <span class="opt">native Windows</span></h2></div>
+  <div class="item-body">
+    <div class="row"><span class="lbl">Tests</span><span class="val">NORMAL-mode <kbd>Ctrl+o</kbd> and <kbd>Ctrl+p</kbd>; PowerShell is the shell, Windows Terminal is the terminal host</span></div>
+    <div class="row"><span class="lbl">Do</span><span class="val">Open Windows Terminal and choose its PowerShell profile. From the full checkout, run <code>.\launcher\zj.cmd --config-dir . -s keyboard-test -n minimal</code> with an unused session name. Confirm NORMAL; unlock with <kbd>Ctrl+g</kbd> for portable defaults or <kbd>F12</kbd> for classic. Press <kbd>Ctrl+o</kbd>, <kbd>Esc</kbd>, then <kbd>Ctrl+p</kbd>, <kbd>Esc</kbd>.</span></div>
+    <div class="row pass"><span class="lbl">Pass</span><span class="val">The status bar enters Session and Pane mode respectively. The shell does not receive literal <code>[111;5u</code> or <code>[112;5u</code> reports.</span></div>
+    <div class="row"><span class="lbl">Record</span><span class="val">Terminal host, native Windows versus WSL, and <code>zellij --version</code>; if <code>ZJ_ZELLIJ_BIN</code> is set, check <code>&amp; $env:ZJ_ZELLIJ_BIN --version</code> instead.</span></div>
+    <div class="row"><span class="lbl">Note</span><span class="val" style="color:var(--muted)">The same reported config works in Windows Terminal while the older Windows PowerShell console window prints these reports without changing mode. Open PowerShell in Windows Terminal. See the <a href="../docs/CONFIGURATION.md#ctrl-keys-print-keyboard-reports-in-a-windows-console">keyboard troubleshooting guide</a>.</span></div>
   </div>
 </div>
 

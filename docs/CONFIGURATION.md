@@ -17,7 +17,10 @@ If PowerShell reports that `zj.ps1` cannot be loaded because running scripts is
 disabled, run `zj.cmd` explicitly. PowerShell can select `.ps1` when you type
 bare `zj`; the CMD wrapper runs the same Python helper without an execution-policy
 change. For the current session, `Set-Alias -Name zj -Value zj.cmd` keeps the short
-command. If `setup.ps1` is blocked, use
+command. This alias does not survive closing PowerShell or opening a new terminal.
+Putting it in `$PROFILE` normally persists it, but that profile is itself a script
+subject to execution policy. With scripts disabled, keep using `zj.cmd` in new
+sessions. If `setup.ps1` is blocked, use
 `python tools/manage.py install --launcher-only` from the full source checkout,
 or `python tools/manage.py install` for a separate deployment. See the
 [Windows PowerShell workaround](../README.md#windows-powershell-says-scripts-are-disabled).
@@ -156,9 +159,44 @@ application-specific automatic locking.
 
 The former third-party keybinding popup was removed because its redistribution
 permission was unestablished. The built-in screen uses Zellij's actual bindings.
-Commented `Ctrl+o t` and `Ctrl+o e` examples remain Unix-only opt-ins. Read their
-comments before enabling them: the multitask configuration uses comma-separated
-values, and editor command strings with extra arguments need a wrapper.
+
+### Ctrl keys print keyboard reports in a Windows console
+
+If `Ctrl+o` prints `[111;5u` or `Ctrl+p` prints `[112;5u` and the status bar does
+not change mode, first check that Zellij shows **NORMAL**, not **LOCKED**. Unlock
+with `Ctrl+g` for portable defaults, or `F12` for the classic local profile.
+Locked mode forwards these keys to the application.
+
+These strings resemble CSI-u keyboard reports. In the reported setup, the same
+config works when PowerShell runs inside **Windows Terminal**, while the older
+console window opened by **Windows PowerShell** prints the reports. PowerShell
+is the shell; Windows Terminal is the terminal host. Open Windows Terminal and
+choose its Windows PowerShell or PowerShell profile. This does not require
+changing PowerShell's execution policy, Zellij keybindings or global settings.
+
+From the full checkout, confirm the executable version in that terminal:
+
+```powershell
+if ($env:ZJ_ZELLIJ_BIN) { & $env:ZJ_ZELLIJ_BIN --version } else { zellij --version }
+```
+
+Start a fresh test session with an unused name:
+
+```powershell
+.\launcher\zj.cmd --config-dir . -s keyboard-test -n minimal
+```
+
+In NORMAL mode, press `Ctrl+o`, then `Esc`; press `Ctrl+p`, then `Esc`. The status
+bar should enter Session and Pane mode respectively, without printing the
+reports into the shell. Use `zj.cmd` again in new PowerShell windows: the
+`Set-Alias` workaround above lasts only for the session where it was created.
+
+Record the terminal host, actual Zellij version, and whether the executable is
+native Windows or runs inside WSL when comparing results. WSL uses its Linux
+executable, config paths and Unix launcher. Upstream has a similar
+[Windows Ctrl-key report](https://github.com/zellij-org/zellij/issues/5017);
+the [0.45.1 Windows input implementation](https://github.com/zellij-org/zellij/blob/v0.45.1/zellij-client/src/os_input_output_windows.rs#L12-L34)
+shows the platform-specific detection used for its input path.
 
 ## Plugins and permissions
 

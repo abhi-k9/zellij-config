@@ -149,10 +149,28 @@ and standalone helpers installed in a custom `bin` directory. To keep typing
 Set-Alias -Name zj -Value zj.cmd
 ```
 
-The alias lasts only for that session. No administrator access or execution-policy
-change is needed. If `setup.ps1` is also blocked, run
+The alias disappears when that PowerShell session closes; new terminal sessions
+do not inherit it. Persistent PowerShell aliases normally go in `$PROFILE`, but
+that profile is also a PowerShell script and can be blocked by the same execution
+policy. With scripts disabled, use `zj.cmd` after each restart.
+
+No administrator access or execution-policy change is needed. If `setup.ps1` is
+also blocked, run
 `python tools/manage.py install --launcher-only` from the full source checkout;
 use the shared CLI options such as `--bin-dir` and `--dry-run`.
+
+### Ctrl+O or Ctrl+P prints escape sequences
+
+If `Ctrl+O` prints `[111;5u` or `Ctrl+P` prints `[112;5u` while the mode stays
+unchanged, those are encoded Ctrl-key reports reaching the pane. If the same
+configuration works in Windows Terminal, open **Windows Terminal** and select
+its **Windows PowerShell** profile, then run `zj.cmd` there.
+
+Windows PowerShell is the shell; Windows Terminal and the older Console Host
+are different terminal hosts. The standalone Windows PowerShell shortcut can
+open the older host. This host-specific symptom does not call for different
+Zellij keybindings. Check the current lock mode and executable version using the
+[keyboard troubleshooting guide](docs/CONFIGURATION.md#ctrl-keys-print-keyboard-reports-in-a-windows-console).
 
 ## Personal preferences
 
