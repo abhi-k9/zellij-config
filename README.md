@@ -21,10 +21,12 @@ Native Windows, using Windows PowerShell 5.1+:
 
 ```powershell
 git clone https://github.com/abhi-k9/zellij-config.git "$env:APPDATA\Zellij\config"
-& "$env:APPDATA\Zellij\config\launcher\zj.ps1" -s project -n default
+& "$env:APPDATA\Zellij\config\launcher\zj.cmd" -s project -n default
 ```
 
-The Windows `launcher\zj.cmd` entry point also works. WSL uses the Linux paths
+The Windows CMD launcher also works from PowerShell without changing its script
+execution policy. The `launcher\zj.ps1` alternative requires a policy that allows
+PowerShell scripts. WSL uses the Linux paths
 inside WSL. No setup script or launcher installation is required. For a custom
 checkout location, pass `--config-dir /path/to/checkout` to the launcher.
 
@@ -91,8 +93,8 @@ line handles shell compatibility; do not source them or run `fish setup.sh`.
 On Windows, add `%APPDATA%\Zellij\config\launcher` to your **user Path** through
 Environment Variables. Open a new terminal after changing PATH, then run:
 
-```sh
-zj -s project -n default
+```powershell
+zj.cmd -s project -n default
 ```
 
 For a custom clone destination, add that destination's `launcher` subdirectory
@@ -109,8 +111,11 @@ Alternatively, install standalone launcher helpers from your checkout:
 This leaves your configuration untouched and requires only Python 3.10+ to
 install. Running `zj` still requires Zellij. Add the chosen directory to PATH;
 for a custom config location, pass `zj --config-dir /path/to/checkout`.
-On Windows, use `./setup.ps1 -LauncherOnly` and optionally `-BinDir`; its default
-is `%LOCALAPPDATA%\Programs\zellij-config\bin`. Rerun the command after updating
+On Windows, run `python tools/manage.py install --launcher-only` from the source
+checkout, optionally with `--bin-dir`. Its default is
+`%LOCALAPPDATA%\Programs\zellij-config\bin`. The PowerShell equivalent is
+`./setup.ps1 -LauncherOnly` with optional `-BinDir`, where scripts are allowed.
+Rerun the command after updating
 the checkout to refresh the installed helper copies. Use `--dry-run` / `-DryRun`
 to preview without writing files.
 
@@ -123,6 +128,31 @@ zj -s project -n default
 ```
 
 Use your chosen directory with `fish_add_path` when passing `--bin-dir`.
+
+### Windows PowerShell says scripts are disabled
+
+If `zj` fails with `zj.ps1 cannot be loaded because running scripts is disabled`,
+PowerShell is selecting the `.ps1` wrapper. Select the bundled CMD launcher
+explicitly instead:
+
+```powershell
+zj.cmd
+# Or choose a named session:
+zj.cmd attach --create main
+```
+
+Both launchers run the same Python helper. This works for checked-in launchers
+and standalone helpers installed in a custom `bin` directory. To keep typing
+`zj` in the current PowerShell session:
+
+```powershell
+Set-Alias -Name zj -Value zj.cmd
+```
+
+The alias lasts only for that session. No administrator access or execution-policy
+change is needed. If `setup.ps1` is also blocked, run
+`python tools/manage.py install --launcher-only` from the full source checkout;
+use the shared CLI options such as `--bin-dir` and `--dry-run`.
 
 ## Personal preferences
 
@@ -205,7 +235,7 @@ ZJ_OFFLINE=1 "$HOME/.config/zellij/launcher/zj" -s project -n default
 
 ```powershell
 $env:ZJ_OFFLINE = '1'
-& "$env:APPDATA\Zellij\config\launcher\zj.ps1" -s project -n default
+& "$env:APPDATA\Zellij\config\launcher\zj.cmd" -s project -n default
 ```
 
 Keep the entire checkout, including `plugins/`, when copying to an air-gapped
@@ -256,6 +286,9 @@ A separate checkout can still deploy a verified copy with private backups:
 ```
 
 Windows equivalents are `./setup.ps1`, `-DryRun`, `-Offline` and `-Restore`.
+If scripts are disabled, use `python tools/manage.py install` from the source
+checkout with `--dry-run`, `--offline` or `--restore` instead; see the
+[PowerShell workaround](#windows-powershell-says-scripts-are-disabled).
 Setup requires Python 3.10+ and an installed Zellij executable. It validates
 plugins, config and layouts before activation. It refuses to replace its own
 checkout; a directly cloned config needs no deployment.

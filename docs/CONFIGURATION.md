@@ -8,10 +8,19 @@ template. Files use **KDL v1**, not KDL v2. Inline blocks need semicolons:
 ## Installation and updates
 
 Clone directly into the chosen config directory and start the checked-in
-`launcher/zj` (Unix) or `launcher/zj.ps1` / `launcher/zj.cmd` (Windows), as shown
+`launcher/zj` (Unix) or `launcher/zj.cmd` (Windows, including PowerShell), as shown
 in the [root guide](../README.md). No setup step is needed. Python 3.10+ is
 required for the launcher/helpers. Plain Zellij can use the root config with
 HTTPS aliases; the launcher implements automatic bundled fallback.
+
+If PowerShell reports that `zj.ps1` cannot be loaded because running scripts is
+disabled, run `zj.cmd` explicitly. PowerShell can select `.ps1` when you type
+bare `zj`; the CMD wrapper runs the same Python helper without an execution-policy
+change. For the current session, `Set-Alias -Name zj -Value zj.cmd` keeps the short
+command. If `setup.ps1` is blocked, use
+`python tools/manage.py install --launcher-only` from the full source checkout,
+or `python tools/manage.py install` for a separate deployment. See the
+[Windows PowerShell workaround](../README.md#windows-powershell-says-scripts-are-disabled).
 
 The repository root contains `config.kdl`, `layouts/`, `themes/` and backup
 `plugins/`. `versions.json` selects the pinned artifacts; `plugins.sha256` and

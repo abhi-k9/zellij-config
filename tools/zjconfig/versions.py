@@ -33,7 +33,7 @@ def documentation(pins: dict) -> bytes:
               'python3 tools/manage.py versions update --zellij v0.45.1',
               'python3 tools/manage.py install-zellij --bin-dir ~/.local/bin',
               './check.sh', './launcher/zj attach --create main', '```', '',
-              'On Windows use `python` instead of `python3` and `launcher/zj.ps1` to start.', '',
+              'On Windows use `python` instead of `python3` and `launcher/zj.cmd` to start.', '',
               'Update checks never change files. Update downloads and verifies all selected artifacts',
               'before changing pins, bundled bytes, license notices and generated references.',
               'Review `git diff` and run the checks before committing. A direct checkout is the live',

@@ -24,7 +24,7 @@ python3 tools/manage.py install-zellij --bin-dir ~/.local/bin
 ./launcher/zj attach --create main
 ```
 
-On Windows use `python` instead of `python3` and `launcher/zj.ps1` to start.
+On Windows use `python` instead of `python3` and `launcher/zj.cmd` to start.
 
 Update checks never change files. Update downloads and verifies all selected artifacts
 before changing pins, bundled bytes, license notices and generated references.

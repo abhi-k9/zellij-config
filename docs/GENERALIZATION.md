@@ -8,7 +8,9 @@ still has `main` and `shell` tabs; these names do not force a session called
 
 ## Save choices outside shared KDL
 
-Run from the checkout, using `python` instead of `python3` on Windows:
+Run from the checkout, using `python` instead of `python3` on Windows and
+`.\launcher\zj.cmd` for launcher examples. If bare `zj` selects a policy-blocked
+PowerShell script, use the [CMD workaround](../README.md#windows-powershell-says-scripts-are-disabled).
 
 ```sh
 python3 tools/manage.py configure --config-dir . --profile portable --dry-run
