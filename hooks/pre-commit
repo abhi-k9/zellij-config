@@ -12,7 +12,8 @@
 #
 #  Python 3.10+ and Zellij are required: missing validation tools block the
 #  commit. Config, layouts/swaps and the example theme use Zellij's parser.
-#  Works under Git Bash too.
+#  Works under Git Bash too. ZJ_PYTHON and ZJ_ZELLIJ_BIN select validation tools.
+#  This invokes repository validation, not the full unittest or linter suite.
 # ─────────────────────────────────────────────────────────────────────────────
 
 # Check what is STAGED — exactly what the commit will contain — not the working
@@ -20,6 +21,8 @@
 # would pass, and an unrelated unstaged edit could block a good commit (both
 # verified). `git checkout-index` exports the staged snapshot into a temp dir,
 # and check.sh runs there (it always works relative to its own location).
+# Untracked local preferences are absent from the staged snapshot; the hook
+# validates the shared files rather than a developer's private rendered choices.
 root=$(git rev-parse --show-toplevel) || exit 1
 cd "$root" || exit 1
 

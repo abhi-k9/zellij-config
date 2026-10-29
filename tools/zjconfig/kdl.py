@@ -2,7 +2,8 @@
 
 This is a small tokenizer/node reader, not a replacement for Zellij's validator.
 It handles nested block comments, slashdash nodes/entries, escaped and raw strings,
-and line continuations. Unsupported or malformed input fails explicitly.
+and line continuations. Unterminated structures and unsupported escapes fail
+explicitly; this reader does not check every KDL grammar rule or Zellij option.
 """
 from __future__ import annotations
 
@@ -23,6 +24,7 @@ class Token:
 
 @dataclass
 class Node:
+    """Active entries plus original character spans for narrowly scoped edits."""
     name: str
     properties: dict[str, str] = field(default_factory=dict)
     arguments: list[str] = field(default_factory=list)
@@ -130,6 +132,7 @@ def tokens(text: str) -> list[Token]:
 
 
 def parse(text: str) -> list[Node]:
+    """Read active nodes as string values, retaining offsets into the source text."""
     stream = tokens(text)
     pos = 0
 

@@ -1,4 +1,8 @@
-"""On-demand release notices; never edits pins or installed plugin files."""
+"""Select launch resources, prepare private snapshots and show release notices.
+
+    Pin/source files stay unchanged. Runtime plugin acquisition and notice scans
+    have separate caches and separate offline/disable controls.
+"""
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
@@ -17,6 +21,7 @@ from .kdl import plugin_locations
 
 
 def config_file(arguments: list[str]) -> Path:
+    """Select config text independently from the layouts/themes resource directory."""
     selected, directory = None, None
     index = 0
     while index < len(arguments):
@@ -95,7 +100,8 @@ def scan(file: Path, urls: list[str] | None = None) -> Scan:
         except (ConfigError, KeyError, ValueError) as error:
             result.incomplete = True
             result.lines.append(f'  {repository}: could not check ({error})')
-            # Bound offline startup to one failing request, including redirects.
+            # End this foreground/worker scan after its first failed lookup;
+            # normal launch schedules the network work in a detached process.
             break
     return result
 
@@ -126,6 +132,10 @@ def cache_data(stamp: Path) -> dict:
 
 
 def cached_scan(file: Path, urls: list[str], now: int | None = None) -> Scan | None:
+    """Cache this scan's result; incomplete scans retry sooner than complete ones.
+
+    A new result replaces the previous notice, including partial failure results.
+    """
     now = int(time.time()) if now is None else now
     stamp, lock = scan_cache(file, urls)
     with FileLock(lock):

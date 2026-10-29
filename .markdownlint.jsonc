@@ -1,4 +1,4 @@
-// markdownlint settings for README/CHANGELOG, used by CI (.github/workflows/check.yml).
+// Settings for repository Markdown, selected by package.json and run in CI.
 // Everything is checked except three style rules this repo deliberately doesn't follow:
 {
   "default": true,

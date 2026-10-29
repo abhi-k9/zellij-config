@@ -1,4 +1,8 @@
-"""Local preference ownership and complete startup/deployment integration."""
+"""Preference ownership, real-parser integration and captured startup arguments.
+
+The native startup fixture captures argv instead of opening an interactive TUI;
+terminal key handling, rendering and application recovery need on-machine tests.
+"""
 from __future__ import annotations
 
 import json

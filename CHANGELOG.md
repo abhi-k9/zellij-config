@@ -6,7 +6,25 @@ changed and why, and which bugs were found along the way. Nothing here is needed
 to *use* the config; it's for when you want to know how much to trust a claim,
 or why something is the way it is.
 
+Entries describe the implementation at the time of each change. In particular,
+the archive-era records below mention removed plugins, an internal `config/`
+directory, old shell implementations and numbered checks that no longer exist.
+Use [the configuration guide](docs/CONFIGURATION.md) and
+[the current validation map](docs/AUDIT_FIXES.md) for today's commands and
+guarantees. Historical interactive results are retained as recorded, not claimed
+as freshly repeated by each documentation review.
+
 ---
+
+## Unreleased — documentation and comment review
+
+- Checked the current guides, generated references, cheatsheets, KDL examples,
+  wrappers and Python comments against the implementation and selected Zellij
+  binary. Corrected removed-shortcut references and clarified preference
+  precedence, runtime snapshots, deployment ownership and validation limits.
+- Distinguished current instructions from the historical archive verification
+  records below. This review adds explanations without changing application or
+  launcher behavior.
 
 ## 2026-10-26 — portable defaults and local preferences
 
@@ -66,7 +84,7 @@ or why something is the way it is.
 The following verification records describe historical archive versions. Current
 checks and platform boundaries are documented in `docs/AUDIT_FIXES.md` and CI.
 
-## Verification status — zellij 0.45.1
+## Historical verification status — zellij 0.45.1
 
 Everything below was run against the real 0.45.1 binary, not reasoned about.
 Where the 2026-10-14 audit found a claim broader than what was actually tested,

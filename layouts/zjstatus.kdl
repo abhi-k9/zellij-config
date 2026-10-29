@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════
-//  zjstatus layout — a rich status bar (mode · session · tabs · git branch ·
+//  zjstatus layout — a rich status bar (mode · session · tabs · optional git ·
 //  clock) in place of the built-in compact-bar. OPT-IN; the default layout is
 //  unaffected.
 //
@@ -7,19 +7,25 @@
 //  ADOPT IT:   in config.kdl set  default_layout "zjstatus"  and handle frames
 //              (see ⚠ FRAMES — set pane_frames false, or use Ctrl+p z per session).
 //              Then plain `zellij` uses this bar.
+//  LOCAL CHOICE: `python3 tools/manage.py configure --config-dir . --layout zjstatus`
+//              saves preferences instead of editing shared KDL. Start through
+//              zj to apply them; it defaults frames off for this layout unless
+//              pane_frames is explicitly set. On Windows use python / zj.cmd.
 //
 //  ⚠ FIRST RUN — GRANT PERMISSION. On first launch zjstatus asks to allow
 //  ReadApplicationState and ChangeApplicationState, shown as a prompt
 //  IN the one-row bar — so it looks truncated, e.g. just `…Allow? (y/n)` or even
 //  only `/n)`. Pressing y from your shell won't work (the keystroke goes to the
 //  shell). CLICK on the status bar to focus it (mouse_mode is on), then press y.
-//  The bar renders immediately after. You must re-grant after a zjstatus version
-//  bump (the wasm changes). The optional local git_status setting additionally
-//  needs git on PATH and RunCommands permission; it is disabled by default.
+//  The bar renders after the required grants. A changed plugin location can
+//  prompt again when pinned bytes or runtime paths change. The optional local
+//  git_status setting additionally needs git on PATH and RunCommands permission;
+//  it is disabled by default.
 //
 //  ⚠ FRAMES — zjstatus manages pane frames itself (hide_frame_for_single_pane),
 //  and its docs require pane_frames OFF globally or zellij and zjstatus fight over
-//  frames each event cycle (flicker). Two ways to handle it:
+//  frames each event cycle (flicker). Besides the local-preference choice above,
+//  plain Zellij users can handle it in either of these ways:
 //    1. config.kdl → pane_frames false (keep pane_frame_style "full" +
 //       rounded_corners — they still style the frames zjstatus toggles ON when a
 //       tab has >1 pane). Clean borderless single pane, rounded frames on split.
@@ -31,11 +37,12 @@
 //  INSIDE the layout {} block makes the layout fail to load, and placed after
 //  the block (where layouts may carry config, as zellij's built-in welcome
 //  layout does for session_serialization) it parses but is silently ignored. Nor can config
-//  auto-detect zjstatus — options aren't conditional. So it's option 1 or 2.
+//  auto-detect zjstatus — options aren't conditional. The zj preferences helper
+//  coordinates this setting when it renders a selected zjstatus layout.
 //
 //  TWO TABS, same as default.kdl: "main" (work / nvim) and "shell" (the safety
-//  net). If a resurrected nvim in "main" gets `:qa`, you land in "shell" instead
-//  of the session ending. See default.kdl's header for the full rationale.
+//  net). If exiting a resurrected application closes its pane, "shell" keeps
+//  the session alive while that tab remains. See default.kdl for the limits.
 //
 //  Keep the tab blocks MULTI-LINE (as below). A one-line block like
 //  `tab name="x" { pane }` makes the whole layout fail to load, because zellij
@@ -53,7 +60,9 @@ layout {
         children
         pane size=1 borderless=true {
             plugin location="zjstatus" {
-                // ── Catppuccin Mocha palette (edit in one place; used as $name) ──
+                // ── Catppuccin Mocha palette (used as $name) ──
+                // This is the plugin's own palette; changing Zellij's theme
+                // does not automatically recolor these values.
                 color_bg     "#1e1e2e"
                 color_dim    "#6c7086"
                 color_blue   "#89b4fa"

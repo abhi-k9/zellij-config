@@ -93,7 +93,7 @@
 
 <!-- ═══════════════════════ PLUGIN SYSTEM ═══════════════════════ -->
 <div class="card col-full">
-  <div class="card-header"><div class="dot" style="background:var(--lavender)"></div><h2>Plugin System</h2><span class="note" style="margin-left:8px">All plugins are sandboxed WebAssembly — safe and cross-platform</span></div>
+  <div class="card-header"><div class="dot" style="background:var(--lavender)"></div><h2>Plugin System</h2><span class="note" style="margin-left:8px">WebAssembly sandbox; permissions and native command dependencies still matter</span></div>
   <table>
     <tr class="divider"><td colspan="4">Locations</td></tr>
     <tr>
@@ -101,7 +101,7 @@
       <td><code>file:~/path.wasm</code></td><td>Local .wasm file</td>
     </tr>
     <tr>
-      <td><code>https://…/x.wasm</code></td><td>Remote URL — downloaded &amp; cached on first use (pin a release tag, not <code>latest</code>: the cache makes <code>latest</code> non-reproducible). <strong>Offline?</strong> the pinned files ship in <code>plugins/</code>; load them with <code>file:</code> paths (README: <em>Offline / air-gapped machines</em>)</td>
+      <td><code>https://…/x.wasm</code></td><td>Plain Zellij downloads/caches it on first use. Pin a release tag rather than mutable <code>latest</code>. For this repository's managed aliases, <code>zj</code> additionally verifies hashes and falls back to bundled files. Set <code>ZJ_OFFLINE=1</code> to skip startup downloads; see README, <em>Downloads and offline fallback</em>.</td>
       <td>Alias</td><td>Short name you register in <code>plugins {}</code> to use anywhere</td>
     </tr>
     <tr class="divider"><td colspan="4">Declaration &amp; usage</td></tr>
@@ -111,7 +111,7 @@ plugins {
     // one line — a URL broken inside the quotes would contain a newline
     monocle location="https://github.com/imsnif/monocle/releases/download/v0.100.2/monocle.wasm"
 
-    my-plugin location="file:~/zellij-plugins/x.wasm" {   // ~ = home, every OS
+    my-plugin location="file:~/zellij-plugins/x.wasm" {   // example only; not a bundled plugin
         key "value"   // passed to plugin on init
     }
 }</pre></td>
@@ -123,11 +123,13 @@ pane { plugin location="monocle"; }
 // 2. From the CLI
 $ zellij plugin --floating -- monocle
 
-// 3. From a keybind (ours: Ctrl+o, then m)
-session {
-    bind "m" {
-        LaunchOrFocusPlugin "monocle" { floating true; };
-        SwitchToMode "Normal"
+// 3. Inside config.kdl's keybinds block (ours: Ctrl+o, then m)
+keybinds {
+    session {
+        bind "m" {
+            LaunchOrFocusPlugin "monocle" { floating true; };
+            SwitchToMode "Normal"
+        }
     }
 }</pre></td>
     </tr>
@@ -271,7 +273,7 @@ session {
     <tr class="divider"><td colspan="2">Purpose</td></tr>
     <tr><td colspan="2" class="note">A "mini-CI" in a pane. Launching it opens your <code>$EDITOR</code> on a <code>.multitask</code> file — every save runs the commands in it. Commands in the same block run <strong>in parallel</strong>; a blank line separates sequential <strong>steps</strong>, and the next step only starts if every command in the previous one succeeded. Press <kbd style="font-size:9.5px">Enter</kbd> on a failed pane to re-run it and resume the pipeline.</td></tr>
     <tr class="divider"><td colspan="2">Launch</td></tr>
-    <tr><td><kbd>Ctrl+o</kbd> <kbd class="teal">t</kbd> <span class="badge">opt-in</span></td><td>Commented out in <code>config.kdl</code> (Unix-only: needs <code>sh</code> and <code>$SHELL</code>) — uncomment to launch it for the focused pane's directory. A second press restarts it.</td></tr>
+    <tr><td>Explicit invocation <span class="badge">opt-in</span></td><td>No <kbd>Ctrl+o</kbd> <kbd>t</kbd> binding is shipped. The example below uses a Unix shell, a configured editor and an installed command interpreter; restarting the plugin can interrupt its current tasks.</td></tr>
     <tr><td colspan="2"><pre># From a shell (its README's form; ccwd = where the commands run)
 $ zellij action start-or-reload-plugin multitask \
     --configuration "shell=$SHELL,ccwd=$(pwd)"
@@ -284,6 +286,7 @@ cargo test            # step 2: only if step 1 succeeded</pre></td></tr>
     <tr class="divider"><td colspan="2">Config keys (optional, passed at launch)</td></tr>
     <tr><td><code>shell</code></td><td>Shebang for the .multitask file — <code>$SHELL</code> recommended</td></tr>
     <tr><td><code>ccwd</code></td><td>Working directory for the commands (defaults to the session host dir)</td></tr>
+    <tr><td colspan="2" class="note">The configuration argument is a comma-separated key=value list; a comma in the working-directory path cannot be passed by this example. The .multitask commands execute on the host after the required Zellij permission grants; review them as shell scripts.</td></tr>
   </table>
 </div>
 
@@ -292,7 +295,7 @@ cargo test            # step 2: only if step 1 succeeded</pre></td></tr>
   <div class="card-header"><div class="dot" style="background:var(--pink)"></div><h2>Locking is manual <span class="badge active">by design</span></h2><span class="note" style="margin-left:8px">no autolock plugin &nbsp;·&nbsp; <kbd style="font-size:9.5px">Ctrl+g</kbd> toggles both ways</span></div>
   <table>
     <tr class="divider"><td colspan="2">The problem locking solves</td></tr>
-    <tr><td colspan="2" class="note">Zellij's <kbd style="font-size:9.5px">Alt</kbd>-based shortcuts collide with editor and readline bindings (<code>Alt+h/j/k/l</code> pane focus vs nvim/readline, <code>Alt+f</code> floating panes vs readline word-forward, <code>Alt+n</code> new pane). Locked mode passes every key straight through to the running program.</td></tr>
+    <tr><td colspan="2" class="note">Zellij's <kbd style="font-size:9.5px">Alt</kbd>-based shortcuts can collide with editor and readline bindings (<code>Alt+h/j/k/l</code> pane focus vs nvim/readline, <code>Alt+f</code> floating panes vs readline word-forward, <code>Alt+n</code> new pane). Locked mode forwards keys to the running program except the configured unlock key.</td></tr>
     <tr class="divider"><td colspan="2">Default and optional F12 mapping</td></tr>
     <tr><td><kbd class="pink">Ctrl+g</kbd></td><td>Press before and after an application that needs Zellij's shortcuts; status bar shows <strong>LOCKED</strong></td></tr>
     <tr><td><kbd class="pink">F12</kbd></td><td>Opt-in: <code>python3 tools/manage.py configure --config-dir . --lock-key F12</code>, or select the classic local profile</td></tr>
@@ -403,7 +406,7 @@ tab name="logs" split_direction="vertical" {
     }
 }</pre>
         <div style="margin-top:8px;font-size:10.5px;color:var(--muted)">
-          <strong style="color:var(--text);font-style:normal">Session picker (built-in, no file needed)</strong>
+          <strong style="color:var(--text);font-style:normal">Minimal workspaces and session picker</strong>
         </div>
         <table style="margin-top:6px">
           <tr><td><code>zj -s scratch -n minimal</code></td><td>Shipped minimal layout: one shell pane and the built-in compact bar; no application commands, matching swap layout included</td></tr>
@@ -465,7 +468,7 @@ theme_light "catppuccin-latte"</pre></td>
 //   themes/my-custom.kdl (a .kdl.example file is ignored), then in config.kdl:
 //     theme "my-custom"</pre></td>
     </tr>
-    <tr><td colspan="4" class="note">Each color is 3 numbers (RGB 0–255). Full component reference: <code>zellij.dev/documentation/themes.html</code> — we ship <code>themes/example-custom.kdl.example</code> as a starter.</td></tr>
+    <tr><td colspan="4" class="note">Each color is 3 numbers (RGB 0–255). Full component reference: <code>zellij.dev/documentation/themes.html</code> — we ship <code>themes/example-custom.kdl.example</code> as a starter. A saved local <code>theme</code> preference overrides the shared theme line for new <code>zj</code> sessions. zjstatus keeps its own Mocha palette; selecting a Zellij theme does not recolor that bar.</td></tr>
   </table>
 </div>
 
@@ -481,7 +484,7 @@ theme_light "catppuccin-latte"</pre></td>
     <tr><td><code>harpoon</code></td><td>Pin and jump to favorite panes (nvim harpoon style)</td></tr>
     <tr><td><code>theme-tester</code></td><td>Live-edit a theme and see the result</td></tr>
     <tr class="divider"><td colspan="2">Install manually</td></tr>
-    <tr><td colspan="2" class="note">Review redistribution permission, then add its source, tag, digest and notice to <code>versions.json</code> and <code>licenses/</code>. Use the explicit version updater and validate before installation. See <code>VERSIONS.md</code>; the checks reject stale metadata or missing plugin files.</td></tr>
+    <tr><td colspan="2" class="note">A new managed plugin needs coordinated alias, manifest, bundled WASM, digest, license notice and generated-reference updates. The version updater updates existing inventory entries; it is not an add-plugin command. Test personal plugins in a separate config first. Automatic checksum/fallback handling covers only manifest-matched aliases, not every plugin URL in an arbitrary layout. See <code>VERSIONS.md</code> and <code>docs/CONFIGURATION.md</code>.</td></tr>
   </table>
 </div>
 
@@ -489,7 +492,7 @@ theme_light "catppuccin-latte"</pre></td>
 
 <footer>
   <span>Printable API reference snapshot: Zellij 0.45.1. Current selected pins and explicit upgrades: VERSIONS.md.</span>
-  <span>Plugins are .wasm — sandboxed by default, no network or shell access without explicit zellij permission grants</span>
+  <span>WASM permissions can authorize host actions; review the plugin, its source and requested permissions</span>
   <span>Our 3 aliases: <code>zjstatus</code> &middot; <code>monocle</code> &middot; <code>multitask</code> &nbsp;·&nbsp; <code>github.com/zellij-org/awesome-zellij</code></span>
 </footer>
 

@@ -25,6 +25,8 @@ class ConfigError(Exception):
 def zellij_executable(which=None) -> str:
     """Resolve one literal executable, without shell parsing or override fallback."""
     requested = os.environ.get('ZJ_ZELLIJ_BIN')
+    # Keep explicit relative selectors such as ./chosen: pathlib normalization
+    # could remove their separator and turn them into unrelated PATH searches.
     candidate = os.path.expanduser(requested) if requested else 'zellij'
     executable = (which or shutil.which)(candidate)
     if not executable:
@@ -84,7 +86,11 @@ def read_json(path: Path):
 
 
 def atomic_write(path: Path, data: bytes, mode: int = 0o600) -> None:
-    """Replace a file without opening an existing destination symlink."""
+    """Replace a file via a sibling temporary, without following its final symlink.
+
+    The caller supplies an existing parent directory. File data is fsynced, but
+    parent directories are not; this is not a power-loss durability guarantee.
+    """
     fd, temporary = tempfile.mkstemp(prefix='.' + path.name + '-', dir=path.parent)
     try:
         with os.fdopen(fd, 'wb') as stream:
@@ -103,7 +109,11 @@ def json_bytes(value) -> bytes:
 
 
 class FileLock:
-    """An OS-released lock; the inode deliberately survives release to avoid races."""
+    """Nonblocking OS lock; retain the lock file after release to avoid races.
+
+    A busy lock raises OSError rather than waiting. Closing the descriptor or
+    ending the process releases ownership; a leftover file is not a stale lock.
+    """
 
     def __init__(self, path: Path):
         self.path = path
@@ -220,7 +230,12 @@ class HTTPSRedirects(urllib.request.HTTPRedirectHandler):
 
 
 def fetch_bytes(url: str, limit: int = 128 * 1024 * 1024, *, timeout=10, budget=45, attempts=2) -> bytes:
-    """Bounded HTTPS fetch; preserve inherited proxy and system CA settings."""
+    """Fetch HTTPS with size/retry limits and inherited proxy/system CA settings.
+
+    Each attempt gets its own elapsed budget, checked between reads. A blocking
+    read is still subject to its socket timeout, so budget is not a hard total
+    wall-clock deadline across reads, redirects and retries.
+    """
     if urllib.parse.urlsplit(url).scheme != 'https':
         raise ConfigError('Only HTTPS download URLs are supported')
     opener = urllib.request.build_opener(HTTPSRedirects())

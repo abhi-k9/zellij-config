@@ -5,6 +5,12 @@ copyright and permission notices accompany the binaries and are also copied into
 installed configurations. Current versions, hashes and source URLs are in
 [VERSIONS.md](VERSIONS.md) and [versions.json](versions.json).
 
+Normal setup deployment writes these notices to `third-party-licenses/` beside
+the deployed config. Launcher-only installation copies helper code and pin
+metadata; it does not deploy plugin binaries or their notices. A direct checkout
+keeps the original notices in `licenses/`. Keep those files with redistributed
+plugin copies.
+
 | Component | Upstream | Verbatim notice |
 | --- | --- | --- |
 | zjstatus | <https://github.com/dj95/zjstatus> | [MIT notice](licenses/zjstatus.txt) |

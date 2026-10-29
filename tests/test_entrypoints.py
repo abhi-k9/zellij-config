@@ -1,4 +1,8 @@
-"""Native entry-point discovery and argument forwarding without real installs."""
+"""Native entry-point discovery and argument forwarding without real installs.
+
+Windows fixtures use process-scoped PowerShell policy flags for reviewed test
+scripts. They do not change user/machine policy; normal users can use zj.cmd.
+"""
 from __future__ import annotations
 
 import base64

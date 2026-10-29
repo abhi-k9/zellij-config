@@ -1,5 +1,7 @@
 #!/bin/sh
 # zellij-config installer; Python 3.10+ provides the shared cross-platform logic.
+# Execute this script from any shell, including Fish; do not source it.
+# Config deployment and launcher-only copying are separate shared CLI modes.
 set -eu
 root=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 helper=$root/tools/manage.py

@@ -2,7 +2,7 @@
 
 The shared files provide independent sessions, Zellij's standard `Ctrl+g` lock
 toggle, no pane debug export, and a UTC zjstatus clock with no Git command.
-Application commands in commented examples remain opt-ins. The default layout
+Platform application commands in commented examples remain opt-ins. The default layout
 still has `main` and `shell` tabs; these names do not force a session called
 `main`. The `minimal` layout has a single shell and compact bar.
 
@@ -19,30 +19,59 @@ python3 tools/manage.py configure --config-dir . --timezone Europe/Paris --layou
 ```
 
 `configure` saves preferences in `.zellij-config-local.json` in the chosen config
-directory. This gitignored file uses schema version 1; unknown fields and invalid
-values are rejected. A missing file selects shared defaults. CLI options are
-optional, and explicit preferences override the selected preset.
+directory. This gitignored file uses schema version 1; unknown fields, duplicate
+JSON keys, wrong types and control characters in strings are rejected. Symlinks
+are rejected and the file is limited to 64 KiB. A missing
+file leaves the actual source KDL in control, including any manual source edits.
+CLI options are optional, and explicit preferences override the selected preset.
 Changing one option preserves unspecified existing choices. Switching profiles
 also preserves explicit overrides; use `--reset` first to discard them. Running
-`configure --config-dir DIRECTORY` without preference options prints effective
-settings without writing. `--project-sessions` cannot be combined with
+`configure --config-dir DIRECTORY` without preference options prints the resolved
+preference values without writing. If no local file exists, that display shows
+portable preset values; it does not inspect or dump the source KDL. `--project-sessions` cannot be combined with
 `--session-name` or `--attach-to-session`; `--reset` cannot be combined with
 preference changes.
 
-`zj` renders private config and layout snapshots for each new session. Source
+A local file selects a complete preset and then applies its explicit keys. It is
+not a sparse KDL overlay: even `{ "schema": 1 }` applies all portable preference
+values to their managed settings. Settings outside that preference schema stay
+in the source KDL. For example:
+
+```json
+{
+  "schema": 1,
+  "profile": "portable",
+  "layout": "zjstatus",
+  "timezone": "UTC",
+  "git_status": false
+}
+```
+
+`configure --dry-run` checks the schema and helper-supported KDL syntax without
+requiring Zellij. It does not prove that a custom theme exists or that a selected
+terminal supports the keys, glyphs or clipboard protocol. Run the full repository
+check and the on-machine checks before relying on new choices.
+
+`zj` renders private config and layout snapshots when local preferences apply. Source
 files and version pins stay unchanged; already running sessions retain their
 snapshots. Plain `zellij` reads KDL directly and always ignores local JSON. Setup
 for a separate deployed directory preserves that target's preferences and
 validates a rendered temporary copy, without baking choices into deployed KDL
 or copying preferences from the source checkout. `zj` applies the target's JSON
-on startup; `--reset` restores shared defaults for the next new session.
+on startup; `--reset` restores the source KDL's settings for the next new session.
+Detaching and reattaching does not reload a running session's snapshot. Use a new
+name for a test session, or save work before fully stopping and recreating an old
+one.
 
-Preferences are read beside the selected config file. Explicit config-directory
+Preferences are read beside the selected config file, so different config files
+in the same directory share that local preferences file. Explicit config-directory
 selection can still supply separate layouts/themes. The launcher snapshots
 layout pairs and keeps theme lookup in the selected resource directory. An
 explicit layout file path is outside these layout preference overrides, including
 paths to shipped files. Use a named layout such as `--layout zjstatus` to apply
-the rendered timezone and Git settings.
+the rendered timezone and Git settings. Without local preferences, the launcher
+can still snapshot managed plugin locations in the config, but layouts remain
+in the original resource directory.
 
 | Option | Choice |
 | --- | --- |
@@ -61,6 +90,13 @@ the rendered timezone and Git settings.
 | `--pane-frames on/off` | Select pane frames; defaults off for a selected zjstatus layout |
 | `--dry-run` | Preview without writing |
 | `--reset` | Remove the local file and return to shared defaults |
+
+The timezone and Git choices affect the optional zjstatus bar; enabling Git does
+not select that layout. Likewise, automatic frame disabling follows the saved
+`layout: "zjstatus"` preference. Selecting zjstatus only with a Zellij CLI flag
+does not change that saved frame choice; use `--pane-frames off` explicitly if
+needed. Zellij's own session/layout CLI selectors still take precedence over
+the corresponding generated config settings.
 
 For example, keep the previous workflow but choose a different clock:
 
@@ -83,8 +119,15 @@ the wrappers try Unix `python3` then `python`, or Windows `py -3`/`python`, with
 Zellij on PATH. Invoke real script paths or install helpers with
 `--launcher-only`; external symlink entry points are unsupported.
 
+Use `python3 tools/manage.py configure ...` from the source checkout for the
+preference command. The `zj` wrapper forwards arguments to Zellij; `zj configure`
+does not invoke the helper's `configure` subcommand.
+
 Default launcher state lives under `${XDG_STATE_HOME:-~/.local/state}/zellij-config`
 on Unix or `%LOCALAPPDATA%\zellij-config` on Windows.
+Offline startup still needs writable state for verified plugin/config snapshots.
+State is separate from setup backups and is not automatically pruned. Preserve
+generations referenced by running or recoverable sessions.
 
 `ZJ_OFFLINE` and `ZJ_NO_UPDATE_CHECK` keep their existing semantics: every
 nonempty value, including `0`, enables them. Unset them or use an empty value
@@ -119,8 +162,10 @@ The `theme` preference selects Zellij's theme. The optional zjstatus layout keep
 its own Mocha palette; changing the Zellij theme does not recolor that palette.
 
 Plugin pins remain zjstatus `v0.25.0`, monocle `v0.100.2`, and multitask `v0.45.1`.
-They were checked against current stable releases and freshly downloaded bytes;
-no version or checksum changes were needed. See [VERSIONS.md](../VERSIONS.md).
+At the portability review, these pins matched the stable releases and freshly
+downloaded bytes; this is a recorded review result, not an automatic guarantee
+that they remain the latest releases. Use the explicit version-check commands
+when choosing an upgrade. See [VERSIONS.md](../VERSIONS.md).
 
 ## Migration and validation checklist
 

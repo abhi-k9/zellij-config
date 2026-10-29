@@ -26,8 +26,8 @@ git clone https://github.com/abhi-k9/zellij-config.git "$env:APPDATA\Zellij\conf
 
 The Windows CMD launcher also works from PowerShell without changing its script
 execution policy. The `launcher\zj.ps1` alternative requires a policy that allows
-PowerShell scripts. WSL uses the Linux paths
-inside WSL. No setup script or launcher installation is required. For a custom
+PowerShell scripts. WSL uses the Linux paths inside WSL. No setup script or
+launcher installation is required. For a custom
 checkout location, pass `--config-dir /path/to/checkout` to the launcher.
 
 The shared defaults create independent sessions, keep Zellij's `Ctrl+g` lock
@@ -64,6 +64,13 @@ The layout inside any of these destinations is the same:
 ├── tools/
 └── docs/
 ```
+
+For a custom checkout location, invoking its launcher does **not** select that
+checkout automatically. Pass `--config-dir` on every launch or set
+`ZELLIJ_CONFIG_DIR`. Relative paths are interpreted from the terminal's current
+directory, not the launcher's directory. See the
+[selection rules](docs/CONFIGURATION.md#config-directory-selection) when using
+separate config files and layout/theme directories.
 
 On Windows, the final `config` in `%APPDATA%\Zellij\config` is part of Zellij's
 platform-specific path. It remains even though the repository's former internal
@@ -115,9 +122,15 @@ On Windows, run `python tools/manage.py install --launcher-only` from the source
 checkout, optionally with `--bin-dir`. Its default is
 `%LOCALAPPDATA%\Programs\zellij-config\bin`. The PowerShell equivalent is
 `./setup.ps1 -LauncherOnly` with optional `-BinDir`, where scripts are allowed.
-Rerun the command after updating
-the checkout to refresh the installed helper copies. Use `--dry-run` / `-DryRun`
+Rerun the command after updating the checkout to refresh the installed helper
+copies, using the same `--bin-dir` if you chose one. Use `--dry-run` / `-DryRun`
 to preview without writing files.
+
+Launcher-only installation copies the wrappers and Python helper package; it
+does not install Zellij or copy/bind a configuration. Repository management
+commands such as `install`, `check` and `versions` still run from the full source
+checkout. The checked-in launcher uses current checkout code; installed helper
+copies keep their installed code until refreshed.
 
 From Fish, installing the helpers and adding their default directory is:
 
@@ -187,6 +200,10 @@ shared KDL and plugin pins unchanged. `zj` applies those choices to private
 config/layout snapshots for new sessions. Plain `zellij` reads KDL directly and
 does not read this JSON. Use `python` in place of `python3` on Windows.
 
+An existing session keeps its startup snapshot: detaching and reattaching does
+not apply new preferences. Start a fresh named session to try changes, or save
+work and fully stop the old session before recreating it.
+
 To restore the previous singleton-session workflow, F12 lock key, Denver clock,
 Git widget and pane debug export, opt into the compatibility preset:
 
@@ -224,6 +241,12 @@ At startup, `zj` selects plugins in this order:
 2. An HTTPS download of the pinned release, verified before use.
 3. The bundled backup, verified against the same hash, if downloading fails.
 
+This applies to managed aliases matched against a manifest beside the selected
+config. Arbitrary plugin URLs or plugins referenced directly by a custom layout
+do not automatically gain checksum verification or bundled fallback. Registering
+the shipped aliases makes them eligible for preparation even when the chosen
+layout does not load all three plugins; plugin execution still happens on demand.
+
 A bad checksum, timeout or missing release triggers the verified backup. If
 neither source is valid, startup fails with a diagnostic instead of running
 unverified bytes. Missing downloads run concurrently (at most three), with size,
@@ -259,9 +282,11 @@ $env:ZJ_OFFLINE = '1'
 Keep the entire checkout, including `plugins/`, when copying to an air-gapped
 machine. Downloads and generated runtime configs live in private per-user state,
 not in the checkout. Plugin preparation does not change tracked files. Each
-startup uses a snapshot of `config.kdl`; restart a session to apply source edits
-or local preference changes when using `zj`. Old runtime generations remain available to
-running sessions. Plain Zellij can watch the root config directly.
+managed startup uses a snapshot of `config.kdl`; create a new session to apply
+source edits or local preferences through `zj`. With local preferences, named
+layouts are snapshotted too; without them, layouts stay in the source resource
+directory. Old runtime generations remain available to running sessions. Plain
+Zellij can watch the root config directly.
 
 `ZJ_OFFLINE` and `ZJ_NO_UPDATE_CHECK` are enabled by any nonempty value,
 including `0`; unset them or use an empty value to disable them.
@@ -279,7 +304,9 @@ python3 tools/manage.py versions update --zellij v0.45.1
 ```
 
 The updater verifies selected plugin artifacts and licenses and synchronizes
-root `config.kdl`, backup binaries, pins and generated references. Review the
+root `config.kdl`, backup plugin binaries, pins and generated references. Selecting
+a Zellij version records its published artifact hashes; it does not download or
+test that executable. Review the
 diff and run checks before committing. A direct checkout is the live source;
 `git pull` and version updates change it immediately. New `zj` sessions use those
 changes. The Zellij executable changes only through an explicit installation:
@@ -333,12 +360,15 @@ writing external dotfiles; snapshots retain the original links. See the
 ./check.sh --updates                 # Optional live release check
 python3 -m unittest discover -s tests -v
 git config core.hooksPath hooks
-zellij setup --check
+zellij --config-dir . setup --check
 ```
 
 Full repository validation requires Zellij. `./check.sh --static` explicitly
 omits its parser checks. CI tests direct clones, optional deployment and native
 entry points on Linux, macOS and Windows. Network-dependent checks run separately.
+The repository check and regression suite are separate commands. For the full
+local lint toolchain and the staged hook's scope, see
+[validation and debugging](docs/CONFIGURATION.md#validation-and-debugging).
 
 See the [configuration guide](docs/CONFIGURATION.md), printable
 [cheatsheets](cheatsheets/), [audit resolution map](docs/AUDIT_FIXES.md) and

@@ -1,5 +1,6 @@
 #!/bin/sh
 # Run full validation; use --static explicitly to omit real Zellij validation.
+# --updates [FILE] is a separate live network check; normal checks never fetch releases.
 set -eu
 root=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 helper=$root/tools/manage.py

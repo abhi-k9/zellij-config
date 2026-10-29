@@ -12,6 +12,9 @@
 //  The template below only has to match the layout's bar so zellij can tell
 //  the bar apart from your panes; it never adds a second bar.
 //  When you upgrade zellij, re-dump it if the built-in swap layouts changed.
+//  Keep the named layout/swap pair together: repository checks require both.
+//  zj snapshots these layout files when local preferences are active; existing
+//  sessions retain their generation rather than following later source edits.
 // ═══════════════════════════════════════════════════════════════════════════
 
 tab_template name="ui" {

@@ -8,6 +8,7 @@ from .common import ConfigError, fetch_bytes, plugin_url
 
 
 def verified(data: bytes, pin: dict) -> bytes:
+    """Check trusted pinned bytes and the WASM header, not plugin safety/behavior."""
     if hashlib.sha256(data).hexdigest() != pin['sha256']:
         raise ConfigError(f'Plugin checksum mismatch: {pin["name"]}')
     if not data.startswith(b'\0asm\x01\0\0\0'):
@@ -16,6 +17,7 @@ def verified(data: bytes, pin: dict) -> bytes:
 
 
 def acquire(pin: dict, bundled: Path, *, offline=False) -> tuple[bytes, str]:
+    """Try a verified download, then the verified bundle; offline skips fetching."""
     error = None
     if not offline:
         try:

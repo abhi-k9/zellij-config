@@ -5,9 +5,9 @@
 //    zellij -s proj -n dev                    new "proj" session, dev layout
 //    cd ~/projects/foo && zellij -s foo -n dev   same, cwd = the project dir
 //
-//  ⚠ `-n` (--new-session-with-layout) is REQUIRED to start a NEW session from a
-//  layout. `zellij --session proj --layout dev` does NOT work: when --session is
-//  given, --layout means "add these tabs to session proj" and errors with "no
+//  Use `-n` (--new-session-with-layout) for the NEW named-session form shown
+//  above. `zellij --session proj --layout dev` selects an existing session:
+//  --layout means "add these tabs to session proj" and errors with "no
 //  active session" if proj doesn't exist. With the local classic profile's
 //  session_name "main" + attach_to_session, a bare `zellij --layout dev` can
 //  attach to a running main and ignore the layout. Use -s/-n above for a
@@ -20,7 +20,7 @@
 //    Tab 3 "logs"  — split log-watching pane on left, free shell on right
 //
 //  WHY USE IT: one command to spin up a fresh project workspace (editor + git +
-//  logs) in its own session, separate from your default `main`. Serialization is
+//  logs) in its own session, separate from other project sessions. Serialization is
 //  ON (see config.kdl), so an existing project session is resurrected on
 //  reattach — you only run the `-s … -n dev` form above to CREATE one.
 //
@@ -28,8 +28,8 @@
 //  pane does NOT run `nvim` as its command — you launch nvim yourself inside
 //  that shell. This is on purpose (and matches "no nvim<->zellij coupling"):
 //    • nvim runs as a CHILD of the shell, so `:qa` drops you back to the shell
-//      instead of closing the pane — and it's never the last pane anyway (the
-//      shell pane below + the git/logs tabs keep the session alive regardless).
+//      instead of replacing the shell. The shell pane below and git/logs tabs
+//      provide other panes while retained.
 //    • the layout stays portable (Linux/macOS/Windows) with no hardcoded tools.
 //  The commented `command` lines below are opt-in for anyone who wants
 //  auto-launch — but note the trade-off in the editor pane's comment.
@@ -53,9 +53,10 @@ layout {
             // RECOMMENDED: leave this as a plain shell and run `nvim` yourself.
             // It then nests in the shell, so `:qa` returns you here instead of
             // closing the pane. Uncommenting a `command` below makes that tool
-            // the pane's PROCESS (no shell under it) — quitting it closes the
-            // pane (harmless here, since it's never the last pane). If you do
-            // enable one, add `start_suspended true` to hold it behind zellij's
+            // the pane's PROCESS (no shell under it). On exit, command panes
+            // normally show their status and offer a rerun; close_on_exit=true
+            // closes them instead. Other panes help only while retained.
+            // If you enable one, add `start_suspended true` behind zellij's
             // "Waiting to run" prompt (Enter runs it, Esc drops to a shell)
             // instead of auto-launching:
             // command "nvim"

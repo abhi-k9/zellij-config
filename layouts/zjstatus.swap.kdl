@@ -14,6 +14,9 @@
 //  Here the template's bar is "zjstatus" (not "compact-bar") to match
 //  zjstatus.kdl; its widgets/colors are configured in zjstatus.kdl, not here.
 //  When you upgrade zellij, re-dump it if the built-in swap layouts changed.
+//  Keep the named layout/swap pair together: repository checks require both.
+//  zj snapshots these layout files when local preferences are active; existing
+//  sessions retain their generation rather than following later source edits.
 // ═══════════════════════════════════════════════════════════════════════════
 
 tab_template name="ui" {

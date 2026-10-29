@@ -1,4 +1,6 @@
 # Staged, verified installer for Windows PowerShell 5.1+; Python 3.10+ required.
+# This wrapper maps named switches to the shared CLI; it changes no execution policy.
+# If scripts are blocked, run python tools/manage.py install from the checkout.
 param(
     [switch]$Offline, [switch]$Restore, [switch]$DryRun, [switch]$NoLauncher,
     [switch]$LauncherOnly,

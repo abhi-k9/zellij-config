@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Run the pinned official actionlint artifact; never extract arbitrary paths."""
+"""Run the pinned Linux AMD64 actionlint artifact without archive path extraction.
+
+CI invokes this on its Linux lint runner. The hash selects the executable; this
+helper does not install system-wide tooling or choose artifacts for other OSes.
+"""
 import hashlib
 import io
 from pathlib import Path

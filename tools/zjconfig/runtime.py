@@ -1,4 +1,4 @@
-"""Prepare verified plugin locations at startup without modifying the checkout."""
+"""Prepare verified plugins and local preference snapshots outside the checkout."""
 from __future__ import annotations
 
 import hashlib
@@ -14,6 +14,11 @@ from .plugin_files import acquire, verified
 
 
 def needs_plugins(arguments: list[str]) -> bool:
+    """Classify session startup using the selected Zellij CLI's known grammar.
+
+    This also controls preference preparation and automatic notices. Review the
+    command/option tables when upgrading Zellij; it is not a general CLI parser.
+    """
     prefix = arguments[:arguments.index('--')] if '--' in arguments else arguments
     if any(item in ['--version', '-V', '--help', '-h', '--clean'] for item in prefix):
         return False
@@ -96,7 +101,11 @@ def resource_directory(arguments: list[str], file: Path) -> Path:
 
 
 def snapshot_layouts(text: str, arguments: list[str], file: Path, directory: Path, settings: dict) -> str:
-    """Render complete layout pairs once; older sessions keep their generation."""
+    """Snapshot available named KDL resources; retain older content generations.
+
+    layout_dir selects the snapshot without rewriting explicit layout-file argv.
+    Pair completeness is enforced by the repository checker, not by this copy.
+    """
     from .preferences import render_layout, set_root_nodes
     source = resource_directory(arguments, file) / 'layouts'
     configured = [node for node in parse(text) if node.name == 'layout_dir']
@@ -146,6 +155,12 @@ def retry_later(path: Path, pin: dict, now: int) -> bool:
 
 
 def prepare(file: Path, arguments: list[str], state: Path, *, offline=False, now=None) -> list[str]:
+    """Return startup argv for a verified config generation, preserving source bytes.
+
+    Only aliases matching adjacent pin metadata get managed plugin fallback.
+    Preferences can apply without a manifest. No real Zellij parsing happens
+    here; the installer/checker provide that separate validation step.
+    """
     from .preferences import LOCAL_FILE, settings_snapshot, render_config
     now = int(time.time()) if now is None else now
     file = file.resolve()
@@ -246,7 +261,7 @@ def prepare(file: Path, arguments: list[str], state: Path, *, offline=False, now
             configured = render_config(configured, settings)
             configured = snapshot_layouts(configured, arguments, file, directory, settings)
         rendered = configured.encode('utf-8')
-        # The source and pins can be edited while downloads are in flight.
+        # Source config, pins and local preferences can change during downloads.
         current_settings = settings_file.read_bytes() if settings_file.is_file() else None
         if (file.read_text(encoding='utf-8') != text
                 or (manifest is not None and validate_versions(read_json(manifest)) != pins)

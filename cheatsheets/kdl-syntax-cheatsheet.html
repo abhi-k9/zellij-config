@@ -119,7 +119,7 @@
   <div class="card">
     <div class="card-header"><div class="dot" style="background:var(--green)"></div><h2>Values &amp; Types</h2></div>
     <table>
-      <tr><td><span class="k-str">"quoted string"</span></td><td>the common case; always safe</td></tr>
+      <tr><td><span class="k-str">"quoted string"</span></td><td>string value; keep booleans/numbers unquoted when an option expects those types</td></tr>
       <tr><td><span class="k-str">"with \n \t \" \\"</span></td><td>escapes: newline, tab, quote, backslash</td></tr>
       <tr><td><span class="k-str">"\u{1F600}"</span></td><td>unicode by hex code point</td></tr>
       <tr><td><span class="k-num">42</span> &nbsp; <span class="k-num">-5</span> &nbsp; <span class="k-num">1.5</span></td><td>integers and floats</td></tr>
@@ -139,7 +139,7 @@
       <tr><td><span class="k-com">/* block */</span></td><td>spans multiple lines</td></tr>
       <tr><td><span class="k-dash">/-</span> <span class="k-node">node</span></td><td><strong>slashdash</strong>: disable the <em>next whole thing</em></td></tr>
     </table>
-    <div class="lead"><strong>Slashdash <span class="k-dash">/-</span></strong> comments out the next node, value, or entire <code>{ }</code> block — structure-aware, no matching <code>*/</code> to chase. Works in <code>config.kdl</code> (options and keybinds). <strong style="color:var(--red)">⚠ NOT in layout files</strong> — zellij's layout parser rejects <code>/-</code> and the whole layout fails to load (verified on 0.45.1). Use <code>//</code> in layouts instead.</div>
+    <div class="lead"><strong>Slashdash <span class="k-dash">/-</span></strong> comments out the next node, value, property, or entire <code>{ }</code> block — structure-aware, no matching <code>*/</code> to chase. Zellij 0.45.1 accepts it in config and layouts: <code>layout { /- pane; pane; }</code> disables the first pane. The disabled fragment still needs valid KDL structure; use <code>//</code> for free-form notes.</div>
     <table>
       <tr class="divider"><td colspan="2">Disable without deleting (in config.kdl)</td></tr>
       <tr><td colspan="2"><pre><span class="k-dash">/-</span><span class="k-node">scroll_buffer_size</span> <span class="k-num">50000</span>   <span class="k-com">// this option off (uses default)</span>
@@ -185,7 +185,7 @@
 <span class="k-com">//                              ↑ ';' ends the</span>
 <span class="k-com">//                                inner node</span></pre></td></tr>
     </table>
-    <div class="lead"><span class="k-node">clear-defaults</span>=<span class="k-bool">true</span> — a zellij property (hyphens are fine in bare names) that wipes built-in binds/plugins before yours.</div>
+    <div class="lead"><span class="k-node">clear-defaults</span>=<span class="k-bool">true</span> is a Zellij block property, for example on <code>keybinds</code> to remove inherited bindings. It is not a general KDL instruction; use it only on blocks documented to support it.</div>
   </div>
 
   <!-- ═══════════════════════ ZELLIJ GOTCHAS ═══════════════════════ -->
@@ -195,22 +195,22 @@
       <tr>
         <td style="width:50%;vertical-align:top;padding:8px 12px">
           <table>
-            <tr><td><span class="badge warn">silent</span></td><td>Unknown / misspelled node names are <strong>ignored without error</strong>. <code>serialize_pane_veiwport true</code> (note the typo) just does nothing — no warning, the real setting stays at its default.</td></tr>
+            <tr><td><span class="badge warn">silent</span></td><td>Unknown top-level option names can be <strong>ignored without error</strong>. <code>serialize_pane_veiwport true</code> (note the typo) does nothing; layout/action/plugin parsing has its own rules and may reject unknown nodes.</td></tr>
             <tr><td><span class="badge warn">v1</span></td><td>Write <code>true</code>/<code>false</code>, not <code>#true</code>. Copy-pasting v2 KDL from the web makes the whole file fail to parse on 0.45.1.</td></tr>
             <tr><td><span class="badge warn">;</span></td><td>On <strong>one line</strong>, a closing <code>}</code> doesn't end a node — write <code>{ floating true; }</code>, not <code class="bad">{ floating true }</code>, and put <code>;</code> after each closed block too (<code>…}; }</code>). Otherwise the file won't load. Multi-line blocks need none.</td></tr>
-            <tr><td><span class="badge active">live</span></td><td>Zellij watches the file and hot-reloads most options on save — no restart needed to test a change.</td></tr>
+            <tr><td><span class="badge active">live</span></td><td>Plain Zellij watches its loaded config, but some options require restart. The <code>zj</code> launcher loads a private snapshot: source/local JSON edits require a new session; reattaching an existing session keeps its snapshot.</td></tr>
           </table>
         </td>
         <td style="vertical-align:top;padding:8px 12px">
           <table>
             <tr><td><span class="badge active">errors</span></td><td>Real <em>syntax</em> errors (bad braces, unclosed quote) surface via miette — a pointed, underlined message on the offending line.</td></tr>
             <tr><td><span class="badge active">merge</span></td><td>Config is merged from several sources; your <code>config.kdl</code> extends the built-in defaults unless a block sets <code>clear-defaults=true</code>.</td></tr>
-            <tr><td><span class="badge active">quote</span></td><td>When in doubt, quote the value. <code>"Alt n"</code> and <code>size="50%"</code> must be quoted; a bare <code>50%</code> is a parse error.</td></tr>
+            <tr><td><span class="badge active">quote</span></td><td>Quote strings such as <code>"Alt n"</code> and <code>size="50%"</code>; a bare <code>50%</code> is invalid. Keep typed options typed: <code>pane_frames true</code>, not <code>pane_frames "true"</code>.</td></tr>
           </table>
         </td>
       </tr>
     </table>
-    <div class="lead" style="border-top:1px solid var(--overlay)"><strong>Quick self-check when an edit doesn't take effect:</strong> &nbsp;1) node name spelled exactly right (typos are silently ignored)? &nbsp;2) bare <code>true</code>/<code>false</code>, not <code>#true</code>? &nbsp;3) values that need quotes actually quoted? &nbsp;4) braces balanced, and on one-line blocks a <code>;</code> after every node? &nbsp;<code>zellij setup --check</code> pinpoints 2–4 with a line number; it can't catch 1.</div>
+    <div class="lead" style="border-top:1px solid var(--overlay)"><strong>Quick self-check when an edit doesn't take effect:</strong> &nbsp;1) the intended config file and resource directory selected? &nbsp;2) a new <code>zj</code> session after source/JSON edits? &nbsp;3) exact option spelling and supported value type? &nbsp;4) KDL v1 booleans, quoting, braces and inline semicolons correct? &nbsp;Use <code>zellij --config-dir . setup --check</code> from the checkout, and add <code>--layout NAME</code> before <code>setup</code> to check a layout too. Parser success cannot prove that an unknown option is implemented.</div>
   </div>
 
   <!-- ═══════════════════════ COLOR KEY ═══════════════════════ -->
@@ -232,7 +232,7 @@
 <footer>
   <span>Printable API reference snapshot: Zellij 0.45.1. Current selected pins and explicit upgrades: VERSIONS.md.</span>
   <span>KDL 1.0 dialect (zellij 0.45.1 reads v1 only — v2 syntax fails to parse) &nbsp;·&nbsp; spec: <code>kdl.dev</code></span>
-  <span>Edit &middot; save &middot; zellij hot-reloads &nbsp;·&nbsp; Catppuccin Mocha</span>
+  <span>Plain Zellij watches loaded config &nbsp;·&nbsp; new zj sessions render snapshots &nbsp;·&nbsp; Catppuccin Mocha</span>
 </footer>
 
 </body>

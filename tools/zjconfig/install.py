@@ -17,6 +17,11 @@ from .plugin_files import acquire
 
 
 def default_directory() -> Path:
+    """Choose the config-directory default, preserving existing Unix legacy roots.
+
+    Explicit installer --config-dir is handled by install(); ZELLIJ_CONFIG_FILE
+    selects a launcher config file and does not change this deployment target.
+    """
     if os.environ.get('ZELLIJ_CONFIG_DIR'):
         return Path(os.environ['ZELLIJ_CONFIG_DIR']).expanduser()
     home = Path.home()
@@ -55,6 +60,11 @@ def validate(directory: Path, zellij: str) -> None:
 
 
 def validate_kdl(directory: Path, zellij: str) -> None:
+    """Run Zellij's parser for config and named layouts with adjacent swap files.
+
+    This checks configuration syntax, not executable availability, plugin
+    permissions, terminal rendering or application/session recovery.
+    """
     for layout in [None, *sorted((directory / 'layouts').glob('*.kdl'))]:
         if layout and layout.name.endswith('.swap.kdl'):
             continue
@@ -133,7 +143,7 @@ def recover(target: Path) -> None:
 def publish(target: Path, stage: Path) -> Path | None:
     """Rollback on exceptions/signals; retain a private snapshot of the old tree.
 
-    There is a short directory-name gap between the two renames. A durable
+    There is a short directory-name gap between the two renames. A recovery
     journal allows the next invocation to recover a process killed in that gap.
     This is not an atomic exchange or a power-loss durability guarantee.
     """
@@ -179,6 +189,11 @@ def default_binary_directory() -> Path:
 
 
 def install_launcher(root: Path, binary_dir: Path) -> None:
+    """Copy wrappers and their helper package, preserving unrelated launchers.
+
+    The helper payload includes pins but not config/layout/plugin resources.
+    Its replacement is separate from config publication and config snapshots.
+    """
     binary_dir.mkdir(parents=True, exist_ok=True)
     with FileLock(binary_dir / '.zj-helper.lock'):
         stage = private_tempdir(binary_dir, '.zj-helper-')
@@ -214,6 +229,12 @@ def install_launcher(root: Path, binary_dir: Path) -> None:
 
 def install(root: Path, *, target: Path | None = None, offline=False, restore=False,
             dry_run=False, bin_dir: Path | None = None, no_launcher=False) -> None:
+    """Stage, validate and publish a separate config tree or restore a snapshot.
+
+    Normal deployment preserves target-owned extras/preferences, replaces shipped
+    names, and emits plugin paths for the physical destination. Launcher copies
+    are installed before config publication and are not part of its rollback.
+    """
     source = root.resolve()
     requested = (target or default_directory()).expanduser()
     # resolve also normalizes trailing slashes and preserves a whole-directory

@@ -53,6 +53,7 @@ class Tags(HTMLParser):
 
 
 def local_link(root: Path, source: Path, destination: str) -> None:
+    """Check local destination existence; fragment anchors are not resolved."""
     parsed = urlsplit(destination)
     if parsed.scheme or parsed.netloc or not parsed.path:
         return
@@ -63,6 +64,11 @@ def local_link(root: Path, source: Path, destination: str) -> None:
 
 
 def check(root: Path, static=False) -> None:
+    """Check repository contracts, adding real-parser validation unless static.
+
+    Static mode still reads/hashes bundled assets and parses active KDL with the
+    helper reader. Neither mode runs the regression suite or interactive tests.
+    """
     for name in REQUIRED:
         path = root / name
         if not path.is_file():

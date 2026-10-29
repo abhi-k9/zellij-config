@@ -79,6 +79,11 @@
   <strong>Run these checks on your own machine</strong> — they need a real
   terminal, GUI, clipboard, or a reboot. Tick each once confirmed; investigate
   configuration, application and terminal capabilities when a check fails.
+  Use disposable named sessions for these checks. Shell command examples use
+  a POSIX shell unless marked PowerShell; on native Windows use
+  <code>zj.cmd</code> for the launcher and the equivalent native application commands.
+  Start a new <code>zj</code> session after source/local-preference edits; reconnecting
+  an existing session retains its startup snapshot.
 </div>
 
 <!-- 1 -->
@@ -95,10 +100,10 @@
 <div class="item">
   <div class="item-head"><input type="checkbox" aria-labelledby="item-2"><h2 id="item-2">Clipboard over SSH (OSC52) <span class="opt">if you SSH</span></h2></div>
   <div class="item-body">
-    <div class="row"><span class="lbl">Tests</span><span class="val">OSC52 forwarding — the only clipboard path that crosses an SSH hop</span></div>
+    <div class="row"><span class="lbl">Tests</span><span class="val">OSC52 forwarding through SSH to the local terminal's clipboard</span></div>
     <div class="row"><span class="lbl">Do</span><span class="val">SSH into a remote box running this zellij, drag-select text in a pane, then paste into a <em>local</em> app on your laptop.</span></div>
     <div class="row pass"><span class="lbl">Pass</span><span class="val">Text lands in your local clipboard. Needs an OSC52-capable local terminal (kitty, WezTerm, Ghostty, iTerm2, Alacritty…).</span></div>
-    <div class="row"><span class="lbl">If it fails</span><span class="val" style="color:var(--muted)">Your terminal likely doesn't allow OSC52 clipboard writes — enable it in the terminal's settings.</span></div>
+    <div class="row"><span class="lbl">If it fails</span><span class="val" style="color:var(--muted)">Check the local terminal's OSC52 support and clipboard permissions, and any intermediate multiplexer/SSH forwarding settings. A remote pbcopy/wl-copy command normally accesses the remote machine's clipboard.</span></div>
   </div>
 </div>
 
@@ -119,7 +124,7 @@
     <div class="row"><span class="lbl">Tests</span><span class="val"><code>theme "catppuccin-mocha"</code> (confirmed a real built-in; colors are visual)</span></div>
     <div class="row"><span class="lbl">Do</span><span class="val">Look at it: dark background, soft mauve/blue/green accents, rounded pane frames.</span></div>
     <div class="row pass"><span class="lbl">Pass</span><span class="val">It reads as Catppuccin Mocha, not zellij's default palette.</span></div>
-    <div class="row"><span class="lbl">Bonus</span><span class="val" style="color:var(--muted)">If your terminal supports CSI 2031, uncomment <code>theme_dark</code>/<code>theme_light</code> in <code>config.kdl</code> and flip your terminal's light/dark mode — zellij should follow. (Leave <code>explicit_theme_hue</code> commented for this test: it pins one hue and stops the switching.)</span></div>
+    <div class="row"><span class="lbl">Bonus</span><span class="val" style="color:var(--muted)">If your terminal supports CSI 2031, uncomment both <code>theme_dark</code>/<code>theme_light</code> lines in <code>config.kdl</code>, start a new <code>zj</code> session, then flip the terminal's light/dark mode. Leave <code>explicit_theme_hue</code> commented: it pins one hue and stops switching. The optional zjstatus bar keeps its own palette.</span></div>
   </div>
 </div>
 
@@ -145,7 +150,7 @@
       4. Reattach: <code>zj attach --create recovery-test</code>.<br>
       5. If the <kbd>main</kbd> tab returns running nvim without a parent shell, type <code>:qa</code>. Record whether the editor/application state was restored; a plain shell cannot verify this case.
     </span></div>
-    <div class="row pass"><span class="lbl">Pass</span><span class="val"><code>:qa</code> closes nvim's tab and drops you into the <kbd>shell</kbd> tab — the session stays alive. (Closing the last pane in a single-tab session would instead end it.)</span></div>
+    <div class="row pass"><span class="lbl">Pass</span><span class="val">Record whether <code>:qa</code> returns to a shell, leaves a held command pane, or closes the editor pane. If it closes, the retained <kbd>shell</kbd> tab remains usable and the session stays alive. Closing the last pane in a single-tab session would instead end it.</span></div>
     <div class="row"><span class="lbl">Note</span><span class="val" style="color:var(--muted)">The extra tab helps only while it exists. Editor session plugins and backups can provide separate recovery, but must be tested too. See <code>docs/CONFIGURATION.md</code>.</span></div>
   </div>
 </div>

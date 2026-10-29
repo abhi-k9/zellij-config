@@ -36,7 +36,11 @@ def _string(value, name: str) -> str:
 
 
 def validate_settings(raw) -> dict:
-    """Return effective settings; unknown keys and coercions fail explicitly."""
+    """Resolve a preset plus explicit overrides; reject unknown keys/coercions.
+
+    Only a missing local file leaves source preferences untouched. Even a file
+    containing just schema=1 actively selects all portable preset defaults.
+    """
     if not isinstance(raw, dict):
         raise ConfigError('Local preferences must be a JSON object')
     allowed = {'schema', 'profile', *PRESETS['portable']}
@@ -191,6 +195,7 @@ def _lock_bindings(text: str, key: str) -> str:
 
 
 def render_config(text: str, settings: dict) -> str:
+    """Apply the complete resolved preset to managed active config nodes."""
     settings = validate_settings(settings)
     text = set_root_nodes(text, {
         'theme': 'theme ' + quote(settings['theme']),
@@ -211,6 +216,7 @@ def render_config(text: str, settings: dict) -> str:
 
 
 def render_layout(text: str, name: str, settings: dict) -> str:
+    """Adjust the named zjstatus widget only; other layout content passes through."""
     settings = validate_settings(settings)
     if name.removesuffix('.kdl') != 'zjstatus':
         return text
@@ -260,7 +266,8 @@ def render_directory(directory: Path, settings: dict | None = None) -> None:
         file = directory / 'layouts' / (name + '.kdl')
         if file.is_file():
             rendered[file] = render_layout(file.read_text(encoding='utf-8'), name, settings)
-    # Compute every result before publishing any; syntax/schema failures cannot
-    # leave a partly rendered staging tree.
+    # Compute every result before writing any, so render/schema failures leave
+    # the tree untouched. Writes are not a transaction: callers use disposable
+    # validation trees, which can be discarded if filesystem I/O fails midway.
     for file, text in rendered.items():
         file.write_text(text, encoding='utf-8')

@@ -9,27 +9,29 @@
 //    • Opens TWO TABS: "main" (where you work / run nvim) and "shell".
 //
 //  WHY TWO TABS (the nvim-safety design):
-//  Session serialization is ON (see config.kdl), so a crashed/rebooted session
-//  is resurrected — but zellij re-runs the *foreground command* it saw, so a pane
-//  that was running nvim comes back as nvim with NO parent shell under it. On its
-//  own, `:qa` from that pane closes the pane, and if it were the last pane in the
-//  last tab it would end the whole session. Keeping a separate "shell" tab means
-//  the "main" tab is never the last tab: `:qa` closes nvim's pane (and its tab),
-//  and you land in the shell tab — the session, and reboot/crash recovery, survive.
-//  No hooks, no editor<->zellij coupling, no shell assumptions — purely structural.
+//  Session serialization is ON (see config.kdl), so saved structure can be
+//  resurrected — but Zellij may re-run a saved foreground command without its
+//  original parent shell. Exiting that command can close its pane, depending
+//  on the restored pane's exit handling. Closing the last pane in the last tab
+//  ends the session. Keeping a separate "shell" tab means that "main" is not
+//  the last tab while "shell" remains, so closing the editor pane leaves an
+//  available shell. This protects the
+//  session lifetime, not unsaved work or application-specific recovery.
 //
 //  A separate tab (rather than a split pane in the same tab) is used deliberately:
 //  it gives nvim the full screen, and a whole tab is far less tempting to close by
 //  reflex than an in-your-face split — so the safety net tends to stay in place.
 //
 //  NOTE — this is a SOFT guarantee: it holds only while the shell tab exists. If
-//  you close the shell tab and then `:qa` from a lone nvim, the session ends (it's
-//  still resurrectable via `zellij attach`, since serialization is on). For a hard
-//  guarantee independent of tabs, see README "Session recovery" (a
-//  post_command_discovery_hook, or an nvim session plugin).
+//  you close the shell tab and then close the last editor pane, the session ends (it
+//  may still be offered for resurrection if its snapshot was saved). Use
+//  `zj attach --create NAME` with the actual session name. Editor session plugins
+//  and backups address different recovery needs and need their own testing;
+//  see docs/CONFIGURATION.md, "Session recovery, clipboard and terminal behavior".
 //
-//  To revert to a single tab, delete the "shell" `tab` block below. To revert to
-//  stock zellij entirely, delete this whole file (zellij falls back to built-in).
+//  For a single shell/tab, choose the shipped minimal layout. To edit this
+//  layout directly, retain its matching default.swap.kdl; repository validation
+//  requires both files. Local preferences apply only when starting through zj.
 // ═══════════════════════════════════════════════════════════════════════════
 
 layout {

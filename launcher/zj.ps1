@@ -6,6 +6,7 @@ if (-not (Test-Path -LiteralPath $helper)) { $helper = Join-Path $PSScriptRoot '
 if (-not (Test-Path -LiteralPath $helper -PathType Leaf)) { throw "zj helper is missing: $helper. Keep the launcher beside its installed .zellij-config helpers or inside the checkout's launcher directory." }
 $forward = @($args)
 if ($args.Count -gt 0 -and $args[0] -eq '-CheckUpdates') {
+    # Retain the older PowerShell spelling; the shared helper uses --check-updates.
     $forward = @('--check-updates')
     if ($args.Count -eq 3 -and $args[1] -eq '-Config') { $forward += $args[2] }
     elseif ($args.Count -eq 2) { $forward += $args[1] }
@@ -17,6 +18,7 @@ if ($args.Count -gt 0 -and $args[0] -eq '-CheckUpdates') {
 $json = ConvertTo-Json -InputObject $forward -Compress
 $encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($json))
 if ($env:ZJ_PYTHON) {
+    # Test paths literally before PATH discovery, preserving brackets and spaces.
     if (-not (Test-Path -LiteralPath $env:ZJ_PYTHON -PathType Leaf) -and -not (Get-Command -Name ([System.Management.Automation.WildcardPattern]::Escape($env:ZJ_PYTHON)) -CommandType Application -ErrorAction SilentlyContinue)) { throw "ZJ_PYTHON executable is unavailable: $env:ZJ_PYTHON. Set one Python 3.10+ executable path without arguments." }
     & $env:ZJ_PYTHON $helper launch --argv64 $encoded
 }

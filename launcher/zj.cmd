@@ -1,10 +1,12 @@
 @echo off
 rem zellij-config launcher; keep the installed .zellij-config helper alongside it.
+rem Disable inherited delayed expansion so exclamation marks in paths survive.
 setlocal DisableDelayedExpansion
 set "zj_helper=%~dp0.zellij-config\manage.py"
 if not exist "%zj_helper%" set "zj_helper=%~dp0..\tools\manage.py"
 if not exist "%zj_helper%" goto missing_helper
 if defined ZJ_PYTHON goto override
+rem Use cmd's normal argument rules; PowerShell's .ps1 wrapper has its own transport.
 where py >nul 2>&1
 if errorlevel 1 goto python
 py -3 "%zj_helper%" launch -- %*

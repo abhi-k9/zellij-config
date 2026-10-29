@@ -20,11 +20,13 @@ def checksums(pins: dict) -> bytes:
 
 
 def documentation(pins: dict) -> bytes:
+    """Generate the version guide from pins; edit this text before VERSIONS.md."""
     lines = ['# Selected versions', '', 'Generated from `versions.json`. Pins change only on an explicit update.', '',
              f"Zellij: **{pins['zellij']['tag']}**. These pins select artifacts; CI records validation.", '',
              '| Plugin | Tag | Release artifact | SHA-256 |', '| --- | --- | --- | --- |']
     lines += [f"| {p['name']} | {p['tag']} | {plugin_url(p)} | `{p['sha256']}` |" for p in pins['plugins']]
-    lines += ['', '## Change versions when you choose', '', '```sh',
+    lines += ['', '## Change versions when you choose', '',
+              'Run these commands from the full source checkout, not a copied launcher helper.', '', '```sh',
               'python3 tools/manage.py versions check',
               'python3 tools/manage.py versions update --all',
               'python3 tools/manage.py versions update --plugin zjstatus=latest',
@@ -32,17 +34,30 @@ def documentation(pins: dict) -> bytes:
               'python3 tools/manage.py versions update --zellij latest',
               'python3 tools/manage.py versions update --zellij v0.45.1',
               'python3 tools/manage.py install-zellij --bin-dir ~/.local/bin',
-              './check.sh', './launcher/zj attach --create main', '```', '',
+              './check.sh', './launcher/zj --config-dir . attach --create project', '```', '',
               'On Windows use `python` instead of `python3` and `launcher/zj.cmd` to start.', '',
-              'Update checks never change files. Update downloads and verifies all selected artifacts',
-              'before changing pins, bundled bytes, license notices and generated references.',
+              '`versions check` contacts GitHub and reports selected versus latest tags without changing',
+              'source files. A successful lookup exits 0 even when tags differ; it does not test',
+              'compatibility or imply that a different tag is newer. The launcher\'s `--check-updates`',
+              'command has its own 0/1/2 status contract; see the [configuration guide](docs/CONFIGURATION.md#update-notices).', '',
+              'A plugin update downloads and verifies the selected WASM files and upstream notices',
+              'before changing pins, bundled bytes, licenses and generated references. Selecting a',
+              'Zellij version records the release asset digests; it does not download or replace the',
+              'executable until `install-zellij` is run. On Windows choose a binary directory on PATH',
+              'instead of copying the Unix `~/.local/bin` example unchanged.', '',
+              'Checks use the executable selected by PATH or `ZJ_ZELLIJ_BIN`, not the manifest tag.',
+              'After installing a different Zellij version, verify that executable with `--version`',
+              'and point `ZJ_ZELLIJ_BIN` at it when testing multiple installations.', '',
               'Review `git diff` and run the checks before committing. A direct checkout is the live',
               'source configuration; new launcher sessions use its updated pins without setup.',
               'A separately deployed copy needs setup again. The Zellij executable changes only',
-              'through the explicit install-zellij command (or your package manager).', '',
+              'through the explicit install-zellij command (or your package manager). Updating installed',
+              'standalone launcher copies is a separate `install --launcher-only` operation.', '',
               'If a new plugin release has no published GitHub digest, provide a trusted digest with',
               '`--sha256 NAME=HEX`; the updater refuses to treat its own computed hash as independent',
-              'verification. Updates never select prereleases through `latest`.', '']
+              'verification. Updates never select prereleases through `latest`. A trusted hash proves',
+              'artifact identity, not compatibility: test the selected Zellij/plugin combination',
+              'before adopting it. See the [local preferences and migration guide](docs/GENERALIZATION.md).', '']
     return '\n'.join(lines).encode()
 
 
@@ -83,6 +98,7 @@ def license_terms(notice: bytes) -> str:
 
 
 def check_versions(root: Path) -> int:
+    """Report remote tag differences; successful lookups return 0 even if different."""
     pins = load_versions(root)
     for repository, tag in [('zellij-org/zellij', pins['zellij']['tag']),
                             *[(p['repository'], p['tag']) for p in pins['plugins']]]:
@@ -93,6 +109,11 @@ def check_versions(root: Path) -> int:
 
 def update(root: Path, selections: dict[str, str], zellij_tag: str | None,
            all_latest=False, overrides: dict[str, str] | None = None) -> None:
+    """Publish selected pins and plugin bytes after verification, without upgrading Zellij.
+
+    Zellij selections update asset hashes only. Rollback covers ordinary failures
+    during per-file publication; the collection is not a crash-atomic transaction.
+    """
     overrides = overrides or {}
     with FileLock(root / '.versions.lock'):
         pins = load_versions(root)
@@ -165,6 +186,7 @@ def update(root: Path, selections: dict[str, str], zellij_tag: str | None,
 
 
 def install_zellij(root: Path, binary_dir: Path) -> Path:
+    """Install one pinned platform artifact; do not change source pins or PATH."""
     pins = load_versions(root)
     system, machine = platform.system(), platform.machine().lower()
     arch = 'aarch64' if machine in ['aarch64', 'arm64'] else 'x86_64' if machine in ['x86_64', 'amd64'] else None

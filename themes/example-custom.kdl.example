@@ -9,6 +9,13 @@
 //
 //    theme "my-custom"
 //
+//  With local preferences, select it using
+//    python3 tools/manage.py configure --config-dir . --theme my-custom
+//  and start a NEW session through zj (Windows: python / zj.cmd). A saved
+//  theme preference overrides the shared theme line. The theme file must be in
+//  the selected resource directory's themes/ folder. The optional zjstatus bar
+//  has its own colors and does not inherit this palette.
+//
 //  (Verified on 0.45.1: copied as my-custom.kdl it renders — e.g. the focused
 //  pane's frame turns pink.)
 //

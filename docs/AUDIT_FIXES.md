@@ -19,7 +19,8 @@ single-shell alternative to the two-tab default. A gitignored schema-1 local
 preferences file restores the previous workflow through `--profile classic` or
 records individual choices without editing shared KDL.
 
-The launcher renders private config/layout snapshots. Setup preserves the
+The launcher renders private config snapshots for managed plugins and snapshots
+named layouts when local preferences apply. Setup preserves the
 target's local preferences and validates a separately rendered temporary tree;
 source preferences are not imported and deployed KDL retains shared defaults.
 Plain Zellij always ignores local JSON. `ZJ_PYTHON`, `ZJ_ZELLIJ_BIN` and `ZJ_STATE_DIR` make executable
@@ -75,7 +76,9 @@ parser success does not establish interactive correctness. See the
 
 `versions.json` is the canonical artifact inventory. The explicit updater stages
 verified plugin bytes and exact upstream notices, synchronizes config pins and
-generated references, and rolls back ordinary write failures. Download size,
+generated references, and rolls back ordinary write failures. Zellij pin updates
+record published binary hashes; installation and compatibility validation are
+separate operations. Download size,
 connection and total-duration bounds apply; HTTPS downgrade redirects are denied.
 The launcher can check local installed plugins using retained upstream metadata.
 
@@ -84,7 +87,8 @@ Ordinary tests use deterministic network fixtures. Live latest-release requests
 are a separate optional manual smoke job. CI has timeouts and cancellation of
 superseded runs, pinned action commits, locked npm dependencies, hash-locked Ruff
 wheels, verified actionlint, root README lint and HTML validation.
-Local Markdown/HTML file links are checked without network access. Restore also
+Local Markdown/HTML target files are checked without network access; the checker
+does not verify heading fragments or remote URLs. Restore also
 checks snapshot plugin hashes and works when the current source pins are damaged.
 Upgrade regressions cover write rollback, edits during downloads and changed
 license terms. Physical path normalization covers macOS temporary-directory
@@ -104,11 +108,15 @@ Clipboard, terminal fonts,
 mouse behavior, permission prompts and crash/reboot recovery require native
 interactive checks. Parser success alone does not establish those behaviors.
 
-Automatic bundled fallback requires the checked-in `zj` launcher. The pinned
+Automatic bundled fallback requires the shared `zj` launcher, either checked in
+or installed as a helper copy. The pinned
 [native loader](https://github.com/zellij-org/zellij/blob/v0.45.1/zellij-server/src/plugins/wasm_bridge.rs)
 does not provide an HTTPS-to-bundled-file fallback. Launcher sessions use an
 immutable startup config snapshot: source edits apply to a new session rather
-than being watched live. Downloaded plugin caches are reused only after hash
+than being watched live. With preferences, named layout generations are retained
+too; without preferences the original layout directory remains in use. Helper
+copies are installed before config publication and are not reverted by restoring
+a config snapshot. Downloaded plugin caches are reused only after hash
 verification; offline fallback never masquerades as a successful cached download.
 
 Startup performance improvements retain hash verification: downloads run in a

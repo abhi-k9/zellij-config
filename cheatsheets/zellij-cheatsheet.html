@@ -124,19 +124,19 @@
 
 <!-- ═══════════════════ THIS CONFIG — CHANGES ═══════════════════ -->
 <div class="card col-full">
-  <div class="card-header"><div class="dot" style="background:var(--pink)"></div><h2>This Config — Changes from Default</h2><span class="note" style="margin-left:8px">everything this config changes; every other line of <code>config.kdl</code> restates a zellij default (marked <code>// default</code>). Full key list: the <kbd style="font-size:9.5px">Ctrl+o</kbd> <kbd style="font-size:9.5px">h</kbd> popup.</span></div>
+  <div class="card-header"><div class="dot" style="background:var(--pink)"></div><h2>This Config — Changes from Default</h2><span class="note" style="margin-left:8px">shared defaults; local preferences may override these choices. Lines marked <code>// default</code> restate Zellij defaults. Full key list: the <kbd style="font-size:9.5px">Ctrl+o</kbd> <kbd style="font-size:9.5px">h</kbd> screen.</span></div>
   <table>
     <tr><td><kbd class="red">Ctrl+q</kbd> <span class="badge active">unbound</span></td><td>Default quit removed (fat-finger guard)</td>
         <td><kbd class="mauve">Ctrl+o</kbd> <kbd class="mauve">q</kbd> <span class="badge active">added</span></td><td>Deliberate two-step quit (replaces it)</td></tr>
     <tr><td><kbd class="mauve">Ctrl+o</kbd> <kbd class="mauve">h</kbd> <span class="badge active">added</span></td><td>Built-in configuration/keybinding screen (floating; <kbd style="font-size:9.5px">Esc</kbd> closes)</td>
         <td><kbd class="flamingo">Ctrl+g</kbd> <span class="badge">default</span></td><td>Lock toggle; choose F12 with a local preference if it conflicts with your application</td></tr>
     <tr><td><kbd class="mauve">Ctrl+o</kbd> <kbd class="mauve">m</kbd> <span class="badge active">added</span></td><td>monocle — find files &amp; contents from the focused pane's directory</td>
-        <td><kbd class="mauve">Ctrl+o</kbd> <kbd class="mauve">t</kbd> / <kbd class="mauve">e</kbd> <span class="badge">opt-in</span></td><td>multitask / edit config — commented out in <code>config.kdl</code> (Unix-only)</td></tr>
+        <td>Task runners / config editors <span class="badge">local choice</span></td><td>No shortcuts shipped; review shell syntax and application dependencies before adding your own</td></tr>
     <tr><td>Locking <span class="badge active">manual</span></td><td>No autolock plugin — press Ctrl+g before and after an application that needs all keys</td>
         <td colspan="2" class="note">Forget, and zellij eats your Alt+hjkl / Alt+f keystrokes.</td></tr>
     <tr><td>Sessions</td><td>No fixed name or automatic attachment; choose an explicit name per project. The classic local profile restores the shared <code>main</code> workflow</td>
         <td>Default layout</td><td>Two tabs, <strong>main</strong> + <strong>shell</strong>, with the 1-line <code>compact-bar</code></td></tr>
-    <tr><td>Resurrection <span class="badge active">on</span></td><td><code>session_serialization true</code> (zellij's default, kept on) — the two-tab layout keeps <code>:qa</code> in a resurrected nvim from ending the session</td>
+    <tr><td>Resurrection <span class="badge active">on</span></td><td><code>session_serialization true</code> (Zellij's default, kept on) — a retained safety shell keeps another pane available if a restored editor pane closes</td>
         <td>Look</td><td><code>catppuccin-mocha</code>, <code>pane_frame_style "full"</code> (0.45 default is "titles") + <code>rounded_corners</code></td></tr>
     <tr><td>Pane environment</td><td>No debug environment exported by default; <code>RUST_BACKTRACE</code> is opt-in</td>
         <td>Plugin aliases</td><td>zjstatus, monocle, multitask — pinned, loaded on demand</td></tr>
@@ -146,7 +146,7 @@
 
 <!-- ═══════════════════════ NORMAL MODE ═══════════════════════ -->
 <div class="card">
-  <div class="card-header"><div class="dot" style="background:var(--lavender)"></div><h2>Normal Mode</h2><span class="mode-badge">always active</span></div>
+  <div class="card-header"><div class="dot" style="background:var(--lavender)"></div><h2>Normal Mode</h2><span class="mode-badge">shared shortcuts exclude Locked</span></div>
   <table>
     <tr class="divider"><td colspan="2">Quick pane actions (no mode switch)</td></tr>
     <tr><td><kbd>Alt+n</kbd></td><td>New pane (largest available space)</td></tr>
@@ -269,7 +269,7 @@
     <tr><td><kbd class="mauve">q</kbd></td><td>Quit zellij <span class="badge active">added</span> (replaces unbound Ctrl+q)</td></tr>
     <tr><td><kbd class="mauve">h</kbd></td><td>Built-in keybinding screen <span class="badge active">added</span></td></tr>
     <tr><td><kbd class="mauve">m</kbd></td><td>monocle — find files &amp; contents <span class="badge active">added</span></td></tr>
-    <tr><td><kbd class="mauve">t</kbd> / <kbd class="mauve">e</kbd></td><td>multitask / edit config — <span class="badge">opt-in</span> commented out in <code>config.kdl</code> (Unix-only)</td></tr>
+    <tr><td><kbd class="mauve">t</kbd> / <kbd class="mauve">e</kbd></td><td>Unassigned by this config; no task-runner/config-editor binding is shipped</td></tr>
     <tr class="divider"><td colspan="2">Resurrection <span class="badge active">on</span></td></tr>
     <tr><td colspan="2" class="note"><code>session_serialization true</code> + <code>serialization_interval 60</code> saves session structure. Reattach with <code>zj attach --create &lt;name&gt;</code> using your actual session name. Verify crash/reboot recovery on your machine; parser checks do not prove recovery. A restored application may have no parent shell; the default layout's separate "shell" tab keeps the session alive while that tab exists.</td></tr>
     <tr><td colspan="2" class="note">Keep saved sessions when clearing caches. <code>on_force_close "detach"</code> keeps a running session alive if the terminal window closes; unsaved editor buffers still need their own recovery strategy.</td></tr>
@@ -299,7 +299,7 @@
   <div class="card-header"><div class="dot" style="background:var(--sky)"></div><h2>CLI Reference</h2></div>
   <table>
     <tr class="divider"><td colspan="2">Start</td></tr>
-    <tr><td><code>zellij</code></td><td>Start without a configured singleton session. Use <code>zj</code> for local preferences and verified plugin fallback</td></tr>
+    <tr><td><code>zellij</code></td><td>Use the loaded KDL directly; the shipped source has no singleton session. Use <code>zj</code> for local preferences and verified plugin fallback</td></tr>
     <tr><td><code>zj attach --create &lt;name&gt;</code></td><td>Reattach/resurrect the named session, or create it when absent</td></tr>
     <tr><td><code>zellij -s &lt;name&gt;</code></td><td>Named session</td></tr>
     <tr><td><code>zj -s &lt;name&gt; -n &lt;layout&gt;</code></td><td>New named session with a layout; use a distinct project name when you want a separate session</td></tr>
@@ -314,7 +314,7 @@
     <tr><td><code>zellij run -- cmd</code></td><td>Run in new pane (in the current session)</td></tr>
     <tr><td><code>zellij run -f -- cmd</code></td><td>Run floating</td></tr>
     <tr><td><code>zellij run -d down -- cmd</code></td><td>Direction: up/down/left/right</td></tr>
-    <tr><td><code>zellij edit &lt;file&gt;</code></td><td>Open in <code>$EDITOR</code> in a new pane</td></tr>
+    <tr><td><code>zellij edit &lt;file&gt;</code></td><td>Open with the configured editor or <code>$EDITOR</code>/<code>$VISUAL</code> in a new pane</td></tr>
     <tr class="divider"><td colspan="2">Setup / introspection</td></tr>
     <tr><td><code>zellij setup --check</code></td><td>Validate <code>config.kdl</code> (add <code>--layout &lt;name&gt;</code> before <code>setup</code> to parse a layout too)</td></tr>
     <tr><td><code>zellij setup --dump-config</code></td><td>Print the full default config</td></tr>
@@ -325,7 +325,7 @@
     <tr><td><code>$ZELLIJ_CONFIG_DIR</code></td><td>Override config dir</td></tr>
     <tr><td><code>$ZJ_PYTHON</code> / <code>$ZJ_ZELLIJ_BIN</code></td><td>Literal interpreter / Zellij executable path for helpers</td></tr>
     <tr><td><code>$ZJ_STATE_DIR</code></td><td>Override the private helper state directory</td></tr>
-    <tr><td colspan="2" class="note">From the checkout: <code>python3 tools/manage.py configure --config-dir . --profile classic</code> saves optional local preferences. Plain <code>zellij</code> ignores that JSON; <code>zj</code> renders a private config/layout snapshot. See <code>docs/CONFIGURATION.md</code>.</td></tr>
+    <tr><td colspan="2" class="note">From the checkout: <code>python3 tools/manage.py configure --config-dir . --profile classic</code> saves optional local preferences. Plain <code>zellij</code> ignores that JSON; <code>zj</code> renders a private config/layout snapshot. On Windows use <code>python</code> and <code>zj.cmd</code>; bare <code>zj</code> may select a policy-blocked PowerShell script. See <code>docs/CONFIGURATION.md</code>.</td></tr>
   </table>
 </div>
 

@@ -27,6 +27,7 @@ env:
 
 jobs:
   regression:
+    # Native parser and helper regressions; these do not drive a graphical terminal.
     name: ${{ matrix.os }} / Python ${{ matrix.python }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
@@ -89,6 +90,7 @@ jobs:
           done
 
   network-smoke:
+    # Opt-in live metadata/download checks; ordinary regressions use local fixtures.
     if: github.event_name == 'workflow_dispatch' && inputs.network_smoke
     runs-on: ubuntu-latest
     timeout-minutes: 5

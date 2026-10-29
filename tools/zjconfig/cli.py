@@ -1,4 +1,8 @@
-"""Command-line interface; all mutations are explicit subcommands."""
+"""Shared CLI for source management, local preferences and launcher state.
+
+Source upgrades and deployment require explicit commands. Launching also writes
+private cache/snapshot state and may schedule a release-notice worker.
+"""
 from __future__ import annotations
 
 import argparse
@@ -69,8 +73,9 @@ def configure(options) -> int:
         validate_settings(raw)
         raw.update(updates)
         effective = validate_settings(raw)
-        # Check the actual active KDL that these settings will affect without
-        # requiring Zellij, network access or a writable runtime directory.
+        # Render and check helper-level syntax without Zellij or network access.
+        # This does not validate theme availability, Zellij option semantics or
+        # the interactive behavior of commands in a selected layout.
         parse(render_config(config.read_text(encoding='utf-8'), effective))
         for layout in (directory / 'layouts').glob('*.kdl'):
             parse(render_layout(layout.read_text(encoding='utf-8'), layout.name, effective))

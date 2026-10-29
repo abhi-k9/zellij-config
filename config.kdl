@@ -8,10 +8,13 @@
 //              ~/Library/Application Support/org.Zellij-Contributors.Zellij/
 //              location also works but is shadowed if ~/.config/zellij exists)
 //    Windows : %APPDATA%\Zellij\config\config.kdl
-//  (Or wherever $ZELLIJ_CONFIG_DIR / --config-dir point.)
+//  Explicit --config / ZELLIJ_CONFIG_FILE can choose a different file;
+//  --config-dir / ZELLIJ_CONFIG_DIR choose the layouts/themes directory and
+//  supply config.kdl when no explicit file is selected. See the guide's precedence.
 //
 //  Plain Zellij watches this file live. The zj launcher uses a private startup
-//  snapshot; restart a session to apply changes through that launcher.
+//  snapshot; start a new session to apply source or local-preference edits
+//  through that launcher. Reattaching an existing session keeps its snapshot.
 //  `zellij setup --check` validates it, but unknown keys are silently ignored:
 //  compare spellings against `zellij setup --dump-config`.
 //
@@ -74,8 +77,9 @@ on_force_close "detach"                 // default
 
 // Resolved against layouts/ first, then zellij's built-ins (compact, welcome,
 // …). "default" is OUR layouts/default.kdl: compact-bar plus two tabs, "main"
-// and "shell" (why: README "Session recovery"). Opt-in alternative: "zjstatus"
-// — then also set pane_frames false (see layouts/zjstatus.kdl).
+// and "shell" (see docs/CONFIGURATION.md, "Session recovery, clipboard and
+// terminal behavior"). Local `configure --layout zjstatus` selects the optional
+// bar and defaults frames off unless explicitly overridden; see its layout file.
 default_layout "default"
 
 // Unset = $SHELL. Set it for a different or non-login shell, e.g. "fish",
@@ -97,7 +101,8 @@ stacked_resize true                     // default
 
 // Copy goes through OSC52 while copy_command is unset: the terminal writes the
 // clipboard, which works in most terminals and over SSH — the portable choice
-// (README "Clipboard"). Only on a local-only box where OSC52 fails, uncomment ONE
+// (docs/CONFIGURATION.md, "Session recovery, clipboard and terminal behavior").
+// Only on a local-only box where OSC52 fails, uncomment ONE
 // (each is a single-OS program and can't reach your laptop over SSH):
 // copy_command "pbcopy"                          // macOS
 // copy_command "wl-copy"                         // Linux Wayland
@@ -123,9 +128,10 @@ mouse_click_through false               // default — true lets the focusing cl
 
 
 // ─── Sessions & Resurrection ───────────────────────────────────────────────
-// Rationale, the nvim caveat and the hard-guarantee alternatives (an nvim
-// session plugin, or a post_command_discovery_hook — not used here): README
-// "Session recovery". zellij 0.45.1 caveats: README "Known issues (0.45.1)".
+// Rationale and recovery limits: docs/CONFIGURATION.md, "Session recovery,
+// clipboard and terminal behavior". The extra shell tab protects session
+// lifetime while it exists; it does not save editor buffers or guarantee that
+// every application restarts correctly. Test those separately on your machine.
 
 // Save each session (tabs, panes, cwds, running commands) and resurrect it.
 // After a crash or reboot use `zellij attach --create NAME` for a named session.
@@ -170,7 +176,9 @@ host_notification_protocol "auto"
 // scroll_mode_sync false
 
 // Richer key events for apps (Ctrl+Shift+letter, key release) on terminals
-// that support the kitty keyboard protocol.
+// that support the kitty keyboard protocol. If Ctrl+o / Ctrl+p print CSI-u
+// reports in a Windows console, see docs/CONFIGURATION.md's keyboard checks;
+// the same PowerShell shell can use a different input path in Windows Terminal.
 support_kitty_keyboard_protocol true    // default
 
 // ASCII-friendly plugin UI — set it if the status bar shows broken glyphs
@@ -209,8 +217,8 @@ keybinds {
     // LOCK TOGGLE uses Zellij's standard Ctrl+g. Locking is manual: press it
     // entering a full-screen application, and again on leaving. If your app
     // needs Ctrl+g, choose lock_key "F12" in local preferences (the classic
-    // profile does this). Both contexts are rendered together so either key
-    // works consistently; confirm your terminal forwards the selected key.
+    // profile does this). Both lock contexts are rendered together; only the
+    // selected toggle is active. Confirm your terminal forwards that key.
     locked {
         bind "Ctrl g" { SwitchToMode "Normal"; }
     }
@@ -270,11 +278,14 @@ plugins {
     monocle location="https://github.com/imsnif/monocle/releases/download/v0.100.2/monocle.wasm"
 
     // https://github.com/leakec/multitask (moved from imsnif/multitask) —
-    // "mini-CI". Released in lockstep with zellij: bump it with every upgrade.
+    // "mini-CI". Its release tags track Zellij versions; check compatibility when
+    // upgrading rather than changing this alias independently of versions.json.
     multitask location="https://github.com/leakec/multitask/releases/download/v0.45.1/multitask.wasm"
 
 
 }
 
 // To start a plugin with every session (in the background), add a block like
-// `load_plugins { zjstatus; }` here. check.sh reports one as INFO, not an error.
+// `load_plugins { zjstatus; }` here. Inspect the full built-in config too:
+// Zellij's defaults may already load built-in helpers such as zellij:link.
+// The checker validates syntax and pinned aliases, not startup-plugin behavior.

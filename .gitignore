@@ -11,7 +11,7 @@ Thumbs.db
 /zellij.backup-*/
 /plugins/*.part
 
-# Output files produced by the supplied CI commands.
+# Local validation/tooling output, including logs from older helper versions.
 /tidy.log
 /setup.err
 /offline.log

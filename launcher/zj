@@ -1,10 +1,13 @@
 #!/bin/sh
-# zellij-config launcher: literal argument forwarding into the shared helper.
+# zellij-config launcher: preserve the shell's received argv for the Python helper.
+# A copied helper beside this launcher takes precedence over checkout helpers.
 set -eu
 bin=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 helper=$bin/.zellij-config/manage.py
 if [ ! -f "$helper" ]; then helper=$bin/../tools/manage.py; fi
 if [ ! -f "$helper" ]; then echo "zj helper is missing: $helper. Keep the launcher beside its installed .zellij-config helpers or inside the checkout's launcher directory." >&2; exit 1; fi
+# Interpreter overrides are one executable, not a shell command with arguments.
+# The Python entry point checks the version; discovery does not probe candidates.
 if [ -n "${ZJ_PYTHON:-}" ]; then
     python=$ZJ_PYTHON
     if ! command -v "$python" >/dev/null 2>&1; then echo "ZJ_PYTHON executable is unavailable: $python. Set one Python 3.10+ executable path without arguments." >&2; exit 1; fi

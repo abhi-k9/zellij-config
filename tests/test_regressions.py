@@ -1,4 +1,8 @@
-"""Deterministic audit regressions, shared across Linux/macOS/Windows."""
+"""Regression fixtures with mocked network; native cases run on available hosts.
+
+Most installer cases mock Zellij validation to isolate transaction failures.
+RealBinaryTests separately exercise the installed binary without opening a TUI.
+"""
 from __future__ import annotations
 
 import hashlib
@@ -43,6 +47,7 @@ class Workspace(unittest.TestCase):
         (self.target / 'config.kdl').write_text('// ORIGINAL CONFIG\n', encoding='utf-8')
 
     def setup_config(self, root=ROOT, **kwargs):
+        """Prepare an offline fixture; real-parser coverage lives in RealBinaryTests."""
         with mock.patch.object(install, 'validate'), mock.patch.object(install.shutil, 'which', return_value=sys.executable):
             install.install(root, target=kwargs.pop('target', self.target), offline=True,
                             no_launcher=kwargs.pop('no_launcher', True), **kwargs)

@@ -33,8 +33,9 @@ The launcher first reuses a verified prior download, then attempts the pinned
 HTTPS release, then verifies and uses the bundled backup if fetching fails.
 Download/cache checksum errors cannot select unverified bytes. `ZJ_OFFLINE=1`
 skips startup network access and uses a verified download cache or bundled files.
-Private per-user config/layout snapshots leave the checkout untouched; restart a
-session to apply source config edits or local preferences when using `zj`.
+Private per-user config snapshots leave the checkout untouched. Local preferences
+also produce snapshots of named layouts. Create a new session to apply changed
+config or preferences; reattaching to a running session keeps its startup state.
 Missing downloads run concurrently, with at most three requests in flight.
 Failed downloads have a five-minute per-pin cooldown, during which backups are
 still hash-verified. Changed pins and unusable backups bypass the cooldown.
@@ -56,10 +57,42 @@ again. The updater keeps pins, plugin bytes, notices and generated references
 together and refuses a new artifact without a published or independently supplied
 digest. Changed license terms require review.
 
+Selecting a Zellij tag records published binary hashes; downloading/installing
+that executable is a separate `install-zellij` command. Neither changing a pin
+nor accepting a published checksum proves compatibility with the config or
+plugins. Run the real checks and native smoke checks with the selected executable
+before using an upgrade in ongoing sessions.
+
 ## Config directory selection
 
-`ZELLIJ_CONFIG_DIR` or the installer's `--config-dir` selects an explicit target.
-Otherwise Unix uses an existing `~/.config/zellij` first. Linux then uses
+The launcher's config-file selection follows this order:
+
+| Priority | Config file |
+| --- | --- |
+| 1 | Explicit `--config FILE` / `-c FILE` |
+| 2 | `ZELLIJ_CONFIG_FILE` |
+| 3 | Explicit `--config-dir DIRECTORY`, using `DIRECTORY/config.kdl` |
+| 4 | `ZELLIJ_CONFIG_DIR`, using its `config.kdl` |
+| 5 | Platform directory below, using its `config.kdl` |
+
+The last occurrence of each CLI selector wins. A config-file selector and a
+config-directory selector have different jobs: an explicit directory can supply
+layouts/themes without replacing an explicit config file. In particular,
+`ZELLIJ_CONFIG_FILE` still wins over `--config-dir` for the file. Unset an old
+file variable when intending to select an entire different checkout.
+
+When the helper prepares a runtime config, layout/theme lookup uses explicit
+`--config-dir`, then `ZELLIJ_CONFIG_DIR`, then the selected config file's parent;
+active KDL `layout_dir`/`theme_dir` options can override those resource paths.
+Without matching managed plugin aliases or local preferences, no runtime config
+is prepared: arguments pass through and Zellij's native resource discovery applies.
+Relative paths use the current working directory. The launcher location alone
+never selects a custom checkout.
+
+The installer's and `configure` command's `--config-dir` select a directory
+containing `config.kdl`; they do not use `ZELLIJ_CONFIG_FILE` as a target.
+Their default is `ZELLIJ_CONFIG_DIR` when set, otherwise the platform directory.
+On Unix, an existing `~/.config/zellij` wins first. Linux then uses
 `${XDG_CONFIG_HOME:-~/.config}/zellij`; macOS also recognizes the existing legacy
 `~/Library/Application Support/org.Zellij-Contributors.Zellij` directory. Fresh
 macOS installs use `~/.config/zellij`. Windows uses `%APPDATA%\Zellij\config`.
@@ -82,6 +115,14 @@ into `~/.local/bin`, leaving the configuration untouched. Choose another locatio
 with `--bin-dir /path/to/bin`, or preview with `--dry-run`. Python 3.10+ is needed
 for installation; Zellij is needed when launching. Windows uses `-LauncherOnly`
 and defaults to `%LOCALAPPDATA%\Programs\zellij-config\bin`.
+
+Installed helpers are copies, not links to the source checkout. Refresh them by
+rerunning launcher-only installation with the same `--bin-dir` after updating
+the checkout; it needs Python but not Zellij. The installed package supports
+launching and local configuration, while installation, repository checks, version
+management and binary installation require the full source checkout. Launcher-only
+installation cannot be combined with `--config-dir`, `--restore` or `--no-launcher`;
+choose the config when launching or configuring instead.
 
 Fish can execute `./setup.sh` and `zj` directly using their `#!/bin/sh`
 interpreter line. Do not source these scripts or invoke them with `fish`.
@@ -122,7 +163,9 @@ options can override the preset. `--project-sessions` clears the singleton
 session choice, `--reset` removes the local file, and `--dry-run` previews without
 writing. Individual options retain unspecified existing choices, including
 explicit overrides when changing profiles. Running `configure --config-dir .`
-without changes prints effective settings without writing. See the
+without changes prints resolved preference settings without writing. This is not
+a dump of the actual loaded KDL: without a local file it prints portable preset
+values even if the source KDL has been edited. See the
 [options and migration checklist](GENERALIZATION.md).
 
 ## Layouts
@@ -230,7 +273,8 @@ launched by default; platform-specific command examples remain opt-ins.
 config's pins. `--config`, `-c`, `--config-dir` and their environment equivalents
 are respected. Checks are cached separately for each config and pinset: a
 complete scan waits 30 days, and an incomplete scan retries after one day.
-Known updates are still shown when a later request fails.
+A partial scan reports any different releases found before a later request
+fails; a new scan replaces the previous cached notice.
 Automatic requests run in a detached worker with no terminal handles; startup
 reads only cached results and schedules work when due. A notice is displayed once
 on a later launch after the worker finishes. Rapid launches share a reservation;
@@ -243,9 +287,14 @@ zj --check-updates /path/to/config.kdl
 ./check.sh --updates /path/to/config.kdl
 ```
 
-Exit status is 0 for current pins, 1 for a different latest release, and 2 for an
-incomplete/unavailable check. A different tag is not necessarily newer. No check
-changes files or interrupts startup for confirmation. `ZJ_NO_UPDATE_CHECK=1`
+For these launcher checks, exit status is 0 for current eligible pins, 1 for a
+different latest release, and 2 for an incomplete/unavailable check or no eligible
+GitHub release pins. These commands inspect plugin pins only. By contrast,
+`python3 tools/manage.py versions check` checks Zellij and plugins from the source
+manifest and returns success after a completed query even if tags differ.
+A different tag is not necessarily newer. Release checks do not change pins or
+configuration. Automatic notices update private cache files without prompting.
+`ZJ_NO_UPDATE_CHECK=1`
 skips startup notices; `ZJ_OFFLINE=1` also skips plugin downloads. Both Windows wrappers use this same logic; tags and URLs
 are compared case-sensitively. Requests follow bounded HTTPS redirects with
 timeouts; ordinary CI tests use deterministic fixtures instead of live releases.
@@ -268,20 +317,51 @@ and only owned resources are cleaned up. Dry runs create no lock, staging,
 backup, network request or cleanup trap. Never delete a recovery journal or
 snapshot while an installer is running.
 
+Normal deployment preserves unrelated target files but replaces `config.kdl` and
+same-named shipped layouts/themes/plugins. Keep portable personal choices in the
+target's local JSON or use distinct names for custom layouts and themes; direct
+edits to shipped target files can be overwritten on the next setup. Deployment
+writes absolute `file:` plugin locations, so redeploy after moving a deployed
+tree to a different physical location. All retained target layouts are parser
+checked too; an invalid custom layout can block deployment.
+
+Restore selects the newest recognized snapshot and validates it before restoring
+the whole config tree, including its old local preferences. A corrupt selected
+snapshot fails restore rather than silently choosing an older one. Restore does
+not undo source Git changes, restore
+installed helper copies, or change the Zellij executable. Launcher helpers are
+installed before config publication; a later publication failure can leave newer
+helpers alongside the previous config. Their installation and the config-tree
+publication are separate operations.
+
+Lock files can remain after successful commands. The OS lock is released when
+its owning process closes the file or exits; a leftover lock filename alone
+does not mean setup is still running. Busy locks fail promptly rather than
+waiting. Do not delete lock files to bypass a running installer.
+
+Runtime plugin/config/layout generations under the launcher state directory are
+not setup backups. They are retained without automatic garbage collection;
+deleting them can affect running sessions or saved sessions that reference them.
+
 ## Session recovery, clipboard and terminal behavior
 
 `session_serialization true` saves the session structure once per minute.
 `serialize_pane_viewport false` keeps restored screens clean; the similarly
 named `pane_viewport_serialization` is not the parser key. Use
 `zj attach --create project` with your actual session name after a crash/reboot.
-Plain `zellij` can create a
-fresh session instead of resurrecting the saved one.
+Plain `zellij` can create a fresh session instead of resurrecting the saved one.
 
 Restored applications may have no shell beneath them; the extra `shell` tab
 helps keep the session alive after an editor exits. This is not a substitute for
 an editor session plugin or backups of unsaved work. Verify crash/reboot recovery
 in your own environment rather than inferring it from config parser success.
 The `minimal` layout has one tab and does not provide the extra safety shell.
+
+The shared layouts inherit the launch directory and Zellij's shell selection;
+they do not choose an editor or auto-launch development tools. Scroll-mode
+editing needs a usable `EDITOR`/`VISUAL` environment choice or an explicit
+`scrollback_editor` in KDL. Local preferences do not install those applications
+or supply editor/shell command strings.
 
 Clipboard copy defaults to OSC52 so it can work through SSH. Terminal support
 still matters; the commented `pbcopy`, `wl-copy`, `xclip` and `clip.exe` examples
@@ -293,7 +373,9 @@ clipboard behavior need the [on-machine checklist](../cheatsheets/verification-c
 Full `./check.sh` requires Zellij and checks the required file inventory, active
 KDL pins, exact bundled hashes, license notices, generated references, HTML
 structure and Python syntax. It then parses the actual config, all layout/swap
-pairs and example theme. `--static` explicitly omits the real-binary phase.
+pairs, both portable/classic preference presets and example theme. With local
+preferences it also validates a rendered temporary tree. `--static` explicitly
+omits the real-binary phase.
 Read/checksum errors fail validation. The staged git hook also fails if its
 checker is missing and prints the actual diagnostic output.
 
@@ -302,6 +384,36 @@ zellij --config-dir . setup --check
 zellij --config-dir . --layout dev setup --check
 python3 -m unittest discover -s tests -v
 ```
+
+These checks have different scopes:
+
+| Check | What it establishes |
+| --- | --- |
+| `configure --dry-run` | Preference schema and helper KDL syntax; no Zellij execution or downloads |
+| `install --dry-run` | Normalized target plan; it does not fetch artifacts or validate a staged install |
+| `check --static` | Repository inventory, pins/hashes, generated references, local file links, helper KDL/HTML/Python checks |
+| `check` / `./check.sh` | Static checks plus real Zellij config, preset, layout/swap and theme parsing |
+| `python3 -m unittest discover -s tests -v` | The separate regression suite; unavailable native tools cause explicit skips |
+
+The staged pre-commit hook runs the repository check against exported staged
+files, not the working tree. It does not run the entire regression or lint suite.
+CI additionally runs Markdown lint, ShellCheck, Ruff, actionlint and HTML Tidy.
+To reproduce those development checks, install the locked tools and run:
+
+```sh
+python3 -m pip install --only-binary=:all: --require-hashes -r requirements-dev.txt
+npm ci --ignore-scripts --no-audit --no-fund
+npm run lint:markdown
+python3 -m ruff check tools tests
+shellcheck -s sh setup.sh check.sh hooks/pre-commit launcher/zj
+python3 tools/lint_workflow.py
+```
+
+ShellCheck and HTML Tidy are external development tools. The workflow's HTML
+step runs `tidy -q -e` for each cheatsheet and accepts warning-only status 1.
+The pinned actionlint downloader is Linux AMD64-specific and uses the network;
+other platforms can use an appropriate separately installed actionlint binary.
+See `.github/workflows/check.yml` for the exact commands and native CI matrix.
 
 Zellij can silently ignore unknown option names, so parser success is not proof
 that an arbitrary new option works. Compare it with the version's official
