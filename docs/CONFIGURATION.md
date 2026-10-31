@@ -1,5 +1,8 @@
 # Zellij configuration guide
 
+For a first session and common daily tasks, start with the
+[quick start](QUICK_START.md).
+
 The config targets the version selected in [VERSIONS.md](../VERSIONS.md).
 Catppuccin Mocha is built into Zellij; the custom theme file is an optional
 template. Files use **KDL v1**, not KDL v2. Inline blocks need semicolons:

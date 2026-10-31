@@ -4,6 +4,9 @@ Catppuccin Mocha, four layouts, matching swap layouts and three pinned plugins.
 The repository root is a Zellij config directory: `config.kdl`, `layouts/`,
 `themes/` and backup `plugins/` are ready to use after cloning.
 
+Start with the [quick start for everyday workflows](docs/QUICK_START.md): first
+launch, project workspaces, essential keys, detach/reattach and personal choices.
+
 ## Clone directly and start
 
 Install Git, Zellij and Python 3.10+. Choose an **absent or empty** destination;
