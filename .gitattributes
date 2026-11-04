@@ -6,5 +6,12 @@
 * text=auto eol=lf
 *.cmd   text eol=crlf
 *.wasm  binary
+*.crate binary
 # Preserve exact upstream license text, including its final blank line.
 licenses/*.txt whitespace=-blank-at-eof
+# Preserve dependency notices verbatim, including mixed upstream line endings
+# and legal-text spacing. Formatting checks still apply to source and guides.
+plugin-sources/confirm-quit/LICENSE -text whitespace=-blank-at-eof
+plugin-sources/confirm-quit/THIRD_PARTY_LICENSES.txt -text whitespace=-blank-at-eof,-blank-at-eol
+plugin-sources/confirm-quit/notice-supplements/*.txt -text whitespace=-blank-at-eof
+licenses/confirm-quit.txt -text whitespace=-blank-at-eof,-blank-at-eol

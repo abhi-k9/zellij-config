@@ -1,0 +1,17 @@
+[package]
+name = "confirm-quit"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.95"
+publish = false
+license = "MIT"
+
+[dependencies]
+zellij-tile = "=0.45.1"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
