@@ -16,6 +16,21 @@ as freshly repeated by each documentation review.
 
 ---
 
+## 2026-11-04 — confirmed quit, F12 locking and pane selection
+
+- Restored F12 lock/unlock in the shared KDL and both preference presets, freeing
+  Ctrl+g for applications such as Neovim. Explicit local Ctrl+g choices remain
+  supported; existing sessions retain their startup bindings.
+- Replaced immediate Ctrl+o, q quitting with a visible, permission-gated bundled
+  WASM dialog. Only unmodified y confirms; n/Esc cancel. The dialog preserves
+  native client Quit semantics: other attached clients continue, and the session
+  stops when the last active client quits. Detach remains Ctrl+o, d.
+- Added locked source/toolchain and byte-for-byte rebuild checks for that adapted
+  MIT-licensed plugin. Runtime acquisition verifies bundled bytes without network
+  requests; release updates leave this source build alone.
+- Documented Zellij's existing Alt+p / Alt-click multi-pane selection and c/Esc
+  group actions. No additional pane-picker plugin or grouping binding is needed.
+
 ## Unreleased — documentation and comment review
 
 - Checked the current guides, generated references, cheatsheets, KDL examples,

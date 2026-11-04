@@ -21,10 +21,18 @@ def checksums(pins: dict) -> bytes:
 
 def documentation(pins: dict) -> bytes:
     """Generate the version guide from pins; edit this text before VERSIONS.md."""
+    has_bundled = any(p.get('source') == 'bundled' for p in pins['plugins'])
     lines = ['# Selected versions', '', 'Generated from `versions.json`. Pins change only on an explicit update.', '',
              f"Zellij: **{pins['zellij']['tag']}**. These pins select artifacts; CI records validation.", '',
+             '| Plugin | Tag / source commit | Artifact | SHA-256 |' if has_bundled else
              '| Plugin | Tag | Release artifact | SHA-256 |', '| --- | --- | --- | --- |']
     lines += [f"| {p['name']} | {p['tag']} | {plugin_url(p)} | `{p['sha256']}` |" for p in pins['plugins']]
+    if has_bundled:
+        lines += ['', 'Entries with `source: "bundled"` are repository-built plugins pinned to an',
+                  'immutable artifact commit, not GitHub releases. Launch/setup use the verified',
+                  'bundled bytes without downloading. `versions check` and `versions update --all`',
+                  'leave these builds alone; explicit plugin updates require rebuilding and review.',
+                  'See the [quit-confirmation build guide](docs/QUIT_CONFIRMATION.md).']
     lines += ['', '## Change versions when you choose', '',
               'Run these commands from the full source checkout, not a copied launcher helper.', '', '```sh',
               'python3 tools/manage.py versions check',
@@ -101,9 +109,13 @@ def check_versions(root: Path) -> int:
     """Report remote tag differences; successful lookups return 0 even if different."""
     pins = load_versions(root)
     for repository, tag in [('zellij-org/zellij', pins['zellij']['tag']),
-                            *[(p['repository'], p['tag']) for p in pins['plugins']]]:
+                            *[(p['repository'], p['tag']) for p in pins['plugins']
+                              if p.get('source') != 'bundled']]:
         latest = github_release(repository)['tag_name']
         print(f'{repository}: pinned {tag}; latest {latest}' + (' (different)' if latest != tag else ' (current)'))
+    for plugin in pins['plugins']:
+        if plugin.get('source') == 'bundled':
+            print(f'{plugin["name"]}: bundled build pinned to {plugin["tag"]}; rebuild explicitly to change')
     return 0
 
 
@@ -119,11 +131,14 @@ def update(root: Path, selections: dict[str, str], zellij_tag: str | None,
         pins = load_versions(root)
         original = json_bytes(pins)
         if all_latest:
-            selections = {p['name']: 'latest' for p in pins['plugins']} | selections
+            selections = {p['name']: 'latest' for p in pins['plugins'] if p.get('source') != 'bundled'} | selections
             zellij_tag = zellij_tag or 'latest'
         unknown = set(selections) - {p['name'] for p in pins['plugins']}
         if unknown:
             raise ConfigError('Unknown plugin(s): ' + ', '.join(sorted(unknown)))
+        bundled = {p['name'] for p in pins['plugins'] if p.get('source') == 'bundled'} & set(selections)
+        if bundled:
+            raise ConfigError('Bundled plugins require a reviewed manual rebuild: ' + ', '.join(sorted(bundled)))
         if not selections and not zellij_tag:
             raise ConfigError('Select --all, --plugin NAME=TAG, or --zellij TAG')
         changes: dict[Path, bytes] = {}

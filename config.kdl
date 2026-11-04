@@ -68,7 +68,7 @@ show_release_notes true                 // default — shown once per new zellij
 // ─── Behavior ──────────────────────────────────────────────────────────────
 
 // "normal": zellij's keys are live. "locked": every key goes to the app until
-// you unlock (Ctrl+g by default — see Keybindings).
+// you unlock (F12 by default — see Keybindings).
 default_mode "normal"                   // default
 
 // Terminal window closed: "detach" keeps the session running (come back with
@@ -210,26 +210,34 @@ env {
 // or remove keys. `shared_except "locked"` = every mode except Locked.
 
 keybinds {
-    // Ctrl+q (quit) is a fat-finger of Ctrl+w in shells. Quit deliberately with
-    // Ctrl+o, q (below), or detach with Ctrl+o, d. Delete this line to keep it.
+    // Ctrl+q (quit) is a fat-finger of Ctrl+w in shells. Ctrl+o, q opens the
+    // confirmation dialog below; Ctrl+o, d detaches without stopping programs.
     unbind "Ctrl q"
 
-    // LOCK TOGGLE uses Zellij's standard Ctrl+g. Locking is manual: press it
-    // entering a full-screen application, and again on leaving. If your app
-    // needs Ctrl+g, choose lock_key "F12" in local preferences (the classic
-    // profile does this). Both lock contexts are rendered together; only the
-    // selected toggle is active. Confirm your terminal forwards that key.
+    // F12 locks/unlocks manually, leaving Ctrl+g available to editors such as
+    // Neovim. Unbind Zellij's Ctrl+g defaults in both contexts; a single global
+    // unbind is insufficient. Local lock_key "Ctrl g" can opt back into the
+    // upstream toggle. Both presets use F12 unless explicitly overridden.
+    // Confirm your terminal forwards the selected key (Fn+F12 on some keyboards).
     locked {
-        bind "Ctrl g" { SwitchToMode "Normal"; }
+        unbind "Ctrl g"
+        bind "F12" { SwitchToMode "Normal"; }
     }
     shared_except "locked" {
-        bind "Ctrl g" { SwitchToMode "Locked"; }
+        unbind "Ctrl g"
+        bind "F12" { SwitchToMode "Locked"; }
     }
 
     // Session mode (Ctrl+o) additions, next to zellij's own launchers. 0.45.1
     // already uses d, w, c, l, p, a, s, f, [ and ] there; q, m, h, t and e are free.
     session {
-        bind "q" { Quit; }                    // replaces the unbound Ctrl+q
+        // A fresh dialog keeps each request/client independent. Return to Normal
+        // so y/n/Esc reach the plugin instead of Session mode's bindings.
+        // Native Confirm/Deny actions are deprecated no-ops in Zellij 0.45.1.
+        bind "q" {
+            LaunchPlugin "confirm-quit" { floating true; };
+            SwitchToMode "Normal"
+        }
 
         // monocle (find files and contents) in a floating pane, rooted at the
         // focused pane's directory; Esc hides it.
@@ -261,9 +269,11 @@ keybinds {
 //
 // VERSIONS ARE PINNED: zellij caches each .wasm by URL, so `releases/latest`
 // would give two machines different builds, and a future build may need a
-// newer zellij. Use `tools/manage.py versions update` to change pins and backups.
-// The checked-in zj launcher prefers verified downloads and falls back to the
-// bundled plugins/ copies when fetching fails. ZJ_OFFLINE=1 skips network work.
+// newer zellij. Use `tools/manage.py versions update` for upstream release pins;
+// rebuild confirm-quit from plugin-sources/confirm-quit when changing that build.
+// The checked-in zj launcher prefers verified downloads for upstream releases
+// and falls back to bundled copies. confirm-quit always uses verified bundled
+// bytes. ZJ_OFFLINE=1 skips network work.
 // Plain zellij uses these HTTPS aliases and its own cache; it has no bundled
 // fallback mechanism. See README.md for direct-clone startup commands.
 //
@@ -283,6 +293,10 @@ plugins {
     multitask location="https://github.com/leakec/multitask/releases/download/v0.45.1/multitask.wasm"
 
 
+
+    // Auditable local build; regenerate from locked source when changing it.
+    // The launcher uses verified bundled bytes; plain Zellij uses this immutable URL.
+    confirm-quit location="https://raw.githubusercontent.com/abhi-k9/zellij-config/3aa07d26dfaa2b4ac0d41f8cc30e880c1d56ea22/plugin-sources/confirm-quit/confirm-quit.wasm"
 }
 
 // To start a plugin with every session (in the background), add a block like

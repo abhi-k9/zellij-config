@@ -83,13 +83,25 @@ mode. Press `Esc` to leave Pane or Tab mode when done.
 | Toggle pane fullscreen | `Ctrl+p`, then `f` |
 | Select tab 1, 2 or 3 | `Ctrl+t`, then `1`, `2` or `3` |
 | Create a tab | `Ctrl+t`, then `n` |
-| Pass shortcuts through to your application | `Ctrl+g` to lock; `Ctrl+g` again to unlock |
+| Mark/unmark a pane | `Alt+p` |
+| Pass shortcuts through to your application | `F12` to lock; `F12` again to unlock |
 | Open keybinding help | `Ctrl+o`, then `h` |
 | Leave the workspace running | `Ctrl+o`, then `d` |
 
-The optional `classic` profile uses **F12** for locking. If Ctrl+o / Ctrl+p print
+Both presets use **F12**, leaving Ctrl+g available to Neovim and other applications.
+If your keyboard requires it, press Fn+F12. If Ctrl+o / Ctrl+p print
 `[111;5u` / `[112;5u` on Windows, check NORMAL mode and use Windows Terminal;
 see [keyboard troubleshooting](CONFIGURATION.md#ctrl-keys-print-keyboard-reports-in-a-windows-console).
+
+## Close several panes
+
+Mark the focused pane with **Alt+p**, move with **Alt+arrows**, then mark others
+with Alt+p. You can also **Alt+left-click** panes to mark/unmark them.
+
+The **Multiple Pane Select** overlay shows the selected count and group actions.
+Review it, then press **c** to close those panes immediately, or **Esc**
+to cancel and clear marks. Save work first: closing panes stops their programs.
+This uses Zellij's built-in visual grouping; no extra picker plugin is needed.
 
 ## Return to your workspace
 
@@ -106,9 +118,12 @@ default layout; an earlier `-n dev` command does not change that default. Saved
 sessions can retain their previous structure after a restart; see
 [recovery limits](CONFIGURATION.md#session-recovery-clipboard-and-terminal-behavior).
 
-To end the session deliberately, save your work, then press **Ctrl+o, then q**.
-This quits the workspace and stops its running programs. `Ctrl+q` is unbound in
-this configuration. Detach with `Ctrl+o, d` when you want programs to keep running.
+To quit, save your work, then press **Ctrl+o, then q**. The **Quit Zellij?** dialog
+requires `y`; `n` or `Esc` cancels, and Enter does not confirm. On first use, grant
+its `ChangeApplicationState` permission, then answer the separate quit question.
+The current client closes; the session and its programs stop only if no other
+active clients remain. `Ctrl+q` is unbound. Detach with `Ctrl+o, d` when you want
+programs to keep running. See the [confirmation guide](QUIT_CONFIRMATION.md).
 
 ## Save personal choices
 

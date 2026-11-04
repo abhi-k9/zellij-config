@@ -77,7 +77,7 @@ jobs:
       - name: Python lint and workflow validation
         run: |
           python -m pip install --only-binary=:all: --require-hashes -r requirements-dev.txt
-          python -m ruff check tools tests
+          python -m ruff check tools tests plugin-sources
           python tools/lint_workflow.py
       - name: HTML validation
         run: |
@@ -88,6 +88,19 @@ jobs:
             tidy -q -e "$file" || status=$?
             test "$status" -le 1
           done
+
+  quit-dialog-build:
+    name: Reproduce bundled quit dialog
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - name: Install the pinned WASM build toolchain
+        run: rustup toolchain install 1.95.0 --profile minimal --target wasm32-wasip1
+      - name: Rebuild locked source and compare bundled bytes
+        run: python3 plugin-sources/confirm-quit/build.py --check
 
   network-smoke:
     # Opt-in live metadata/download checks; ordinary regressions use local fixtures.
@@ -110,7 +123,8 @@ jobs:
           root = Path('.')
           for pin in load_versions(root)['plugins']:
               _, origin = acquire(pin, root / 'plugins' / pin['asset'])
-              if origin != 'download':
+              expected = 'bundle' if pin.get('source') == 'bundled' else 'download'
+              if origin != expected:
                   raise SystemExit(f'Live download failed for {pin["name"]}')
-              print(f'{pin["name"]}: live HTTPS download verified')
+              print(f'{pin["name"]}: {origin} verified')
           PY

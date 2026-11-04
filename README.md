@@ -1,6 +1,6 @@
 # Zellij config
 
-Catppuccin Mocha, four layouts, matching swap layouts and three pinned plugins.
+Catppuccin Mocha, four layouts, matching swap layouts and four pinned plugins.
 The repository root is a Zellij config directory: `config.kdl`, `layouts/`,
 `themes/` and backup `plugins/` are ready to use after cloning.
 
@@ -33,9 +33,10 @@ PowerShell scripts. WSL uses the Linux paths inside WSL. No setup script or
 launcher installation is required. For a custom
 checkout location, pass `--config-dir /path/to/checkout` to the launcher.
 
-The shared defaults create independent sessions, keep Zellij's `Ctrl+g` lock
-toggle, leave pane environments alone, and use a UTC clock without a Git widget
-in the optional zjstatus layout. The `main` and `shell` names are tabs, not a
+The shared defaults create independent sessions, use **F12** to lock/unlock while
+leaving `Ctrl+g` available to applications, leave pane environments alone, and
+use a UTC clock without a Git widget in the optional zjstatus layout. The `main`
+and `shell` names are tabs, not a
 forced session name. Choose `minimal` for a single shell with a compact bar.
 
 Zellij itself can be started directly using the root configuration. It uses the
@@ -188,6 +189,18 @@ open the older host. This host-specific symptom does not call for different
 Zellij keybindings. Check the current lock mode and executable version using the
 [keyboard troubleshooting guide](docs/CONFIGURATION.md#ctrl-keys-print-keyboard-reports-in-a-windows-console).
 
+## Confirm before quitting
+
+Press `Ctrl+o`, then `q` to open **Quit Zellij?**. Press `y` to quit or `n` / `Esc`
+to cancel; Enter does not confirm. On first use, grant the dialog's
+`ChangeApplicationState` permission, then answer the separate quit question.
+The verified bundled dialog works through `zj` without a network request or
+external command. See the [quit-confirmation guide](docs/QUIT_CONFIRMATION.md).
+
+Quitting closes your connected client. If it is the last active client, the
+session and its programs stop; other connected clients keep the session alive.
+To keep your workspace running, detach with `Ctrl+o`, then `d`.
+
 ## Personal preferences
 
 From the checkout, preview or save choices for its config directory:
@@ -207,7 +220,7 @@ An existing session keeps its startup snapshot: detaching and reattaching does
 not apply new preferences. Start a fresh named session to try changes, or save
 work and fully stop the old session before recreating it.
 
-To restore the previous singleton-session workflow, F12 lock key, Denver clock,
+To restore the previous singleton-session workflow, Denver clock,
 Git widget and pane debug export, opt into the compatibility preset:
 
 ```sh
@@ -238,17 +251,21 @@ points are unsupported.
 
 ## Downloads and offline fallback
 
-At startup, `zj` selects plugins in this order:
+For the three upstream release plugins, `zj` selects files in this order:
 
 1. A previously downloaded file that still matches the pinned SHA-256.
 2. An HTTPS download of the pinned release, verified before use.
 3. The bundled backup, verified against the same hash, if downloading fails.
 
+The repository-built `confirm-quit` plugin always uses its hash-verified bundled
+file through `zj` and setup, without a download. Missing or corrupt bundled bytes
+fail validation instead of selecting an unverified replacement.
+
 This applies to managed aliases matched against a manifest beside the selected
 config. Arbitrary plugin URLs or plugins referenced directly by a custom layout
 do not automatically gain checksum verification or bundled fallback. Registering
 the shipped aliases makes them eligible for preparation even when the chosen
-layout does not load all three plugins; plugin execution still happens on demand.
+layout does not load every plugin; plugin execution still happens on demand.
 
 A bad checksum, timeout or missing release triggers the verified backup. If
 neither source is valid, startup fails with a diagnostic instead of running
@@ -306,10 +323,13 @@ python3 tools/manage.py versions update --plugin zjstatus=latest
 python3 tools/manage.py versions update --zellij v0.45.1
 ```
 
-The updater verifies selected plugin artifacts and licenses and synchronizes
+The updater verifies selected upstream plugin artifacts and licenses and synchronizes
 root `config.kdl`, backup plugin binaries, pins and generated references. Selecting
 a Zellij version records its published artifact hashes; it does not download or
-test that executable. Review the
+test that executable. `versions check` skips release queries for `confirm-quit`,
+and `versions update --all` updates the three upstream plugins and core pins only.
+Changing the bundled dialog requires a [reviewed rebuild](docs/QUIT_CONFIRMATION.md#rebuild-and-publish-the-dialog).
+Review the
 diff and run checks before committing. A direct checkout is the live source;
 `git pull` and version updates change it immediately. New `zj` sessions use those
 changes. The Zellij executable changes only through an explicit installation:

@@ -192,10 +192,44 @@
   <div class="item-head"><input type="checkbox" aria-labelledby="item-10"><h2 id="item-10">Ctrl keys and the Windows terminal host <span class="opt">native Windows</span></h2></div>
   <div class="item-body">
     <div class="row"><span class="lbl">Tests</span><span class="val">NORMAL-mode <kbd>Ctrl+o</kbd> and <kbd>Ctrl+p</kbd>; PowerShell is the shell, Windows Terminal is the terminal host</span></div>
-    <div class="row"><span class="lbl">Do</span><span class="val">Open Windows Terminal and choose its PowerShell profile. From the full checkout, run <code>.\launcher\zj.cmd --config-dir . -s keyboard-test -n minimal</code> with an unused session name. Confirm NORMAL; unlock with <kbd>Ctrl+g</kbd> for portable defaults or <kbd>F12</kbd> for classic. Press <kbd>Ctrl+o</kbd>, <kbd>Esc</kbd>, then <kbd>Ctrl+p</kbd>, <kbd>Esc</kbd>.</span></div>
+    <div class="row"><span class="lbl">Do</span><span class="val">Open Windows Terminal and choose its PowerShell profile. From the full checkout, run <code>.\launcher\zj.cmd --config-dir . -s keyboard-test -n minimal</code> with an unused session name. Confirm NORMAL; unlock with <kbd>F12</kbd>, or <kbd>Ctrl+g</kbd> if explicitly selected in local preferences. Press <kbd>Ctrl+o</kbd>, <kbd>Esc</kbd>, then <kbd>Ctrl+p</kbd>, <kbd>Esc</kbd>.</span></div>
     <div class="row pass"><span class="lbl">Pass</span><span class="val">The status bar enters Session and Pane mode respectively. The shell does not receive literal <code>[111;5u</code> or <code>[112;5u</code> reports.</span></div>
     <div class="row"><span class="lbl">Record</span><span class="val">Terminal host, native Windows versus WSL, and <code>zellij --version</code>; if <code>ZJ_ZELLIJ_BIN</code> is set, check <code>&amp; $env:ZJ_ZELLIJ_BIN --version</code> instead.</span></div>
     <div class="row"><span class="lbl">Note</span><span class="val" style="color:var(--muted)">The same reported config works in Windows Terminal while the older Windows PowerShell console window prints these reports without changing mode. Open PowerShell in Windows Terminal. See the <a href="../docs/CONFIGURATION.md#ctrl-keys-print-keyboard-reports-in-a-windows-console">keyboard troubleshooting guide</a>.</span></div>
+  </div>
+</div>
+
+<!-- 11 -->
+<div class="item">
+  <div class="item-head"><input type="checkbox" aria-labelledby="item-11"><h2 id="item-11">F12 locking and application Ctrl+g</h2></div>
+  <div class="item-body">
+    <div class="row"><span class="lbl">Tests</span><span class="val">F12 lock/unlock in both presets; <kbd>Ctrl+g</kbd> reaches the application in NORMAL and LOCKED</span></div>
+    <div class="row"><span class="lbl">Do</span><span class="val">Start a fresh session with no explicit Ctrl+g lock preference. Press <kbd>F12</kbd> twice (or <kbd>Fn+F12</kbd> if required by your keyboard). If you use Neovim, open it and press <kbd>Ctrl+g</kbd> in its Normal mode, then repeat while Zellij is LOCKED.</span></div>
+    <div class="row pass"><span class="lbl">Pass</span><span class="val">F12 changes Zellij's status from NORMAL to LOCKED and back. Ctrl+g shows Neovim's file information without changing Zellij's lock mode. If you intentionally selected <code>--lock-key "Ctrl g"</code>, that key toggles Zellij instead.</span></div>
+    <div class="row"><span class="lbl">If it fails</span><span class="val" style="color:var(--muted)">Check terminal F12 forwarding, custom Neovim mappings, local <code>lock_key</code> overrides, and whether an old running session or installed helper still uses the earlier bindings.</span></div>
+  </div>
+</div>
+
+<!-- 12 -->
+<div class="item">
+  <div class="item-head"><input type="checkbox" aria-labelledby="item-12"><h2 id="item-12">Bulk pane selection</h2></div>
+  <div class="item-body">
+    <div class="row"><span class="lbl">Do</span><span class="val">Use a disposable session with three shell panes. Mark two with <kbd>Alt+p</kbd>, moving focus with Alt+arrows. Review Multiple Pane Select's count and press <kbd>Esc</kbd>. Repeat, then press <kbd>c</kbd>.</span></div>
+    <div class="row pass"><span class="lbl">Pass</span><span class="val">Cancel clears selection and leaves all panes alive. Closing removes exactly the two marked panes and leaves the unmarked shell running. If supported, repeat selection with Alt+left-click.</span></div>
+    <div class="row"><span class="lbl">Note</span><span class="val" style="color:var(--muted)">Group close has no extra confirmation and stops selected processes. Use only scratch panes for this check. Modified mouse clicks depend on the terminal host and advanced_mouse_actions.</span></div>
+  </div>
+</div>
+
+<!-- 13 -->
+<div class="item">
+  <div class="item-head"><input type="checkbox" aria-labelledby="item-13"><h2 id="item-13">Quit confirmation and cancellation</h2></div>
+  <div class="item-body">
+    <div class="row"><span class="lbl">Tests</span><span class="val">Disposable sessions only; test both compact-bar and zjstatus layouts. Save work before the affirmative case.</span></div>
+    <div class="row"><span class="lbl">Do</span><span class="val">Press <kbd>Ctrl+o</kbd>, <kbd>q</kbd>. If first-use permission is requested, grant <code>ChangeApplicationState</code> and wait for the separate <strong>Quit Zellij?</strong> question. Try <kbd>n</kbd>, then reopen and try <kbd>Esc</kbd>. Reopen and check that Enter does not quit; cancel. Finally, reopen and answer <kbd>y</kbd> in a scratch session.</span></div>
+    <div class="row pass"><span class="lbl">Pass</span><span class="val">The question renders with either status bar and without pane frames. Permission approval, cancel and Enter leave the session alive. An explicit y closes the current client; programs stop only when it is the last active client. With two clients attached, the other client and session stay alive.</span></div>
+    <div class="row"><span class="lbl">Small pane</span><span class="val">Below 26 columns or 3 rows, y must not quit. Enlarge the pane to read the question or cancel with n/Esc.</span></div>
+    <div class="row"><span class="lbl">Recovery</span><span class="val">If Zellij saves a layout while the dialog is open, resurrection can reopen it. It must never quit automatically; dismiss with n/Esc. Cancellation does not guarantee an updated saved layout before the next periodic serialization.</span></div>
+    <div class="row"><span class="lbl">Note</span><span class="val" style="color:var(--muted)">The dialog guards Ctrl+o, q only. Pane/tab/group close, shell exit and CLI kill commands have separate behavior. See the <a href="../docs/QUIT_CONFIRMATION.md">confirmation guide</a>.</span></div>
   </div>
 </div>
 

@@ -1,4 +1,4 @@
-"""Prefer verified downloads; bundled WASM files are an offline fallback."""
+"""Acquire verified release plugins or explicitly bundled source builds."""
 from __future__ import annotations
 
 import hashlib
@@ -17,9 +17,10 @@ def verified(data: bytes, pin: dict) -> bytes:
 
 
 def acquire(pin: dict, bundled: Path, *, offline=False) -> tuple[bytes, str]:
-    """Try a verified download, then the verified bundle; offline skips fetching."""
+    """Use local builds directly; release artifacts prefer a verified download."""
     error = None
-    if not offline:
+    local_build = pin.get('source') == 'bundled'
+    if not offline and not local_build:
         try:
             data = fetch_bytes(plugin_url(pin), timeout=3, budget=8, attempts=1)
             return verified(data, pin), 'download'
@@ -28,5 +29,7 @@ def acquire(pin: dict, bundled: Path, *, offline=False) -> tuple[bytes, str]:
     try:
         return verified(bundled.read_bytes(), pin), 'bundle'
     except (ConfigError, OSError) as failure:
+        if local_build:
+            raise ConfigError(f'No valid bundled build for {pin["name"]}: {failure}') from failure
         reason = f'Download unavailable ({error}); ' if error else 'Offline mode; '
         raise ConfigError(reason + f'no valid bundled fallback for {pin["name"]}: {failure}') from failure

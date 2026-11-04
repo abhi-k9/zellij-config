@@ -13,11 +13,18 @@ snapshots outside the checkout; plain Zellij continues to use HTTPS aliases.
 ## Portable configuration and preferences
 
 The portability review used `8e6cc29` as its baseline. Shared defaults no longer
-force a singleton session, a pane debug export, an editor-specific lock key, a
-personal timezone or a Git command widget. The new `minimal` layout offers a
-single-shell alternative to the two-tab default. A gitignored schema-1 local
+force a singleton session, a pane debug export, a personal timezone or a Git
+command widget. F12 is the shared lock toggle so `Ctrl+g` remains available to
+applications; an explicit local preference can select `Ctrl+g` instead. The new
+`minimal` layout offers a single-shell alternative to the two-tab default. A gitignored schema-1 local
 preferences file restores the previous workflow through `--profile classic` or
 records individual choices without editing shared KDL.
+
+The quit binding now launches a small source-reviewed `confirm-quit` dialog,
+built against the pinned Zellij SDK and distributed with its source and MIT
+notice. Launch/setup verify its bundled SHA-256 without fetching remote bytes.
+It requires an explicit affirmative answer after the question is displayed and
+uses native client Quit semantics. See the [confirmation and build guide](QUIT_CONFIRMATION.md).
 
 The launcher renders private config snapshots for managed plugins and snapshots
 named layouts when local preferences apply. Setup preserves the

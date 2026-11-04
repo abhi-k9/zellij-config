@@ -26,6 +26,10 @@ REQUIRED = [
     'package.json', 'package-lock.json', 'pyproject.toml', 'tests/test_regressions.py',
     'tests/test_portability.py', 'tests/test_preferences.py', 'tests/test_entrypoints.py',
     'docs/AUDIT_FIXES.md', 'docs/GENERALIZATION.md', 'tests/test_configuration.py',
+    'docs/QUICK_START.md', 'docs/QUIT_CONFIRMATION.md', 'tests/test_bundled_plugins.py',
+    *['plugin-sources/confirm-quit/' + name for name in
+      ['Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml', 'src/main.rs', 'LICENSE',
+       'THIRD_PARTY_LICENSES.txt', 'README.md', 'build.py', 'confirm-quit.wasm']],
     *['layouts/' + name + suffix for name in ['minimal', 'default', 'dev', 'zjstatus']
       for suffix in ['.kdl', '.swap.kdl']],
     *['cheatsheets/' + name + '.html' for name in
@@ -93,6 +97,11 @@ def check(root: Path, static=False) -> None:
         notice = (root / 'licenses' / (pin['name'] + '.txt')).read_text(encoding='utf-8')
         if 'Copyright' not in notice or 'Permission is hereby granted, free of charge' not in notice:
             raise ConfigError(f'Missing upstream MIT notice: {pin["name"]}')
+        if pin.get('source') == 'bundled':
+            source_license = root / pin['license_path']
+            expected_notice = source_license.read_bytes() + b'\n' + (source_license.parent / 'THIRD_PARTY_LICENSES.txt').read_bytes()
+            if (root / 'licenses' / (pin['name'] + '.txt')).read_bytes() != expected_notice:
+                raise ConfigError(f'Bundled build license notices drifted: {pin["name"]}')
     for path in [root / 'config.kdl', *(root / 'layouts').glob('*.kdl'), *(root / 'themes').glob('*.kdl')]:
         parse(path.read_text(encoding='utf-8'))
     layout_files = {path.name for path in (root / 'layouts').glob('*.kdl')}

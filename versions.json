@@ -37,6 +37,17 @@
       "sha256": "d2c6dadef431065efcc307cd573550031a9d11348ffde9d331f96136b7d60a9d",
       "license": "MIT",
       "license_path": "LICENSE.md"
+    },
+    {
+      "name": "confirm-quit",
+      "source": "bundled",
+      "repository": "abhi-k9/zellij-config",
+      "tag": "3aa07d26dfaa2b4ac0d41f8cc30e880c1d56ea22",
+      "artifact_path": "plugin-sources/confirm-quit/confirm-quit.wasm",
+      "asset": "confirm-quit.wasm",
+      "sha256": "9cc0028a4c964d01543ede618c26aa03f04d84092548e8af0aed5bfec8f93dcf",
+      "license": "MIT",
+      "license_path": "plugin-sources/confirm-quit/LICENSE"
     }
   ]
 }

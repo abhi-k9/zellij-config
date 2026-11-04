@@ -18,7 +18,7 @@ LAYOUTS = ('default', 'dev', 'zjstatus', 'minimal')
 PRESETS = {
     'portable': {
         'timezone': 'UTC', 'git_status': False, 'session_name': None,
-        'attach_to_session': False, 'rust_backtrace': False, 'lock_key': 'Ctrl g',
+        'attach_to_session': False, 'rust_backtrace': False, 'lock_key': 'F12',
         'layout': 'default', 'theme': 'catppuccin-mocha', 'pane_frames': True,
     },
     'classic': {

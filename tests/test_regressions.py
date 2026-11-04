@@ -39,7 +39,8 @@ class Workspace(unittest.TestCase):
 
     def clone(self):
         root = self.base / 'repository'
-        shutil.copytree(ROOT, root, ignore=shutil.ignore_patterns('.git', 'node_modules', '__pycache__', '.versions.lock'))
+        # Rust rebuild outputs are disposable and can dwarf the actual fixture.
+        shutil.copytree(ROOT, root, ignore=shutil.ignore_patterns('.git', 'node_modules', '__pycache__', '.versions.lock', 'target'))
         return root
 
     def old(self):
@@ -90,7 +91,7 @@ class InstallerTests(Workspace):
         self.setup_config()
         (self.target / '..stale').write_text('not in original snapshot')
         install_text = (self.target / 'config.kdl').read_text(encoding='utf-8')
-        self.assertEqual(install_text.count('location="file:'), 3)
+        self.assertEqual(install_text.count('location="file:'), len(common.load_versions(ROOT)['plugins']))
         with mock.patch.object(install, 'validate'), mock.patch.object(install.shutil, 'which', return_value=sys.executable):
             install.install(ROOT, target=self.target, restore=True)
         self.assertEqual((self.target / 'config.kdl').read_text(), '// ORIGINAL CONFIG\n')
@@ -620,18 +621,21 @@ class RuntimeTests(Workspace):
     def test_missing_plugins_download_concurrently(self):
         root = self.clone()
         pins = common.load_versions(root)['plugins']
-        payloads = {common.plugin_url(pin): (root / 'plugins' / pin['asset']).read_bytes() for pin in pins}
-        barrier = threading.Barrier(3)
+        releases = [pin for pin in pins if pin.get('source') != 'bundled']
+        payloads = {common.plugin_url(pin): (root / 'plugins' / pin['asset']).read_bytes() for pin in releases}
+        barrier = threading.Barrier(len(releases))
 
         def fetch(url, **kwargs):
             barrier.wait(timeout=5)
             return payloads[url]
 
         with mock.patch.object(plugin_files, 'fetch_bytes', side_effect=fetch) as download:
-            _, _, locations = self.prepare(root / 'config.kdl')
-        self.assertEqual(download.call_count, 3)
-        self.assertEqual(len(locations), 3)
-        self.assertTrue(all('.bundled.wasm' not in location for location in locations))
+            _, generated, locations = self.prepare(root / 'config.kdl')
+        self.assertEqual(download.call_count, len(releases))
+        self.assertEqual(set(locations), {
+            'file:' + (generated.parent / (pin['sha256'] +
+                      ('.bundled.wasm' if pin.get('source') == 'bundled' else '.wasm'))).as_posix()
+            for pin in pins})
 
     def test_source_edits_during_download_are_not_overwritten(self):
         _, config, _, data = self.managed()
@@ -688,15 +692,23 @@ class RuntimeTests(Workspace):
         scan.assert_called_once_with(config.resolve(), [common.plugin_url(pin)])
 
     def test_optional_install_also_prefers_downloads(self):
-        data = [(ROOT / 'plugins' / pin['asset']).read_bytes() for pin in common.load_versions(ROOT)['plugins']]
+        releases = [pin for pin in common.load_versions(ROOT)['plugins'] if pin.get('source') != 'bundled']
+        data = [(ROOT / 'plugins' / pin['asset']).read_bytes() for pin in releases]
         with mock.patch.object(plugin_files, 'fetch_bytes', side_effect=data) as fetch, \
                 mock.patch.object(install, 'validate'), mock.patch.object(install.shutil, 'which', return_value=sys.executable):
             install.install(ROOT, target=self.target, no_launcher=True)
-        self.assertEqual(fetch.call_count, 3)
+        self.assertEqual(fetch.call_count, len(releases))
         self.assertTrue((self.target / 'config.kdl').is_file())
 
 
 class CheckerTests(Workspace):
+    def test_bundled_dependency_notices_cannot_be_dropped_from_deployment(self):
+        root = self.clone()
+        pin = next(pin for pin in common.load_versions(root)['plugins'] if pin.get('source') == 'bundled')
+        (root / 'licenses' / (pin['name'] + '.txt')).write_bytes((root / pin['license_path']).read_bytes())
+        with self.assertRaisesRegex(common.ConfigError, 'Bundled build license notices drifted'):
+            check.check(root, static=True)
+
     def test_broken_local_documentation_link_fails(self):
         root = self.clone()
         with (root / 'README.md').open('a', encoding='utf-8') as stream:

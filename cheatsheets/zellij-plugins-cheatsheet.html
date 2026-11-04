@@ -101,7 +101,7 @@
       <td><code>file:~/path.wasm</code></td><td>Local .wasm file</td>
     </tr>
     <tr>
-      <td><code>https://…/x.wasm</code></td><td>Plain Zellij downloads/caches it on first use. Pin a release tag rather than mutable <code>latest</code>. For this repository's managed aliases, <code>zj</code> additionally verifies hashes and falls back to bundled files. Set <code>ZJ_OFFLINE=1</code> to skip startup downloads; see README, <em>Downloads and offline fallback</em>.</td>
+      <td><code>https://…/x.wasm</code></td><td>Plain Zellij downloads/caches it on first use. Pin a release tag or immutable artifact commit, not mutable <code>latest</code>. For managed release aliases, <code>zj</code> verifies hashes and falls back to bundled files; repository-built <code>confirm-quit</code> always uses verified bundled bytes. Set <code>ZJ_OFFLINE=1</code> to skip startup downloads; see README, <em>Downloads and offline fallback</em>.</td>
       <td>Alias</td><td>Short name you register in <code>plugins {}</code> to use anywhere</td>
     </tr>
     <tr class="divider"><td colspan="4">Declaration &amp; usage</td></tr>
@@ -290,16 +290,28 @@ cargo test            # step 2: only if step 1 succeeded</pre></td></tr>
   </table>
 </div>
 
+<!-- ═══════════════════════ QUIT CONFIRMATION ═══════════════════════ -->
+<div class="card col-2">
+  <div class="card-header"><div class="dot" style="background:var(--red)"></div><h2>Quit confirmation <span class="badge active">configured</span></h2></div>
+  <table>
+    <tr><td><kbd>Ctrl+o</kbd> <kbd>q</kbd></td><td>Fresh floating <strong>Quit Zellij?</strong> dialog; <kbd>y</kbd> confirms, <kbd>n</kbd>/<kbd>Esc</kbd> cancels. Enter does not confirm.</td></tr>
+    <tr><td>Permission</td><td>Only <code>ChangeApplicationState</code>; approving first-use permission does not answer the quit question. No external commands.</td></tr>
+    <tr><td>Client Quit</td><td>Closes your client. Programs stop only if no other active client remains; detach with <kbd>Ctrl+o</kbd> <kbd>d</kbd> to keep the workspace running.</td></tr>
+    <tr><td>Bundle</td><td>Source-reviewed MIT adaptation, pinned SDK/build inputs and SHA-256; launcher/setup always use verified local bytes. Requires at least 26 columns and 3 rows to confirm.</td></tr>
+    <tr><td colspan="2" class="note">Guards this quit binding, not pane/tab/group close, shell exit or CLI kills. Source and maintenance: <a href="../docs/QUIT_CONFIRMATION.md">quit-confirmation guide</a>.</td></tr>
+  </table>
+</div>
+
 <!-- ═══════════════════════ MANUAL LOCKING ═══════════════════════ -->
 <div class="card col-2">
-  <div class="card-header"><div class="dot" style="background:var(--pink)"></div><h2>Locking is manual <span class="badge active">by design</span></h2><span class="note" style="margin-left:8px">no autolock plugin &nbsp;·&nbsp; <kbd style="font-size:9.5px">Ctrl+g</kbd> toggles both ways</span></div>
+  <div class="card-header"><div class="dot" style="background:var(--pink)"></div><h2>Locking is manual <span class="badge active">by design</span></h2><span class="note" style="margin-left:8px">no autolock plugin &nbsp;·&nbsp; <kbd style="font-size:9.5px">F12</kbd> toggles both ways</span></div>
   <table>
     <tr class="divider"><td colspan="2">The problem locking solves</td></tr>
     <tr><td colspan="2" class="note">Zellij's <kbd style="font-size:9.5px">Alt</kbd>-based shortcuts can collide with editor and readline bindings (<code>Alt+h/j/k/l</code> pane focus vs nvim/readline, <code>Alt+f</code> floating panes vs readline word-forward, <code>Alt+n</code> new pane). Locked mode forwards keys to the running program except the configured unlock key.</td></tr>
-    <tr class="divider"><td colspan="2">Default and optional F12 mapping</td></tr>
-    <tr><td><kbd class="pink">Ctrl+g</kbd></td><td>Press before and after an application that needs Zellij's shortcuts; status bar shows <strong>LOCKED</strong></td></tr>
-    <tr><td><kbd class="pink">F12</kbd></td><td>Opt-in: <code>python3 tools/manage.py configure --config-dir . --lock-key F12</code>, or select the classic local profile</td></tr>
-    <tr><td colspan="2"><pre>// Optional F12 mapping; the portable config retains Ctrl+g.
+    <tr class="divider"><td colspan="2">Shared F12 mapping and optional Ctrl+g</td></tr>
+    <tr><td><kbd class="pink">F12</kbd></td><td>Press before and after an application that needs Zellij's shortcuts; status bar shows <strong>LOCKED</strong>. Some keyboards require Fn+F12.</td></tr>
+    <tr><td><kbd class="pink">Ctrl+g</kbd></td><td>Available to applications by default. Opt into Zellij's upstream lock key with <code>python3 tools/manage.py configure --config-dir . --lock-key "Ctrl g"</code>.</td></tr>
+    <tr><td colspan="2"><pre>// Shared F12 mapping; both presets free Ctrl+g for applications.
 keybinds {
     locked {
         unbind "Ctrl g"                    // default: Ctrl+g → unlock

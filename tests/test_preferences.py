@@ -32,16 +32,20 @@ class SchemaTests(unittest.TestCase):
     def test_preset_defaults_and_explicit_overrides(self):
         portable = preferences.validate_settings({'schema': 1})
         self.assertEqual((portable['session_name'], portable['lock_key'], portable['timezone']),
-                         (None, 'Ctrl g', 'UTC'))
+                         (None, 'F12', 'UTC'))
         self.assertFalse(portable['git_status'] or portable['rust_backtrace'] or portable['attach_to_session'])
         classic = preferences.validate_settings({'schema': 1, 'profile': 'classic'})
         self.assertEqual((classic['session_name'], classic['lock_key'], classic['timezone']),
                          ('main', 'F12', 'America/Denver'))
         self.assertTrue(classic['git_status'] and classic['rust_backtrace'] and classic['attach_to_session'])
-        explicit = preferences.validate_settings({'schema': 1, 'profile': 'classic',
-                                                   'session_name': None, 'git_status': False})
-        self.assertIsNone(explicit['session_name'])
-        self.assertFalse(explicit['git_status'])
+        for profile in ['portable', 'classic']:
+            with self.subTest(profile=profile):
+                explicit = preferences.validate_settings({'schema': 1, 'profile': profile,
+                                                           'session_name': None, 'git_status': False,
+                                                           'lock_key': 'Ctrl g'})
+                self.assertIsNone(explicit['session_name'])
+                self.assertFalse(explicit['git_status'])
+                self.assertEqual(explicit['lock_key'], 'Ctrl g')
 
     def test_status_frames_are_coordinated_without_overriding_explicit_choice(self):
         self.assertFalse(preferences.validate_settings({'schema': 1, 'layout': 'zjstatus'})['pane_frames'])
@@ -70,6 +74,14 @@ class SchemaTests(unittest.TestCase):
             directory = Path(temporary)
             self.assertIsNone(preferences.read_settings(directory))
             file = directory / preferences.LOCAL_FILE
+            for raw, key in [({'schema': 1}, 'F12'),
+                             ({'schema': 1, 'profile': 'portable'}, 'F12'),
+                             ({'schema': 1, 'lock_key': 'Ctrl g'}, 'Ctrl g')]:
+                with self.subTest(raw=raw):
+                    contents = json.dumps(raw).encode('utf-8')
+                    file.write_bytes(contents)
+                    self.assertEqual(preferences.read_settings(directory)['lock_key'], key)
+                    self.assertEqual(file.read_bytes(), contents)
             file.write_text('{"schema": 1, "profile": "classic"}', encoding='utf-8')
             self.assertEqual(preferences.read_settings(directory)['session_name'], 'main')
             file.write_text('{"schema": 1, "git_status": true, "git_status": false}', encoding='utf-8')
@@ -125,14 +137,37 @@ class RenderingTests(unittest.TestCase):
         self.assertEqual(roots['session_name'].arguments, ['main'])
         self.assertEqual(roots['attach_to_session'].arguments, ['true'])
         self.assertEqual(next(node for node in roots['env'].children if node.name == 'RUST_BACKTRACE').arguments, ['1'])
-        for context in roots['keybinds'].children:
-            if context.name == 'locked' or (context.name == 'shared_except' and context.arguments == ['locked']):
-                self.assertTrue(any(node.name == 'unbind' and node.arguments == ['Ctrl g'] for node in context.children))
-                self.assertTrue(any(node.name == 'bind' and node.arguments == ['F12'] for node in context.children))
         portable = active(preferences.render_config(classic, self.portable))
         self.assertNotIn('session_name', portable)
         self.assertFalse(any(node.name == 'RUST_BACKTRACE' for node in portable['env'].children))
         self.assertEqual(kdl.plugin_locations(classic), kdl.plugin_locations(self.config))
+
+    def test_f12_defaults_release_ctrl_g_and_explicit_override_roundtrips(self):
+        def assert_lock_bindings(text, key):
+            contexts = active(text)['keybinds'].children
+            for name, arguments, mode in [('locked', [], 'Normal'),
+                                          ('shared_except', ['locked'], 'Locked')]:
+                context = next(node for node in contexts
+                               if node.name == name and node.arguments == arguments)
+                managed = [(node.name, node.arguments,
+                            [(action.name, action.arguments) for action in node.children])
+                           for node in context.children
+                           if node.name in ['bind', 'unbind'] and {'F12', 'Ctrl g'}.intersection(node.arguments)]
+                expected = [('unbind', ['Ctrl g'], [])] if key == 'F12' else []
+                expected.append(('bind', [key], [('SwitchToMode', [mode])]))
+                self.assertEqual(managed, expected)
+
+        assert_lock_bindings(self.config, 'F12')
+        for profile in ['portable', 'classic']:
+            with self.subTest(profile=profile):
+                defaults = preferences.validate_settings({'schema': 1, 'profile': profile})
+                explicit = preferences.validate_settings({**defaults, 'lock_key': 'Ctrl g'})
+                overridden = preferences.render_config(self.config, explicit)
+                assert_lock_bindings(overridden, 'Ctrl g')
+                self.assertEqual(preferences.render_config(overridden, explicit), overridden)
+                restored = preferences.render_config(overridden, defaults)
+                assert_lock_bindings(restored, 'F12')
+                self.assertEqual(preferences.render_config(restored, defaults), restored)
 
     def test_status_opt_in_and_portable_removal_are_complete(self):
         classic = preferences.render_layout(self.status, 'zjstatus', self.classic)

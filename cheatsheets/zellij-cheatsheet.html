@@ -105,7 +105,7 @@
   <div class="card-header"><div class="dot" style="background:var(--lavender)"></div><h2>Mode System</h2><span class="note" style="margin-left:8px">Modal interface — <kbd style="font-size:9.5px">Ctrl</kbd>+letter enters a mode; single keys act inside it; <kbd style="font-size:9.5px">Esc</kbd>/<kbd style="font-size:9.5px">Enter</kbd> returns to Normal</span></div>
   <table style="border-collapse:collapse">
     <tr>
-      <td style="width:11%"><kbd class="lavender">Ctrl+g</kbd></td><td style="padding-right:16px">→ <strong>Locked</strong> — keys pass through (manual toggle; classic uses F12)</td>
+      <td style="width:11%"><kbd class="lavender">F12</kbd></td><td style="padding-right:16px">→ <strong>Locked</strong> — keys pass through (manual toggle; Ctrl+g stays available to apps)</td>
       <td style="width:11%"><kbd class="blue">Ctrl+p</kbd></td><td style="padding-right:16px">→ <strong>Pane</strong> — create, close, focus, resize, float</td>
       <td style="width:11%"><kbd class="green">Ctrl+t</kbd></td><td>→ <strong>Tab</strong> — create, close, rename, reorder</td>
     </tr>
@@ -117,7 +117,7 @@
     <tr>
       <td><kbd class="mauve">Ctrl+o</kbd></td><td style="padding-right:16px">→ <strong>Session</strong> — detach, switch, configure, layouts</td>
       <td><kbd class="sapphire">Ctrl+b</kbd></td><td style="padding-right:16px">→ <strong>Tmux</strong> — tmux-compatible bindings layer</td>
-      <td><kbd class="red">Ctrl+q</kbd> <span class="badge active">unbound</span></td><td>Quit zellij — disabled in our config (fat-finger guard); quit via <kbd class="mauve">Ctrl+o</kbd> <kbd class="mauve">q</kbd> instead</td>
+      <td><kbd class="red">Ctrl+q</kbd> <span class="badge active">unbound</span></td><td>Quit disabled here; <kbd class="mauve">Ctrl+o</kbd> <kbd class="mauve">q</kbd> opens confirmation (<kbd>y</kbd> yes, <kbd>n</kbd>/<kbd>Esc</kbd> cancel)</td>
     </tr>
   </table>
 </div>
@@ -127,12 +127,12 @@
   <div class="card-header"><div class="dot" style="background:var(--pink)"></div><h2>This Config — Changes from Default</h2><span class="note" style="margin-left:8px">shared defaults; local preferences may override these choices. Lines marked <code>// default</code> restate Zellij defaults. Full key list: the <kbd style="font-size:9.5px">Ctrl+o</kbd> <kbd style="font-size:9.5px">h</kbd> screen.</span></div>
   <table>
     <tr><td><kbd class="red">Ctrl+q</kbd> <span class="badge active">unbound</span></td><td>Default quit removed (fat-finger guard)</td>
-        <td><kbd class="mauve">Ctrl+o</kbd> <kbd class="mauve">q</kbd> <span class="badge active">added</span></td><td>Deliberate two-step quit (replaces it)</td></tr>
+        <td><kbd class="mauve">Ctrl+o</kbd> <kbd class="mauve">q</kbd> <span class="badge active">added</span></td><td>Ask before quitting; <kbd>y</kbd> confirms, <kbd>n</kbd>/<kbd>Esc</kbd> cancels, Enter does not confirm</td></tr>
     <tr><td><kbd class="mauve">Ctrl+o</kbd> <kbd class="mauve">h</kbd> <span class="badge active">added</span></td><td>Built-in configuration/keybinding screen (floating; <kbd style="font-size:9.5px">Esc</kbd> closes)</td>
-        <td><kbd class="flamingo">Ctrl+g</kbd> <span class="badge">default</span></td><td>Lock toggle; choose F12 with a local preference if it conflicts with your application</td></tr>
+        <td><kbd class="flamingo">F12</kbd> <span class="badge active">configured</span></td><td>Lock toggle in both presets; choose Ctrl+g only with an explicit local preference</td></tr>
     <tr><td><kbd class="mauve">Ctrl+o</kbd> <kbd class="mauve">m</kbd> <span class="badge active">added</span></td><td>monocle — find files &amp; contents from the focused pane's directory</td>
         <td>Task runners / config editors <span class="badge">local choice</span></td><td>No shortcuts shipped; review shell syntax and application dependencies before adding your own</td></tr>
-    <tr><td>Locking <span class="badge active">manual</span></td><td>No autolock plugin — press Ctrl+g before and after an application that needs all keys</td>
+    <tr><td>Locking <span class="badge active">manual</span></td><td>No autolock plugin — press F12 before and after an application that needs all keys</td>
         <td colspan="2" class="note">Forget, and zellij eats your Alt+hjkl / Alt+f keystrokes.</td></tr>
     <tr><td>Sessions</td><td>No fixed name or automatic attachment; choose an explicit name per project. The classic local profile restores the shared <code>main</code> workflow</td>
         <td>Default layout</td><td>Two tabs, <strong>main</strong> + <strong>shell</strong>, with the 1-line <code>compact-bar</code></td></tr>
@@ -192,6 +192,7 @@
     <tr><td><kbd class="blue">z</kbd></td><td>Toggle pane frames on/off</td></tr>
     <tr><td><kbd class="blue">i</kbd></td><td>Pin floating pane (stays on top)</td></tr>
     <tr><td><kbd class="blue">c</kbd></td><td>Rename pane → RenamePane mode</td></tr>
+    <tr><td colspan="2" class="note">Mark/unmark panes with <kbd>Alt+p</kbd> or Alt+left-click. Move focus with Alt+arrows and mark more. Multiple Pane Select shows the count and handles its action keys directly: <kbd>c</kbd> immediately closes marked panes; <kbd>Esc</kbd> clears marks and cancels. Save work first. Built-in visual selection, not a searchable checklist.</td></tr>
     <tr class="divider"><td colspan="2">Floating panes</td></tr>
     <tr><td colspan="2" class="note">Drag pane title to move · Ctrl+drag border to resize · Ctrl+scroll resizes from the edge</td></tr>
   </table>
@@ -266,7 +267,7 @@
     <tr><td><kbd class="mauve">s</kbd></td><td>Share — web sharing (<code>zellij:share</code>)</td></tr>
     <tr><td><kbd class="mauve">f</kbd></td><td>Toggle host fullscreen (<code>ToggleHostFullscreen</code>, 0.45.1 default)</td></tr>
     <tr><td><kbd class="mauve">]</kbd> / <kbd class="mauve">[</kbd></td><td>Focus host / guest session (<code>FocusHostSession</code> / <code>FocusGuestSession</code>)</td></tr>
-    <tr><td><kbd class="mauve">q</kbd></td><td>Quit zellij <span class="badge active">added</span> (replaces unbound Ctrl+q)</td></tr>
+    <tr><td><kbd class="mauve">q</kbd></td><td>Open quit confirmation <span class="badge active">added</span>; <kbd>y</kbd> confirms, <kbd>n</kbd>/<kbd>Esc</kbd> cancels. Native client Quit ends the session only when no other active client remains.</td></tr>
     <tr><td><kbd class="mauve">h</kbd></td><td>Built-in keybinding screen <span class="badge active">added</span></td></tr>
     <tr><td><kbd class="mauve">m</kbd></td><td>monocle — find files &amp; contents <span class="badge active">added</span></td></tr>
     <tr><td><kbd class="mauve">t</kbd> / <kbd class="mauve">e</kbd></td><td>Unassigned by this config; no task-runner/config-editor binding is shipped</td></tr>
@@ -280,9 +281,9 @@
 <div class="card">
   <div class="card-header"><div class="dot" style="background:var(--flamingo)"></div><h2>Locked &amp; Tmux</h2></div>
   <table>
-    <tr class="divider"><td colspan="2">Locked mode — <kbd class="flamingo" style="font-size:9.5px">Ctrl+g</kbd></td></tr>
-    <tr><td colspan="2" class="note">Locked mode forwards keys to the running program except the unlock key. Press Ctrl+g before an application that needs Zellij's shortcuts, then again to leave. Status bar shows <strong>LOCKED</strong>.</td></tr>
-    <tr><td><kbd class="flamingo">Ctrl+g</kbd></td><td>Toggle lock; the optional classic local profile uses F12 and frees Ctrl+g for applications</td></tr>
+    <tr class="divider"><td colspan="2">Locked mode — <kbd class="flamingo" style="font-size:9.5px">F12</kbd></td></tr>
+    <tr><td colspan="2" class="note">Locked mode forwards keys to the running program except the unlock key. Press F12 before an application that needs Zellij's shortcuts, then again to leave. Status bar shows <strong>LOCKED</strong>. Some keyboards require Fn+F12.</td></tr>
+    <tr><td><kbd class="flamingo">F12</kbd></td><td>Toggle lock; both portable and classic free Ctrl+g for applications unless you explicitly choose <code>configure --lock-key "Ctrl g"</code></td></tr>
     <tr class="divider"><td colspan="2">Tmux mode — <kbd class="sapphire" style="font-size:9.5px">Ctrl+b</kbd></td></tr>
     <tr><td colspan="2" class="note">Tmux-compatible layer for muscle memory. Press <kbd class="sapphire" style="font-size:9.5px">Ctrl+b</kbd> then:</td></tr>
     <tr><td><kbd class="sapphire">%</kbd> / <kbd class="sapphire">"</kbd></td><td>Vertical split / horizontal split</td></tr>

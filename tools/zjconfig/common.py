@@ -197,8 +197,18 @@ def validate_versions(pins: dict) -> dict:
             raise ConfigError(f'Invalid or duplicate plugin name: {name}')
         if asset in assets:
             raise ConfigError(f'Invalid or duplicate plugin asset: {asset}')
+        if 'source' in plugin and plugin['source'] != 'bundled':
+            raise ConfigError(f'Unsupported plugin source: {name}')
         text(plugin.get('repository'), 'GitHub repository', r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+')
-        text(plugin.get('tag'), 'plugin tag')
+        text(plugin.get('tag'), 'bundled source commit' if plugin.get('source') == 'bundled' else 'plugin tag',
+             r'[0-9a-f]{40}' if plugin.get('source') == 'bundled' else None)
+        if 'artifact_path' in plugin:
+            if plugin.get('source') != 'bundled':
+                raise ConfigError('Only bundled source plugins support artifact_path')
+            artifact_path = text(plugin['artifact_path'], 'bundled artifact path', r'[A-Za-z0-9_./-]+')
+            if (any(part in ['', '.', '..'] for part in artifact_path.split('/'))
+                    or artifact_path.split('/')[-1] != asset):
+                raise ConfigError('Invalid bundled artifact path')
         text(plugin.get('sha256'), 'plugin digest', r'[0-9a-f]{64}')
         notice = text(plugin.get('license_path'), 'upstream license path', r'[A-Za-z0-9_./-]+')
         if notice.startswith('/') or any(part in ['', '.', '..'] for part in notice.split('/')):
@@ -219,6 +229,9 @@ def validate_versions(pins: dict) -> dict:
 
 def plugin_url(plugin: dict) -> str:
     tag = urllib.parse.quote(plugin['tag'], safe='')
+    if plugin.get('source') == 'bundled':
+        path = plugin.get('artifact_path', 'plugins/' + plugin['asset'])
+        return f"https://raw.githubusercontent.com/{plugin['repository']}/{tag}/{path}"
     return f"https://github.com/{plugin['repository']}/releases/download/{tag}/{plugin['asset']}"
 
 

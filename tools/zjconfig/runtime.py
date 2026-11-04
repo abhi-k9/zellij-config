@@ -218,13 +218,13 @@ def prepare(file: Path, arguments: list[str], state: Path, *, offline=False, now
                     replacements[alias] = 'file:' + destination.as_posix()
             except (OSError, ConfigError):
                 retry = directory / (pin['name'] + '-' + pin['sha256'] + '.retry.json')
-                cooling = not offline and retry_later(retry, pin, now)
+                cooling = not offline and pin.get('source') != 'bundled' and retry_later(retry, pin, now)
                 missing.append((pin, aliases, destination, retry, cooling))
 
         def resolve(item):
             pin, _, _, _, cooling = item
             bundled = file.parent / 'plugins' / pin['asset']
-            attempted = not offline and not cooling
+            attempted = not offline and not cooling and pin.get('source') != 'bundled'
             try:
                 data, origin = acquire(pin, bundled, offline=offline or cooling)
             except ConfigError:
@@ -253,7 +253,8 @@ def prepare(file: Path, arguments: list[str], state: Path, *, offline=False, now
                     store_if_changed(chosen, data)
                     if attempted:
                         atomic_write(retry, json_bytes({'url': plugin_url(pin), 'until': now + RETRY_SECONDS}))
-                    print(f'zj: {pin["name"]}: using verified bundled fallback', flush=True)
+                    kind = 'build' if pin.get('source') == 'bundled' else 'fallback'
+                    print(f'zj: {pin["name"]}: using verified bundled {kind}', flush=True)
                 for alias in aliases:
                     replacements[alias] = 'file:' + chosen.as_posix()
         configured = replace_plugin_locations(text, replacements)

@@ -1,7 +1,10 @@
 # Portable defaults and local preferences
 
-The shared files provide independent sessions, Zellij's standard `Ctrl+g` lock
-toggle, no pane debug export, and a UTC zjstatus clock with no Git command.
+The shared files provide independent sessions, an F12 lock toggle that leaves
+`Ctrl+g` available to applications, no pane debug export, and a UTC zjstatus clock
+with no Git command.
+The shared quit binding opens a [confirmation dialog](QUIT_CONFIRMATION.md);
+`Ctrl+o`, then `q` never quits until you answer its question with `y`.
 Platform application commands in commented examples remain opt-ins. The default layout
 still has `main` and `shell` tabs; these names do not force a session called
 `main`. The `minimal` layout has a single shell and compact bar.
@@ -76,7 +79,7 @@ in the original resource directory.
 | Option | Choice |
 | --- | --- |
 | `--config-dir DIRECTORY` | Select the config directory containing the local file |
-| `--profile portable` | Independent sessions, `Ctrl+g`, UTC, no Git/debug export |
+| `--profile portable` | Independent sessions, F12, UTC, no Git/debug export |
 | `--profile classic` | Session `main` with autoattach, F12, Denver, Git widget and debug export |
 | `--timezone ZONE` | IANA clock timezone, such as `Europe/Paris` or `Etc/UTC` |
 | `--git-status on/off` | Enable/disable the startup-directory Git widget |
@@ -90,6 +93,15 @@ in the original resource directory.
 | `--pane-frames on/off` | Select pane frames; defaults off for a selected zjstatus layout |
 | `--dry-run` | Preview without writing |
 | `--reset` | Remove the local file and return to shared defaults |
+
+Both presets default to F12. Existing schema-1 preference files that omit
+`lock_key` inherit F12 without being rewritten; an explicit `"lock_key": "Ctrl g"`
+remains respected. To change that explicit choice, run
+`python3 tools/manage.py configure --config-dir . --lock-key F12`.
+Start a fresh session after updating: existing sessions keep their old bindings.
+Refresh any standalone installed helpers with `install --launcher-only` from the
+updated checkout so their portable preset also uses F12. Confirm that your
+terminal forwards F12; some keyboards require Fn+F12.
 
 The timezone and Git choices affect the optional zjstatus bar; enabling Git does
 not select that layout. Likewise, automatic frame disabling follows the saved
@@ -136,9 +148,9 @@ release check; ordinary checks remain deterministic and use the selected pins.
 
 On native Windows, use PowerShell inside Windows Terminal if the older console
 host prints `[111;5u`/`[112;5u` for `Ctrl+o`/`Ctrl+p` without changing Zellij's
-mode. Confirm NORMAL rather than LOCKED first; portable unlocks with `Ctrl+g`,
-classic with `F12`. PowerShell is the shell, and Windows Terminal supplies the
-terminal host. See the [keyboard checks](CONFIGURATION.md#ctrl-keys-print-keyboard-reports-in-a-windows-console)
+mode. Confirm NORMAL rather than LOCKED first; unlock with F12, or `Ctrl+g` if
+explicitly selected in local preferences. PowerShell is the shell, and Windows
+Terminal supplies the terminal host. See the [keyboard checks](CONFIGURATION.md#ctrl-keys-print-keyboard-reports-in-a-windows-console)
 for a fresh-session test and actual executable-version check. The reported setup
 works in Windows Terminal without preference or global keyboard-setting changes.
 

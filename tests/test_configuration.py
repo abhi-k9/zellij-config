@@ -201,8 +201,8 @@ class ConfigurationTests(Workspace):
         if not binary:
             self.skipTest('Zellij required for real preference validation')
         source = self.source()
-        for profile in ['portable', 'classic']:
-            self.configure(source, '--profile', profile, '--layout', 'zjstatus')
+        for profile, lock_key in [('portable', 'F12'), ('classic', 'F12'), ('portable', 'Ctrl g')]:
+            self.configure(source, '--profile', profile, '--lock-key', lock_key, '--layout', 'zjstatus')
             prepared = runtime.prepare(source / 'config.kdl', [], self.base / 'state', offline=True)
             for layout in ['default', 'dev', 'zjstatus', 'minimal']:
                 result = subprocess.run([binary, *prepared, '--layout', layout, 'setup', '--check'],

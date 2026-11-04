@@ -33,7 +33,9 @@ The repository root contains `config.kdl`, `layouts/`, `themes/` and backup
 `VERSIONS.md` are generated references. `docs/` contains documentation only.
 
 The launcher first reuses a verified prior download, then attempts the pinned
-HTTPS release, then verifies and uses the bundled backup if fetching fails.
+HTTPS release, then verifies and uses the bundled backup if fetching fails, for
+the three upstream release plugins. The repository-built `confirm-quit` dialog
+always uses verified bundled bytes, without a network request.
 Download/cache checksum errors cannot select unverified bytes. `ZJ_OFFLINE=1`
 skips startup network access and uses a verified download cache or bundled files.
 Private per-user config snapshots leave the checkout untouched. Local preferences
@@ -59,6 +61,10 @@ cloned checkout needs no reinstall. For a separately deployed copy, run setup
 again. The updater keeps pins, plugin bytes, notices and generated references
 together and refuses a new artifact without a published or independently supplied
 digest. Changed license terms require review.
+
+`versions check` skips release queries for the bundled `confirm-quit` build;
+`versions update --all` selects only the three upstream plugins and core pins.
+The dialog has a separate [rebuild and publication process](QUIT_CONFIRMATION.md#rebuild-and-publish-the-dialog).
 
 Selecting a Zellij tag records published binary hashes; downloading/installing
 that executable is a separate `install-zellij` command. Neither changing a pin
@@ -144,8 +150,8 @@ are unsupported.
 ## Local preferences
 
 The shared config leaves session names and pane environment variables unset,
-keeps the standard `Ctrl+g` lock toggle, and gives zjstatus a UTC clock without
-command widgets. Save personal choices separately with:
+uses F12 to lock/unlock while freeing `Ctrl+g` for applications, and gives
+zjstatus a UTC clock without command widgets. Save personal choices separately with:
 
 ```sh
 python3 tools/manage.py configure --config-dir . --timezone Europe/Paris --layout dev
@@ -192,25 +198,58 @@ Zellij's defaults remain active except for the explicit customizations:
 
 | Key | Action |
 | --- | --- |
-| `Ctrl+g` | Standard lock/unlock toggle; locking forwards other keys to the focused application |
+| `F12` | Lock/unlock toggle; locking forwards other keys to the focused application |
 | `Ctrl+q` | Unbound to prevent accidental quits |
-| `Ctrl+o`, then `q` | Quit deliberately |
+| `Ctrl+o`, then `q` | Ask before quitting: `y` confirms; `n` / `Esc` cancels |
 | `Ctrl+o`, then `d` | Detach and leave the session running |
 | `Ctrl+o`, then `m` | Open/focus the monocle file finder |
 | `Ctrl+o`, then `h` | Open the built-in configuration/keybinding screen |
+| `Alt+p` | Mark/unmark the focused pane for group actions |
 
-`configure --lock-key F12` opts into F12 locking and releases `Ctrl+g` to the
-application. The `classic` preset selects that behavior too. There is no
-application-specific automatic locking.
+Both shared defaults and the `portable` / `classic` presets use F12, leaving
+`Ctrl+g` available to Neovim and other applications in either lock state.
+`configure --lock-key "Ctrl g"` explicitly selects Zellij's upstream lock key
+instead. There is no application-specific automatic locking. Confirm that your
+terminal forwards F12; some keyboards require Fn+F12.
 
 The former third-party keybinding popup was removed because its redistribution
 permission was unestablished. The built-in screen uses Zellij's actual bindings.
+
+### Quit confirmation
+
+`Ctrl+o`, then `q` opens a fresh floating **Quit Zellij?** dialog. Only unmodified
+`y` confirms; `n` or `Esc` cancels, and Enter does not confirm. Its initial
+`ChangeApplicationState` permission approval is separate from the quit answer.
+If the pane is smaller than 26 columns or 3 rows, enlarge it or cancel;
+confirmation is disabled until the question can be displayed.
+
+This preserves native Quit behavior: the current client closes, and the session
+and its programs stop only when no other active clients remain. Detach with
+`Ctrl+o`, then `d` to leave the workspace running. The dialog guards this binding;
+it does not intercept shell exit, pane/tab closing or CLI kill commands.
+See [behavior, permissions and rebuilding](QUIT_CONFIRMATION.md).
+
+### Close several panes together
+
+Zellij 0.45.1 includes visual pane selection and group actions. Mark the focused
+pane with `Alt+p`, move focus with `Alt+arrows`, and repeat to mark others.
+Alternatively, `Alt+left-click` toggles a pane's selection, or `Alt+left-drag`
+adds panes. Mouse selection needs the default `advanced_mouse_actions` enabled
+and a terminal that forwards the modified clicks.
+
+The **Multiple Pane Select** overlay appears and handles its action keys without
+taking pane focus. Review its selected count, then press `c` to close the marked
+panes, or `Esc` to cancel and clear marks.
+The close is immediate and stops those panes' processes; save work first.
+Selection can span tabs. This is a visual group interface, not a searchable
+checklist; it requires no additional third-party plugin. Opening it without any
+marked panes closes it again.
 
 ### Ctrl keys print keyboard reports in a Windows console
 
 If `Ctrl+o` prints `[111;5u` or `Ctrl+p` prints `[112;5u` and the status bar does
 not change mode, first check that Zellij shows **NORMAL**, not **LOCKED**. Unlock
-with `Ctrl+g` for portable defaults, or `F12` for the classic local profile.
+with F12, or `Ctrl+g` if you explicitly selected that local preference.
 Locked mode forwards these keys to the application.
 
 These strings resemble CSI-u keyboard reports. In the reported setup, the same
@@ -246,9 +285,11 @@ shows the platform-specific detection used for its input path.
 
 ## Plugins and permissions
 
-The three third-party aliases are `zjstatus`, `monocle` and `multitask`. Their
-versions, URLs and hashes are listed once in [VERSIONS.md](../VERSIONS.md).
-They load on demand rather than in a background `load_plugins` block.
+The three upstream release aliases are `zjstatus`, `monocle` and `multitask`.
+`confirm-quit` is the fourth alias, a repository-built dialog adapted from an
+MIT-licensed plugin. Versions, source commits, URLs and hashes are listed in
+[VERSIONS.md](../VERSIONS.md). They load on demand rather than in a background
+`load_plugins` block.
 
 The checked-in aliases use HTTPS. The launcher generates private config snapshots
 with verified file locations and retains source pins for update checks. Optional
@@ -256,6 +297,11 @@ setup deployment records upstream pins in an installed versions ledger.
 Plugin permissions are granted by Zellij, not by the installer. Grant only the
 permissions needed for the features you intend to use. `RunCommands` permits
 host commands; WASM is not a reason to grant it indiscriminately.
+
+`confirm-quit` requests only `ChangeApplicationState` to perform native Quit.
+It runs no host commands and needs no network or filesystem permission. Through
+`zj` and setup it always uses the verified local bundle; plain Zellij follows its
+immutable HTTPS artifact alias using the native downloader/cache.
 
 The optional zjstatus layout uses state access for its bar. Its one-row permission
 prompt can be truncated: click the bar to focus it before responding. Set
@@ -407,7 +453,7 @@ To reproduce those development checks, install the locked tools and run:
 python3 -m pip install --only-binary=:all: --require-hashes -r requirements-dev.txt
 npm ci --ignore-scripts --no-audit --no-fund
 npm run lint:markdown
-python3 -m ruff check tools tests
+python3 -m ruff check tools tests plugin-sources
 shellcheck -s sh setup.sh check.sh hooks/pre-commit launcher/zj
 python3 tools/lint_workflow.py
 ```
