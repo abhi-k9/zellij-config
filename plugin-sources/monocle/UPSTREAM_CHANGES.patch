@@ -1,0 +1,29 @@
+diff --git a/Cargo.toml b/Cargo.toml
+index 2692c8c..5eff116 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -5,7 +5,7 @@ authors = ["Aram Drevekenin <aram@poor.dev>"]
+ edition = "2018"
+ 
+ [dependencies]
+-zellij-tile = "0.41.2"
++zellij-tile = "=0.45.1"
+ ignore = "0.4.23"
+ fuzzy-matcher = "0.3.7"
+ serde = { version = "1.0", features = ["derive"] }
+diff --git a/src/main.rs b/src/main.rs
+index bf5b11e..884cd2d 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -196,9 +196,9 @@ impl State {
+             Some(SearchResult::File { path, .. }) => {
+                 let ctx = BTreeMap::new();
+                 if self.kiosk_mode {
+-                    open_file_in_place(FileToOpen::new(PathBuf::from(path)), ctx)
++                    open_file_in_place(FileToOpen::new(PathBuf::from(path)), ctx);
+                 } else if self.should_open_floating {
+-                    open_file_floating(FileToOpen::new(PathBuf::from(path)), None, ctx)
++                    open_file_floating(FileToOpen::new(PathBuf::from(path)), None, ctx);
+                 } else {
+                     open_file(FileToOpen::new(PathBuf::from(path)), ctx);
+                 }

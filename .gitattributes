@@ -11,7 +11,10 @@
 licenses/*.txt whitespace=-blank-at-eof
 # Preserve dependency notices verbatim, including mixed upstream line endings
 # and legal-text spacing. Formatting checks still apply to source and guides.
-plugin-sources/confirm-quit/LICENSE -text whitespace=-blank-at-eof
-plugin-sources/confirm-quit/THIRD_PARTY_LICENSES.txt -text whitespace=-blank-at-eof,-blank-at-eol
-plugin-sources/confirm-quit/notice-supplements/*.txt -text whitespace=-blank-at-eof
+plugin-sources/*/LICENSE* -text whitespace=-blank-at-eof
+plugin-sources/*/THIRD_PARTY_LICENSES.txt -text whitespace=-blank-at-eof,-blank-at-eol
+plugin-sources/*/notice-supplements/*.txt -text whitespace=-blank-at-eof
 licenses/confirm-quit.txt -text whitespace=-blank-at-eof,-blank-at-eol
+licenses/monocle.txt -text whitespace=-blank-at-eof,-blank-at-eol
+# Unified-diff context lines use a meaningful space even for an empty line.
+plugin-sources/monocle/UPSTREAM_CHANGES.patch whitespace=-blank-at-eol
