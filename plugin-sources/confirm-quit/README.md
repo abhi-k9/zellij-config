@@ -5,16 +5,29 @@ This bundled build adapts the quit-dialog pattern from
 under its [MIT license](LICENSE). It is a local adaptation, not an upstream
 release artifact. Source, dependencies and the toolchain are committed together.
 
-The floating dialog asks `Quit Zellij?`. Unmodified `y` performs Zellij's native
+The confirmation asks `Quit Zellij?`. Unmodified `y` performs Zellij's native
 client Quit; `n` or `Esc` closes only the dialog. Enter does not confirm. Other
 attached clients continue; quitting the last active client stops the session's
 running programs. This plugin never invokes a shell or `kill-session`.
 
-The only requested permission is `ChangeApplicationState`. The plugin subscribes
-to keys only after the permission grant and requires the question to render
-before accepting `y`. Granting the first-use permission is not confirmation to
-quit. With fewer than three rows or 26 columns, the dialog asks for more space
-and refuses confirmation; `n`/`Esc` still cancels.
+The alias configuration `display_style` accepts `popup` (default) or `status`.
+Popup draws a centered question in a floating pane. Status moves that pane into
+a borderless, pinned one-row overlay above the existing bottom bar, or at the
+bottom of a barless workspace. It leaves tiled pane geometry and the original
+bar intact and follows tab/pane geometry updates after a terminal resize.
+Both styles use the same answer keys; this is one plugin with two render modes.
+
+Both request `ChangeApplicationState`; status additionally requests
+`ReadApplicationState` for positioning. Neither requests filesystem/network
+access or executes host commands. Geometry subscriptions are established before
+requesting permission so Zellij can deliver initial state on approval; key
+subscription starts only after approval. The question must render before `y`
+can confirm, so first-use permission approval never also confirms Quit.
+Denial closes the plugin. Popup needs at least three content rows and 26 columns;
+status needs one content row and 36 columns. Smaller panes refuse confirmation
+while retaining `n`/`Esc` cancellation. Unknown styles also refuse confirmation.
+See the [user configuration guide](../../docs/QUIT_CONFIRMATION.md#choose-a-display-style)
+for CLI, JSON and direct KDL examples.
 
 ## Build and verify
 
@@ -59,6 +72,7 @@ notices and any required source offers along with the binary.
 
 Before adopting a rebuild, test first-use permission grant, `n`, `Esc`, repeated
 invocation, modified keys, Enter, narrow terminals and affirmative `y` in a
-disposable session. Repeat with compact-bar and zjstatus layouts and two attached
-clients. Cancelling must preserve all panes and affirmative Quit must leave the
-other client connected. Parser validation alone cannot establish these behaviors.
+disposable session. Repeat both styles with compact-bar and zjstatus layouts,
+terminal resizing and two attached clients. Cancelling must preserve all panes,
+their geometry and the original bar; affirmative Quit must leave the other
+client connected. Parser validation alone cannot establish these behaviors.
