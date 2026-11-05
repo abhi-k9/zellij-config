@@ -1,8 +1,9 @@
 # Third-party components
 
-This repository redistributes three upstream MIT-licensed WebAssembly plugins
-and a repository-built quit dialog. The dialog's own source is an MIT-licensed
-adaptation; its SDK and other dependencies retain their separate license terms.
+This repository redistributes the upstream `zjstatus` and `multitask` releases,
+plus repository builds of Monocle and a quit dialog. Their own sources are MIT
+licensed; the source builds' SDK and other dependencies retain their separate
+license terms.
 The exact copyright and permission notices accompany the binaries and are also
 copied into installed configurations. Current versions, hashes and source URLs are in
 [VERSIONS.md](VERSIONS.md) and [versions.json](versions.json).
@@ -16,7 +17,7 @@ plugin copies.
 | Component | Upstream | Verbatim notice |
 | --- | --- | --- |
 | zjstatus | <https://github.com/dj95/zjstatus> | [MIT notice](licenses/zjstatus.txt) |
-| monocle | <https://github.com/imsnif/monocle> | [MIT notice](licenses/monocle.txt) |
+| monocle | Compatibility build from [imsnif/monocle at ec980aba](https://github.com/imsnif/monocle/tree/ec980abab220a1ec0a4434b283ea160838219321) | [Original MIT and dependency notices](licenses/monocle.txt) |
 | multitask | <https://github.com/leakec/multitask> | [MIT notice](licenses/multitask.txt) |
 | confirm-quit | Adapted from [qdelettre/zellij-confirm at 9d15b816](https://github.com/qdelettre/zellij-confirm/tree/9d15b816523b92d98bcff0d921030ff26a044abf) | [Original MIT and dependency notices](licenses/confirm-quit.txt) |
 
@@ -30,6 +31,14 @@ dependencies `colored` and `option-ext` accompany the build; see the
 [MPL source record](plugin-sources/confirm-quit/mpl-sources/README.md).
 Its reviewed build is pinned to an immutable artifact commit; it is not updated
 through an upstream release query. See the [rebuild guide](docs/QUIT_CONFIRMATION.md#rebuild-and-publish-the-dialog).
+
+Monocle's [compatibility source build](plugin-sources/monocle/README.md) preserves
+the original MIT notice and records the exact SDK changes and dependency lock.
+Its [dependency notices](plugin-sources/monocle/THIRD_PARTY_LICENSES.txt) are
+included in `licenses/monocle.txt`, and its corresponding MPL sources are
+recorded in [mpl-sources](plugin-sources/monocle/mpl-sources/README.md). Setup
+copies this complete combined notice alongside the plugin too. The source build
+is pinned to an immutable artifact commit and is not an upstream release.
 
 `zellij-forgot` is no longer bundled or referenced by the active config because
 its pinned upstream version supplied no established redistribution license.

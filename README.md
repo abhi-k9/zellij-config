@@ -6,6 +6,8 @@ The repository root is a Zellij config directory: `config.kdl`, `layouts/`,
 
 Start with the [quick start for everyday workflows](docs/QUICK_START.md): first
 launch, project workspaces, essential keys, detach/reattach and personal choices.
+For a Monocle payload error, RGB text at a Fish prompt or a gap after nesting,
+see [terminal and plugin troubleshooting](docs/TROUBLESHOOTING.md).
 
 ## Clone directly and start
 
@@ -251,15 +253,18 @@ points are unsupported.
 
 ## Downloads and offline fallback
 
-For the three upstream release plugins, `zj` selects files in this order:
+For the upstream release plugins, `zjstatus` and `multitask`, `zj` selects files
+in this order:
 
 1. A previously downloaded file that still matches the pinned SHA-256.
 2. An HTTPS download of the pinned release, verified before use.
 3. The bundled backup, verified against the same hash, if downloading fails.
 
-The repository-built `confirm-quit` plugin always uses its hash-verified bundled
-file through `zj` and setup, without a download. Missing or corrupt bundled bytes
-fail validation instead of selecting an unverified replacement.
+The repository-built `monocle` and `confirm-quit` plugins use their hash-verified
+bundled files through `zj` and setup, without a download. Missing or corrupt
+bundled bytes fail validation instead of selecting an unverified replacement.
+Monocle is rebuilt against Zellij's selected SDK to avoid the upstream release's
+[mouse-payload crash](docs/TROUBLESHOOTING.md#monocle-payload-error).
 
 This applies to managed aliases matched against a manifest beside the selected
 config. Arbitrary plugin URLs or plugins referenced directly by a custom layout
@@ -326,9 +331,11 @@ python3 tools/manage.py versions update --zellij v0.45.1
 The updater verifies selected upstream plugin artifacts and licenses and synchronizes
 root `config.kdl`, backup plugin binaries, pins and generated references. Selecting
 a Zellij version records its published artifact hashes; it does not download or
-test that executable. `versions check` skips release queries for `confirm-quit`,
-and `versions update --all` updates the three upstream plugins and core pins only.
-Changing the bundled dialog requires a [reviewed rebuild](docs/QUIT_CONFIRMATION.md#rebuild-and-publish-the-dialog).
+test that executable. `versions check` skips release queries for `monocle` and
+`confirm-quit`; `versions update --all` updates the two upstream release plugins
+and core pins only. Bundled builds need source review and rebuilding: see the
+[Monocle build instructions](plugin-sources/monocle/README.md) and
+[quit-dialog rebuild guide](docs/QUIT_CONFIRMATION.md#rebuild-and-publish-the-dialog).
 Review the
 diff and run checks before committing. A direct checkout is the live source;
 `git pull` and version updates change it immediately. New `zj` sessions use those

@@ -233,6 +233,26 @@
   </div>
 </div>
 
+<!-- 14 -->
+<div class="item">
+  <div class="item-head"><input type="checkbox" aria-labelledby="item-14"><h2 id="item-14">Monocle mouse-event compatibility</h2></div>
+  <div class="item-body">
+    <div class="row"><span class="lbl">Do</span><span class="val">Update the checkout and any deployed config/helper copies, then start a fresh scratch session. Create a file with a distinctive name and text marker. Open Monocle with <kbd>Ctrl+o</kbd>, <kbd>m</kbd>, respond to its permissions, search for the name and marker, and move/click/scroll the pointer inside its popup.</span></div>
+    <div class="row pass"><span class="lbl">Pass</span><span class="val">The compatible source build keeps its search UI usable after mouse events and finds the scratch file. It does not show <code>&lt;NO PAYLOAD&gt;</code>, <code>PanicHookInfo</code> or <code>ERROR IN PLUGIN</code>.</span></div>
+    <div class="row"><span class="lbl">If it fails</span><span class="val" style="color:var(--muted)">Check the actual Zellij version and whether an existing session still references the older upstream Monocle binary. See <a href="../docs/TROUBLESHOOTING.md#monocle-payload-error">Monocle troubleshooting</a>. A hash check alone does not test mouse-payload compatibility.</span></div>
+  </div>
+</div>
+
+<!-- 15 -->
+<div class="item">
+  <div class="item-head"><input type="checkbox" aria-labelledby="item-15"><h2 id="item-15">Nested-session client sizing</h2></div>
+  <div class="item-body">
+    <div class="row"><span class="lbl">Do</span><span class="val">Use disposable outer/inner sessions. Detach the outer while its nested inner client remains attached, then attach to the inner from a larger terminal. Compare <code>zj action list-clients</code> and the visible tab size.</span></div>
+    <div class="row pass"><span class="lbl">Pass</span><span class="val">A smaller client can constrain the shared tab. In the larger attachment, <kbd>Ctrl+o</kbd>, <kbd>w</kbd>, then <kbd>Ctrl+x</kbd>, <kbd>Esc</kbd> disconnects other clients and lets the tab expand. The current attachment, inner programs and parent session remain alive.</span></div>
+    <div class="row"><span class="lbl">Note</span><span class="val" style="color:var(--muted)">Ctrl+x in the session manager disconnects all other clients of the current session. Use it only when intended; collaborators detach too. See <a href="../docs/TROUBLESHOOTING.md#blank-border-after-reattaching-a-nested-session">nested-session troubleshooting</a>. Check Windows terminal delivery on the target machine.</span></div>
+  </div>
+</div>
+
 <footer>
   <span>Printable API reference snapshot: Zellij 0.45.1. Current selected pins and explicit upgrades: VERSIONS.md.</span>
   <span>What was verified against zellij 0.45.1, and when: <code>CHANGELOG.md</code>.</span>

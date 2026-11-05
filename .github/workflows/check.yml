@@ -90,7 +90,7 @@ jobs:
           done
 
   quit-dialog-build:
-    name: Reproduce bundled quit dialog
+    name: Reproduce bundled plugins
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -100,7 +100,15 @@ jobs:
       - name: Install the pinned WASM build toolchain
         run: rustup toolchain install 1.95.0 --profile minimal --target wasm32-wasip1
       - name: Rebuild locked source and compare bundled bytes
-        run: python3 plugin-sources/confirm-quit/build.py --check
+        run: |
+          python3 plugin-sources/confirm-quit/build.py --check
+          python3 plugin-sources/monocle/build.py --check
+      - name: Install pinned Zellij for the plugin compatibility smoke check
+        run: |
+          python3 tools/manage.py install-zellij --bin-dir "$RUNNER_TEMP/plugin-smoke-bin"
+          echo "$RUNNER_TEMP/plugin-smoke-bin" >> "$GITHUB_PATH"
+      - name: Exercise Monocle search and mouse events in a real terminal
+        run: python3 tools/smoke_plugin_compatibility.py
 
   network-smoke:
     # Opt-in live metadata/download checks; ordinary regressions use local fixtures.

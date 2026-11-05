@@ -32,7 +32,8 @@ def documentation(pins: dict) -> bytes:
                   'immutable artifact commit, not GitHub releases. Launch/setup use the verified',
                   'bundled bytes without downloading. `versions check` and `versions update --all`',
                   'leave these builds alone; explicit plugin updates require rebuilding and review.',
-                  'See the [quit-confirmation build guide](docs/QUIT_CONFIRMATION.md).']
+                  'See the [quit-confirmation build guide](docs/QUIT_CONFIRMATION.md) and',
+                  '[Monocle compatibility build](plugin-sources/monocle/README.md).']
     lines += ['', '## Change versions when you choose', '',
               'Run these commands from the full source checkout, not a copied launcher helper.', '', '```sh',
               'python3 tools/manage.py versions check',

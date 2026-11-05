@@ -270,22 +270,24 @@ keybinds {
 // VERSIONS ARE PINNED: zellij caches each .wasm by URL, so `releases/latest`
 // would give two machines different builds, and a future build may need a
 // newer zellij. Use `tools/manage.py versions update` for upstream release pins;
-// rebuild confirm-quit from plugin-sources/confirm-quit when changing that build.
+// Monocle and confirm-quit are built from locked source under plugin-sources/.
 // The checked-in zj launcher prefers verified downloads for upstream releases
-// and falls back to bundled copies. confirm-quit always uses verified bundled
-// bytes. ZJ_OFFLINE=1 skips network work.
+// and falls back to bundled copies. Source-built plugins always use verified
+// bundled bytes. ZJ_OFFLINE=1 skips network work.
 // Plain zellij uses these HTTPS aliases and its own cache; it has no bundled
 // fallback mechanism. See README.md for direct-clone startup commands.
 //
 // Copy each tag verbatim from its releases page — the formats differ upstream:
-// zjstatus and monocle use `vX.Y.Z`; multitask follows the zellij version.
+// zjstatus uses `vX.Y.Z`; multitask follows the zellij version. Monocle's
+// upstream v0.100.2 binary has an old mouse-event API; the local build below
+// uses the selected Zellij SDK. See docs/TROUBLESHOOTING.md before replacing it.
 plugins {
     // https://github.com/dj95/zjstatus — status bar used by layouts/zjstatus.kdl.
     // v0.25.0 needs zellij >= 0.45.0 (it fixes the 0.45 frame flicker).
     zjstatus location="https://github.com/dj95/zjstatus/releases/download/v0.25.0/zjstatus.wasm"
 
     // https://github.com/imsnif/monocle — fuzzy file/content finder (Ctrl+o, m).
-    monocle location="https://github.com/imsnif/monocle/releases/download/v0.100.2/monocle.wasm"
+    monocle location="https://raw.githubusercontent.com/abhi-k9/zellij-config/074344acbf337369bf7b92c00f156e1395f67c45/plugin-sources/monocle/monocle.wasm"
 
     // https://github.com/leakec/multitask (moved from imsnif/multitask) —
     // "mini-CI". Its release tags track Zellij versions; check compatibility when

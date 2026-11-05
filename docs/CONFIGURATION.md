@@ -2,6 +2,8 @@
 
 For a first session and common daily tasks, start with the
 [quick start](QUICK_START.md).
+For Monocle mouse crashes, terminal color replies appearing in Fish or a border
+gap after nested sessions, see [troubleshooting](TROUBLESHOOTING.md).
 
 The config targets the version selected in [VERSIONS.md](../VERSIONS.md).
 Catppuccin Mocha is built into Zellij; the custom theme file is an optional
@@ -34,8 +36,9 @@ The repository root contains `config.kdl`, `layouts/`, `themes/` and backup
 
 The launcher first reuses a verified prior download, then attempts the pinned
 HTTPS release, then verifies and uses the bundled backup if fetching fails, for
-the three upstream release plugins. The repository-built `confirm-quit` dialog
-always uses verified bundled bytes, without a network request.
+the upstream release plugins `zjstatus` and `multitask`. The repository-built
+`monocle` and `confirm-quit` plugins use verified bundled bytes without a network
+request.
 Download/cache checksum errors cannot select unverified bytes. `ZJ_OFFLINE=1`
 skips startup network access and uses a verified download cache or bundled files.
 Private per-user config snapshots leave the checkout untouched. Local preferences
@@ -51,7 +54,7 @@ To change versions when you choose:
 ```sh
 python3 tools/manage.py versions check
 python3 tools/manage.py versions update --all
-python3 tools/manage.py versions update --plugin monocle=latest
+python3 tools/manage.py versions update --plugin zjstatus=latest
 python3 tools/manage.py versions update --zellij latest
 ./check.sh
 ```
@@ -62,9 +65,10 @@ again. The updater keeps pins, plugin bytes, notices and generated references
 together and refuses a new artifact without a published or independently supplied
 digest. Changed license terms require review.
 
-`versions check` skips release queries for the bundled `confirm-quit` build;
-`versions update --all` selects only the three upstream plugins and core pins.
-The dialog has a separate [rebuild and publication process](QUIT_CONFIRMATION.md#rebuild-and-publish-the-dialog).
+`versions check` skips release queries for the bundled `monocle` and
+`confirm-quit` builds; `versions update --all` selects only the two upstream
+release plugins and core pins. See the [Monocle build instructions](../plugin-sources/monocle/README.md)
+and the dialog's [rebuild and publication process](QUIT_CONFIRMATION.md#rebuild-and-publish-the-dialog).
 
 Selecting a Zellij tag records published binary hashes; downloading/installing
 that executable is a separate `install-zellij` command. Neither changing a pin
@@ -285,9 +289,10 @@ shows the platform-specific detection used for its input path.
 
 ## Plugins and permissions
 
-The three upstream release aliases are `zjstatus`, `monocle` and `multitask`.
-`confirm-quit` is the fourth alias, a repository-built dialog adapted from an
-MIT-licensed plugin. Versions, source commits, URLs and hashes are listed in
+The four managed aliases are `zjstatus`, `monocle`, `multitask` and `confirm-quit`.
+`zjstatus` and `multitask` use upstream releases. Monocle is rebuilt for the
+selected Zellij SDK, and `confirm-quit` is an adapted quit dialog. Versions,
+source commits, URLs and hashes are listed in
 [VERSIONS.md](../VERSIONS.md). They load on demand rather than in a background
 `load_plugins` block.
 
@@ -302,6 +307,12 @@ host commands; WASM is not a reason to grant it indiscriminately.
 It runs no host commands and needs no network or filesystem permission. Through
 `zj` and setup it always uses the verified local bundle; plain Zellij follows its
 immutable HTTPS artifact alias using the native downloader/cache.
+
+The bundled Monocle build corrects an older SDK's mouse-event payload mismatch;
+its file-search behavior and permissions remain explicit. If an old session
+still shows `ERROR IN PLUGIN` when moving the pointer into Monocle, start a fresh
+session after updating. See [Monocle troubleshooting](TROUBLESHOOTING.md#monocle-payload-error)
+for the source change and validation limits.
 
 The optional zjstatus layout uses state access for its bar. Its one-row permission
 prompt can be truncated: click the bar to focus it before responding. Set

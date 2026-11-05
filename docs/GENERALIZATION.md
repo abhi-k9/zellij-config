@@ -173,11 +173,14 @@ enable. The shared config does not install or auto-select those applications.
 The `theme` preference selects Zellij's theme. The optional zjstatus layout keeps
 its own Mocha palette; changing the Zellij theme does not recolor that palette.
 
-Plugin pins remain zjstatus `v0.25.0`, monocle `v0.100.2`, and multitask `v0.45.1`.
-At the portability review, these pins matched the stable releases and freshly
-downloaded bytes; this is a recorded review result, not an automatic guarantee
-that they remain the latest releases. Use the explicit version-check commands
-when choosing an upgrade. See [VERSIONS.md](../VERSIONS.md).
+At the portability review, zjstatus `v0.25.0`, Monocle `v0.100.2` and multitask
+`v0.45.1` matched the published stable releases and freshly downloaded bytes.
+That historical result established artifact identity, not every interactive
+plugin's compatibility. Monocle's published binary later reproduced a mouse
+payload crash on Zellij 0.45.1; the current inventory uses a source build against
+that SDK. `monocle` and `confirm-quit` require reviewed rebuilds, while the version
+updater checks the two upstream release plugins. See [current pins](../VERSIONS.md)
+and [Monocle troubleshooting](TROUBLESHOOTING.md#monocle-payload-error).
 
 ## Migration and validation checklist
 

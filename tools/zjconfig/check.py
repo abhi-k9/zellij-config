@@ -23,13 +23,19 @@ REQUIRED = [
     'launcher/zj', 'launcher/zj.cmd', 'launcher/zj.ps1',
     'hooks/pre-commit', '.github/workflows/check.yml', 'THIRD_PARTY_NOTICES.md',
     'ci-tools.json', 'tools/lint_workflow.py', 'requirements-dev.txt',
+    'tools/smoke_plugin_compatibility.py',
     'package.json', 'package-lock.json', 'pyproject.toml', 'tests/test_regressions.py',
     'tests/test_portability.py', 'tests/test_preferences.py', 'tests/test_entrypoints.py',
     'docs/AUDIT_FIXES.md', 'docs/GENERALIZATION.md', 'tests/test_configuration.py',
-    'docs/QUICK_START.md', 'docs/QUIT_CONFIRMATION.md', 'tests/test_bundled_plugins.py',
-    *['plugin-sources/confirm-quit/' + name for name in
-      ['Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml', 'src/main.rs', 'LICENSE',
-       'THIRD_PARTY_LICENSES.txt', 'README.md', 'build.py', 'confirm-quit.wasm']],
+    'docs/QUICK_START.md', 'docs/QUIT_CONFIRMATION.md', 'docs/TROUBLESHOOTING.md',
+    'tests/test_bundled_plugins.py', 'plugin-sources/confirm-quit/LICENSE',
+    *['plugin-sources/' + plugin + '/' + name for plugin in ['confirm-quit', 'monocle']
+      for name in ['Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml', 'src/main.rs',
+                   'THIRD_PARTY_LICENSES.txt', 'README.md', 'build.py', plugin + '.wasm']],
+    *['plugin-sources/monocle/' + name for name in
+      ['LICENSE.md', 'UPSTREAM_CHANGES.patch', 'src/backend_workers.rs', 'src/search_results.rs',
+       'src/ui/mod.rs', 'src/ui/controls_line.rs', 'src/ui/loading_animation.rs',
+       'src/ui/selection_controls_area.rs']],
     *['layouts/' + name + suffix for name in ['minimal', 'default', 'dev', 'zjstatus']
       for suffix in ['.kdl', '.swap.kdl']],
     *['cheatsheets/' + name + '.html' for name in

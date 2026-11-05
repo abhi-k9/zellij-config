@@ -112,6 +112,10 @@ zj list-sessions
 zj attach myproject
 ```
 
+If a reattached nested session has a blank strip along its border, check for a
+smaller client still attached inside its parent. See the
+[nested-session recovery steps](TROUBLESHOOTING.md#blank-border-after-reattaching-a-nested-session).
+
 Use `zj attach --create myproject` to attach, resurrect or create it as needed.
 When no running or recoverable session exists, creation uses your configured
 default layout; an earlier `-n dev` command does not change that default. Saved

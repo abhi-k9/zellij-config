@@ -7,7 +7,7 @@ Zellij: **v0.45.1**. These pins select artifacts; CI records validation.
 | Plugin | Tag / source commit | Artifact | SHA-256 |
 | --- | --- | --- | --- |
 | zjstatus | v0.25.0 | https://github.com/dj95/zjstatus/releases/download/v0.25.0/zjstatus.wasm | `282ceab219e56e1908c9fac33907241fe6c3e1ef7d85faab3e5f438cef87b8fe` |
-| monocle | v0.100.2 | https://github.com/imsnif/monocle/releases/download/v0.100.2/monocle.wasm | `4cb7e2cc912d975b4e755c93e44e7f0de62ef9240a09a89b735490cf4713792c` |
+| monocle | 074344acbf337369bf7b92c00f156e1395f67c45 | https://raw.githubusercontent.com/abhi-k9/zellij-config/074344acbf337369bf7b92c00f156e1395f67c45/plugin-sources/monocle/monocle.wasm | `536a4780ebaf1c47c3847cee1f4c88aea25882063631aaa3f26447bbdd372357` |
 | multitask | v0.45.1 | https://github.com/leakec/multitask/releases/download/v0.45.1/multitask.wasm | `d2c6dadef431065efcc307cd573550031a9d11348ffde9d331f96136b7d60a9d` |
 | confirm-quit | 3aa07d26dfaa2b4ac0d41f8cc30e880c1d56ea22 | https://raw.githubusercontent.com/abhi-k9/zellij-config/3aa07d26dfaa2b4ac0d41f8cc30e880c1d56ea22/plugin-sources/confirm-quit/confirm-quit.wasm | `9cc0028a4c964d01543ede618c26aa03f04d84092548e8af0aed5bfec8f93dcf` |
 
@@ -15,7 +15,8 @@ Entries with `source: "bundled"` are repository-built plugins pinned to an
 immutable artifact commit, not GitHub releases. Launch/setup use the verified
 bundled bytes without downloading. `versions check` and `versions update --all`
 leave these builds alone; explicit plugin updates require rebuilding and review.
-See the [quit-confirmation build guide](docs/QUIT_CONFIRMATION.md).
+See the [quit-confirmation build guide](docs/QUIT_CONFIRMATION.md) and
+[Monocle compatibility build](plugin-sources/monocle/README.md).
 
 ## Change versions when you choose
 

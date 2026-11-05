@@ -16,6 +16,23 @@ as freshly repeated by each documentation review.
 
 ---
 
+## 2026-11-04 — Monocle compatibility and terminal diagnostics
+
+- Reproduced the published Monocle v0.100.2 mouse-event deserialization panic on
+  Zellij 0.45.1. Build the unchanged search logic with the exact 0.45.1 SDK and
+  the two file-opening call adjustments required by that API. Pin the reviewed
+  source-built artifact instead of the incompatible upstream binary.
+- Refresh the compatible Cargo dependency lock, including crossbeam-channel's
+  double-free fix, and retain complete dependency notices and required sources.
+  CI reproduces both bundled source builds; upstream release updates leave these
+  builds unchanged.
+- Document OSC 11 background-color replies leaking into Fish as the matching
+  unreleased Zellij core fix. No terminal-feature toggle or automatic shell
+  startup delay is presented as a reliable configuration fix.
+- Reproduce the nested-session border gap as a smaller client remaining attached
+  inside a detached parent. Document session-manager disconnection of other
+  clients, which restores the viewport without killing the parent or programs.
+
 ## 2026-11-04 — confirmed quit, F12 locking and pane selection
 
 - Restored F12 lock/unlock in the shared KDL and both preference presets, freeing

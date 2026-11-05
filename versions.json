@@ -22,12 +22,14 @@
     },
     {
       "name": "monocle",
-      "repository": "imsnif/monocle",
-      "tag": "v0.100.2",
+      "repository": "abhi-k9/zellij-config",
+      "tag": "074344acbf337369bf7b92c00f156e1395f67c45",
       "asset": "monocle.wasm",
-      "sha256": "4cb7e2cc912d975b4e755c93e44e7f0de62ef9240a09a89b735490cf4713792c",
+      "sha256": "536a4780ebaf1c47c3847cee1f4c88aea25882063631aaa3f26447bbdd372357",
       "license": "MIT",
-      "license_path": "LICENSE.md"
+      "license_path": "plugin-sources/monocle/LICENSE.md",
+      "source": "bundled",
+      "artifact_path": "plugin-sources/monocle/monocle.wasm"
     },
     {
       "name": "multitask",

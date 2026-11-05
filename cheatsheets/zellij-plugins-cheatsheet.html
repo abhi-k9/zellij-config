@@ -101,7 +101,7 @@
       <td><code>file:~/path.wasm</code></td><td>Local .wasm file</td>
     </tr>
     <tr>
-      <td><code>https://…/x.wasm</code></td><td>Plain Zellij downloads/caches it on first use. Pin a release tag or immutable artifact commit, not mutable <code>latest</code>. For managed release aliases, <code>zj</code> verifies hashes and falls back to bundled files; repository-built <code>confirm-quit</code> always uses verified bundled bytes. Set <code>ZJ_OFFLINE=1</code> to skip startup downloads; see README, <em>Downloads and offline fallback</em>.</td>
+      <td><code>https://…/x.wasm</code></td><td>Plain Zellij downloads/caches it on first use. Pin a release tag or immutable artifact commit, not mutable <code>latest</code>. For managed release aliases, <code>zj</code> verifies hashes and falls back to bundled files; repository-built <code>monocle</code> and <code>confirm-quit</code> use verified bundled bytes. Set <code>ZJ_OFFLINE=1</code> to skip startup downloads; see README, <em>Downloads and offline fallback</em>.</td>
       <td>Alias</td><td>Short name you register in <code>plugins {}</code> to use anywhere</td>
     </tr>
     <tr class="divider"><td colspan="4">Declaration &amp; usage</td></tr>
@@ -109,7 +109,9 @@
       <td colspan="2" style="vertical-align:top;padding:8px 10px"><pre>// config.kdl — register an alias
 plugins {
     // one line — a URL broken inside the quotes would contain a newline
-    monocle location="https://github.com/imsnif/monocle/releases/download/v0.100.2/monocle.wasm"
+    zjstatus location="https://github.com/dj95/zjstatus/releases/download/v0.25.0/zjstatus.wasm"
+    // Monocle is already registered in our config with its compatible source build.
+    // Keep that immutable artifact URL; do not replace it with the old upstream WASM.
 
     my-plugin location="file:~/zellij-plugins/x.wasm" {   // example only; not a bundled plugin
         key "value"   // passed to plugin on init
@@ -195,6 +197,7 @@ keybinds {
     <tr><td><code>zjstatus</code> <span class="badge aliased">aliased</span></td><td>Customizable status bar (tmux-line style)</td></tr>
     <tr><td><code>monocle</code> <span class="badge aliased">aliased</span></td><td>Fuzzy file/content finder from the focused pane's directory — <kbd>Ctrl+o</kbd> <kbd>m</kbd></td></tr>
     <tr><td><code>multitask</code> <span class="badge aliased">aliased</span></td><td>Run several commands and watch all outputs</td></tr>
+    <tr><td><code>confirm-quit</code> <span class="badge aliased">aliased</span></td><td>Bundled confirmation dialog — <kbd>Ctrl+o</kbd> <kbd>q</kbd></td></tr>
     <tr><td><code>configuration</code> <span class="badge builtin">built-in</span></td><td>Keybinding screen — bound to <kbd>Ctrl+o</kbd> <kbd>h</kbd></td></tr>
     <tr class="divider"><td colspan="2">Launching</td></tr>
     <tr><td colspan="2" class="note">Inside a session: <code>zellij plugin --floating -- monocle</code> — or wire to a keybind. See per-plugin cards below for setup details.</td></tr>
@@ -255,6 +258,7 @@ keybinds {
   <table>
     <tr class="divider"><td colspan="2">Purpose</td></tr>
     <tr><td colspan="2" class="note">Fuzzy finder for files AND content, searching from the focused pane's directory. Like a project-wide Telescope/fzf that lives in zellij — open it over any pane, search, open matching files in a new pane.</td></tr>
+    <tr><td>Compatibility build</td><td>Rebuilt from upstream v0.100.2 against SDK 0.45.1. The old published WASM can panic on mouse events. See <a href="../docs/TROUBLESHOOTING.md#monocle-payload-error">payload-error troubleshooting</a> and <a href="../plugin-sources/monocle/README.md">source/build instructions</a>.</td></tr>
     <tr class="divider"><td colspan="2">Launch</td></tr>
     <tr><td><kbd>Ctrl+o</kbd> <kbd class="teal">m</kbd></td><td>Bound in this config — floating, rooted at the focused pane's directory</td></tr>
     <tr><td><code>$ zellij plugin --floating -- monocle</code></td><td>From CLI</td></tr>
@@ -505,7 +509,7 @@ theme_light "catppuccin-latte"</pre></td>
 <footer>
   <span>Printable API reference snapshot: Zellij 0.45.1. Current selected pins and explicit upgrades: VERSIONS.md.</span>
   <span>WASM permissions can authorize host actions; review the plugin, its source and requested permissions</span>
-  <span>Our 3 aliases: <code>zjstatus</code> &middot; <code>monocle</code> &middot; <code>multitask</code> &nbsp;·&nbsp; <code>github.com/zellij-org/awesome-zellij</code></span>
+  <span>Our 4 managed aliases: <code>zjstatus</code> &middot; <code>monocle</code> &middot; <code>multitask</code> &middot; <code>confirm-quit</code> &nbsp;·&nbsp; <code>github.com/zellij-org/awesome-zellij</code></span>
 </footer>
 
 </body>

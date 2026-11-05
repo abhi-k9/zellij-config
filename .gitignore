@@ -27,5 +27,5 @@ node_modules/
 # Personal preferences are rendered locally rather than committed.
 /.zellij-config-local.json
 
-# Rebuild outputs for the bundled quit dialog; its reviewed WASM is tracked.
-/plugin-sources/confirm-quit/target/
+# Rebuild outputs for source-built plugins; reviewed WASM artifacts are tracked.
+/plugin-sources/*/target/

@@ -65,9 +65,11 @@ cache; automatic checksum verification and bundled fallback are launcher
 features.
 
 `versions check` skips upstream release queries for this entry, and
-`versions update --all` leaves it unchanged while updating the three upstream
-release plugins and core pins. An explicit version-update request for the bundled
-dialog is rejected; its source and build must be reviewed together.
+`versions update --all` leaves it and the bundled Monocle build unchanged while
+updating the two upstream release plugins and core pins. An explicit
+version-update request for a bundled build is rejected; its source and build
+must be reviewed together. Monocle has its own
+[build instructions](../plugin-sources/monocle/README.md).
 
 ## Rebuild and publish the dialog
 

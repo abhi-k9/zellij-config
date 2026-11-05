@@ -139,7 +139,7 @@
     <tr><td>Resurrection <span class="badge active">on</span></td><td><code>session_serialization true</code> (Zellij's default, kept on) — a retained safety shell keeps another pane available if a restored editor pane closes</td>
         <td>Look</td><td><code>catppuccin-mocha</code>, <code>pane_frame_style "full"</code> (0.45 default is "titles") + <code>rounded_corners</code></td></tr>
     <tr><td>Pane environment</td><td>No debug environment exported by default; <code>RUST_BACKTRACE</code> is opt-in</td>
-        <td>Plugin aliases</td><td>zjstatus, monocle, multitask — pinned, loaded on demand</td></tr>
+        <td>Plugin aliases</td><td>zjstatus, monocle, multitask, confirm-quit — pinned, loaded on demand</td></tr>
     <tr><td colspan="4" class="note">Gotcha: scroll-mode <kbd style="font-size:9.5px">e</kbd> (edit scrollback) needs <code>$EDITOR</code> set in your environment, or it just returns to Normal.</td></tr>
   </table>
 </div>
@@ -260,6 +260,7 @@
     <tr class="divider"><td colspan="2">In-mode keys</td></tr>
     <tr><td><kbd class="mauve">d</kbd></td><td>Detach from session (keeps running)</td></tr>
     <tr><td><kbd class="mauve">w</kbd></td><td>Open session manager (switch / resurrect)</td></tr>
+    <tr><td>In session manager: <kbd class="mauve">Ctrl+x</kbd></td><td>Disconnect all other clients of this session, keeping the current client and programs alive. Can clear a smaller nested client's viewport limit; collaborators will also detach. <kbd>Esc</kbd> closes the manager.</td></tr>
     <tr><td><kbd class="mauve">c</kbd></td><td>Open configuration screen</td></tr>
     <tr><td><kbd class="mauve">l</kbd></td><td>Open layout manager <span class="badge new">new 0.44</span></td></tr>
     <tr><td><kbd class="mauve">p</kbd></td><td>Plugin manager (install/manage)</td></tr>

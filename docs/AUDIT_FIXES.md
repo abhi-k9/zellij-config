@@ -26,6 +26,13 @@ notice. Launch/setup verify its bundled SHA-256 without fetching remote bytes.
 It requires an explicit affirmative answer after the question is displayed and
 uses native client Quit semantics. See the [confirmation and build guide](QUIT_CONFIRMATION.md).
 
+Monocle's published v0.100.2 binary was later reproduced crashing on newer mouse
+payloads from Zellij 0.45.1. The repository now builds that plugin against the
+selected SDK, with source, dependency lock, notices and artifact hash retained.
+The [troubleshooting guide](TROUBLESHOOTING.md) also distinguishes terminal-query
+replies leaking into Fish from the smaller-client sizing rule after nesting;
+neither is addressed by adding layout padding or changing unrelated protocols.
+
 The launcher renders private config snapshots for managed plugins and snapshots
 named layouts when local preferences apply. Setup preserves the
 target's local preferences and validates a separately rendered temporary tree;
