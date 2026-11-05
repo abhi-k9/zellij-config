@@ -221,11 +221,20 @@ permission was unestablished. The built-in screen uses Zellij's actual bindings.
 
 ### Quit confirmation
 
-`Ctrl+o`, then `q` opens a fresh floating **Quit Zellij?** dialog. Only unmodified
+By default, `Ctrl+o`, then `q` opens a fresh floating **Quit Zellij?** dialog. Only unmodified
 `y` confirms; `n` or `Esc` cancels, and Enter does not confirm. Its initial
 `ChangeApplicationState` permission approval is separate from the quit answer.
-If the pane is smaller than 26 columns or 3 rows, enlarge it or cancel;
+If the popup is smaller than 26 columns or 3 content rows, enlarge it or cancel;
 confirmation is disabled until the question can be displayed.
+
+Popup is the default in both presets. To show a borderless, one-line question
+above the existing bar, save
+`python3 tools/manage.py configure --config-dir . --quit-confirmation status`
+and start a fresh `zj` session. Switch back with `--quit-confirmation popup`.
+Status style needs at least 36 columns and adds `ReadApplicationState` permission
+for positioning; it leaves the bar and tiled pane geometry intact. The
+[style guide](QUIT_CONFIRMATION.md#choose-a-display-style) includes JSON and
+direct KDL configuration for plain Zellij.
 
 This preserves native Quit behavior: the current client closes, and the session
 and its programs stop only when no other active clients remain. Detach with
@@ -256,10 +265,10 @@ not change mode, first check that Zellij shows **NORMAL**, not **LOCKED**. Unloc
 with F12, or `Ctrl+g` if you explicitly selected that local preference.
 Locked mode forwards these keys to the application.
 
-These strings resemble CSI-u keyboard reports. In the reported setup, the same
-config works when PowerShell runs inside **Windows Terminal**, while the older
-console window opened by **Windows PowerShell** prints the reports. PowerShell
-is the shell; Windows Terminal is the terminal host. Open Windows Terminal and
+These strings resemble CSI-u keyboard reports. If the older console window
+opened by **Windows PowerShell** prints them without changing mode, compare the
+same config in **Windows Terminal**. PowerShell is the shell; Windows Terminal
+is the terminal host. Open Windows Terminal and
 choose its Windows PowerShell or PowerShell profile. This does not require
 changing PowerShell's execution policy, Zellij keybindings or global settings.
 
@@ -303,8 +312,10 @@ Plugin permissions are granted by Zellij, not by the installer. Grant only the
 permissions needed for the features you intend to use. `RunCommands` permits
 host commands; WASM is not a reason to grant it indiscriminately.
 
-`confirm-quit` requests only `ChangeApplicationState` to perform native Quit.
-It runs no host commands and needs no network or filesystem permission. Through
+`confirm-quit` requests `ChangeApplicationState` to perform native Quit. Its
+optional status style also requests `ReadApplicationState` to position its line
+using tab/pane geometry. It runs no host commands and needs no network or
+filesystem permission. Through
 `zj` and setup it always uses the verified local bundle; plain Zellij follows its
 immutable HTTPS artifact alias using the native downloader/cache.
 

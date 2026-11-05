@@ -16,6 +16,24 @@ as freshly repeated by each documentation review.
 
 ---
 
+## 2026-11-05 — configurable quit confirmation
+
+- Add `--quit-confirmation popup/status` and the local JSON `quit_confirmation`
+  preference. Both presets retain popup as the default. Direct KDL supports
+  `display_style` on the `confirm-quit` alias.
+- Add a borderless, one-line status confirmation above the existing bar. It
+  follows terminal geometry using the additional `ReadApplicationState`
+  permission, preserving the bar and tiled panes. Both styles require a visible
+  question and unmodified `y`; `n`/`Esc` cancel and permission approval is separate.
+- Use an explicit initial tab in `minimal.kdl` so its compact-bar template also
+  applies to the first shell on Zellij 0.45.1.
+- Document both display styles, their source and build inputs, permissions,
+  configuration and validation. Keep troubleshooting instructions generic.
+- Validate both styles through real Linux Zellij 0.45.1 sessions: first-use
+  permissions, cancellation, answer-key handling, resizing, narrow terminals,
+  compact-bar/zjstatus layouts and native Quit with two clients. Rebuild matches
+  both bundled copies; 150 Python tests pass with 8 environment-specific skips. Native Windows terminal rendering remains an on-machine check.
+
 ## 2026-11-04 — Monocle compatibility and terminal diagnostics
 
 - Reproduced the published Monocle v0.100.2 mouse-event deserialization panic on

@@ -79,8 +79,8 @@ in the original resource directory.
 | Option | Choice |
 | --- | --- |
 | `--config-dir DIRECTORY` | Select the config directory containing the local file |
-| `--profile portable` | Independent sessions, F12, UTC, no Git/debug export |
-| `--profile classic` | Session `main` with autoattach, F12, Denver, Git widget and debug export |
+| `--profile portable` | Independent sessions, F12, popup quit confirmation, UTC, no Git/debug export |
+| `--profile classic` | Session `main` with autoattach, F12, popup quit confirmation, Denver, Git widget and debug export |
 | `--timezone ZONE` | IANA clock timezone, such as `Europe/Paris` or `Etc/UTC` |
 | `--git-status on/off` | Enable/disable the startup-directory Git widget |
 | `--layout NAME` | `default`, `dev`, `zjstatus` or `minimal` |
@@ -89,6 +89,7 @@ in the original resource directory.
 | `--project-sessions` | Clear the fixed session name and automatic attachment |
 | `--rust-backtrace on/off` | Enable/disable the `RUST_BACKTRACE=1` pane export |
 | `--lock-key "Ctrl g"` or `--lock-key F12` | Select the lock toggle |
+| `--quit-confirmation popup/status` | Floating popup (default) or a single line above the existing status bar |
 | `--theme NAME` | Select a Zellij theme; default is `catppuccin-mocha` |
 | `--pane-frames on/off` | Select pane frames; defaults off for a selected zjstatus layout |
 | `--dry-run` | Preview without writing |
@@ -102,6 +103,13 @@ Start a fresh session after updating: existing sessions keep their old bindings.
 Refresh any standalone installed helpers with `install --launcher-only` from the
 updated checkout so their portable preset also uses F12. Confirm that your
 terminal forwards F12; some keyboards require Fn+F12.
+
+Both presets default to `"quit_confirmation": "popup"`; existing schema-1 files
+that omit the field inherit that choice. Save `--quit-confirmation status` to use
+a single-line overlay above the existing bar, or `popup` to return to the dialog.
+Both require an unmodified `y` to quit; `n` and `Esc` cancel. Status style also
+requests permission to read pane/tab geometry. See
+[display styles and permissions](QUIT_CONFIRMATION.md#choose-a-display-style).
 
 The timezone and Git choices affect the optional zjstatus bar; enabling Git does
 not select that layout. Likewise, automatic frame disabling follows the saved
@@ -151,8 +159,8 @@ host prints `[111;5u`/`[112;5u` for `Ctrl+o`/`Ctrl+p` without changing Zellij's
 mode. Confirm NORMAL rather than LOCKED first; unlock with F12, or `Ctrl+g` if
 explicitly selected in local preferences. PowerShell is the shell, and Windows
 Terminal supplies the terminal host. See the [keyboard checks](CONFIGURATION.md#ctrl-keys-print-keyboard-reports-in-a-windows-console)
-for a fresh-session test and actual executable-version check. The reported setup
-works in Windows Terminal without preference or global keyboard-setting changes.
+for a fresh-session test and actual executable-version check. Compare terminal
+hosts before changing preferences or global keyboard settings.
 
 ## Timezones and optional commands
 

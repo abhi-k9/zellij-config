@@ -52,6 +52,15 @@ class SchemaTests(unittest.TestCase):
         self.assertTrue(preferences.validate_settings({'schema': 1, 'layout': 'zjstatus',
                                                         'pane_frames': True})['pane_frames'])
 
+    def test_quit_confirmation_defaults_and_choices(self):
+        for profile in preferences.PRESETS:
+            self.assertEqual(preferences.validate_settings({'schema': 1, 'profile': profile})['quit_confirmation'], 'popup')
+            self.assertEqual(preferences.validate_settings({'schema': 1, 'profile': profile,
+                                                           'quit_confirmation': 'status'})['quit_confirmation'], 'status')
+        for value in ['off', '', True, None, []]:
+            with self.subTest(value=value), self.assertRaisesRegex(ConfigError, 'popup or status'):
+                preferences.validate_settings({'schema': 1, 'quit_confirmation': value})
+
     def test_schema_rejects_unknown_and_ambiguous_values(self):
         invalid = [None, [], {}, {'schema': True}, {'schema': 2}, {'schema': 1, 'unknown': True},
                    {'schema': 1, 'profile': 'other'}, {'schema': 1, 'layout': '../dev'},
@@ -114,6 +123,24 @@ class RenderingTests(unittest.TestCase):
         self.status = (ROOT / 'layouts/zjstatus.kdl').read_text(encoding='utf-8')
         self.portable = preferences.validate_settings({'schema': 1})
         self.classic = preferences.validate_settings({'schema': 1, 'profile': 'classic'})
+
+    def test_quit_style_roundtrip_preserves_aliases_and_other_configuration(self):
+        for source in [self.config,
+                       'plugins {\n    confirm-quit location="file:custom.wasm" {\n'
+                       '        // retained\n        custom "value"\n        display_style "popup"\n    }\n}\n']:
+            status = preferences.render_config(source, {'schema': 1, 'quit_confirmation': 'status'})
+            alias = next(n for n in active(status)['plugins'].children if n.name == 'confirm-quit')
+            self.assertEqual(next(n.arguments for n in alias.children if n.name == 'display_style'), ['status'])
+            self.assertEqual(kdl.plugin_locations(status), kdl.plugin_locations(source))
+            self.assertEqual(preferences.render_config(status, {'schema': 1, 'quit_confirmation': 'status'}), status)
+            popup = preferences.render_config(status, {'schema': 1, 'quit_confirmation': 'popup'})
+            alias = next(n for n in active(popup)['plugins'].children if n.name == 'confirm-quit')
+            self.assertEqual(next(n.arguments for n in alias.children if n.name == 'display_style'), ['popup'])
+            if 'custom "value"' in source:
+                self.assertIn('custom "value"', popup)
+                self.assertIn('// retained', popup)
+        with self.assertRaisesRegex(ConfigError, 'confirm-quit plugin alias'):
+            preferences.render_config('theme "custom"\n', {'schema': 1, 'quit_confirmation': 'status'})
 
     def test_checked_in_defaults_are_portable_and_commands_are_opt_in(self):
         roots = active(self.config)

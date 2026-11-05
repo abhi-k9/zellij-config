@@ -10,5 +10,8 @@ layout {
             plugin location="compact-bar"
         }
     }
-    pane
+    // An explicit tab applies default_tab_template to the initial shell too.
+    tab {
+        pane
+    }
 }

@@ -55,7 +55,7 @@ def configure(options) -> int:
     if file.is_symlink():
         raise ConfigError(f'Refusing a local preferences symlink: {file}')
     keys = ['profile', 'timezone', 'git_status', 'session_name', 'attach_to_session',
-            'rust_backtrace', 'lock_key', 'layout', 'theme', 'pane_frames']
+            'rust_backtrace', 'lock_key', 'layout', 'theme', 'pane_frames', 'quit_confirmation']
     updates = {key: getattr(options, key) for key in keys if getattr(options, key) is not None}
     for key in ['git_status', 'attach_to_session', 'rust_backtrace', 'pane_frames']:
         if key in updates:
@@ -139,6 +139,8 @@ def main(argv=None) -> int:
     preferences.add_argument('--layout', choices=['default', 'dev', 'zjstatus', 'minimal'])
     preferences.add_argument('--theme')
     preferences.add_argument('--pane-frames', choices=['on', 'off'])
+    preferences.add_argument('--quit-confirmation', choices=['popup', 'status'],
+                             help='Show quit confirmation in a popup or a line above the status bar')
     preferences.add_argument('--reset', action='store_true')
     preferences.add_argument('--dry-run', action='store_true')
     start = commands.add_parser('launch')

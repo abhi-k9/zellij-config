@@ -197,7 +197,7 @@ keybinds {
     <tr><td><code>zjstatus</code> <span class="badge aliased">aliased</span></td><td>Customizable status bar (tmux-line style)</td></tr>
     <tr><td><code>monocle</code> <span class="badge aliased">aliased</span></td><td>Fuzzy file/content finder from the focused pane's directory — <kbd>Ctrl+o</kbd> <kbd>m</kbd></td></tr>
     <tr><td><code>multitask</code> <span class="badge aliased">aliased</span></td><td>Run several commands and watch all outputs</td></tr>
-    <tr><td><code>confirm-quit</code> <span class="badge aliased">aliased</span></td><td>Bundled confirmation dialog — <kbd>Ctrl+o</kbd> <kbd>q</kbd></td></tr>
+    <tr><td><code>confirm-quit</code> <span class="badge aliased">aliased</span></td><td>Bundled popup or status-line confirmation — <kbd>Ctrl+o</kbd> <kbd>q</kbd></td></tr>
     <tr><td><code>configuration</code> <span class="badge builtin">built-in</span></td><td>Keybinding screen — bound to <kbd>Ctrl+o</kbd> <kbd>h</kbd></td></tr>
     <tr class="divider"><td colspan="2">Launching</td></tr>
     <tr><td colspan="2" class="note">Inside a session: <code>zellij plugin --floating -- monocle</code> — or wire to a keybind. See per-plugin cards below for setup details.</td></tr>
@@ -298,10 +298,11 @@ cargo test            # step 2: only if step 1 succeeded</pre></td></tr>
 <div class="card col-2">
   <div class="card-header"><div class="dot" style="background:var(--red)"></div><h2>Quit confirmation <span class="badge active">configured</span></h2></div>
   <table>
-    <tr><td><kbd>Ctrl+o</kbd> <kbd>q</kbd></td><td>Fresh floating <strong>Quit Zellij?</strong> dialog; <kbd>y</kbd> confirms, <kbd>n</kbd>/<kbd>Esc</kbd> cancels. Enter does not confirm.</td></tr>
-    <tr><td>Permission</td><td>Only <code>ChangeApplicationState</code>; approving first-use permission does not answer the quit question. No external commands.</td></tr>
+    <tr><td><kbd>Ctrl+o</kbd> <kbd>q</kbd></td><td><strong>Quit Zellij?</strong> popup (default) or status line; <kbd>y</kbd> confirms, <kbd>n</kbd>/<kbd>Esc</kbd> cancels. Enter does not confirm.</td></tr>
+    <tr><td>Style</td><td>Save <code>python3 tools/manage.py configure --config-dir . --quit-confirmation status</code> from the checkout, then start a fresh <code>zj</code> session. Use <code>popup</code> to switch back. Status overlays a line above the existing bar without resizing tiled panes.</td></tr>
+    <tr><td>Permission</td><td><code>ChangeApplicationState</code>; status style adds <code>ReadApplicationState</code> for geometry. Approving first-use permission does not answer the quit question. No external commands.</td></tr>
     <tr><td>Client Quit</td><td>Closes your client. Programs stop only if no other active client remains; detach with <kbd>Ctrl+o</kbd> <kbd>d</kbd> to keep the workspace running.</td></tr>
-    <tr><td>Bundle</td><td>Source-reviewed MIT adaptation, pinned SDK/build inputs and SHA-256; launcher/setup always use verified local bytes. Requires at least 26 columns and 3 rows to confirm.</td></tr>
+    <tr><td>Bundle</td><td>Source-reviewed MIT adaptation, pinned SDK/build inputs and SHA-256; launcher/setup always use verified local bytes. Popup needs 26 columns and 3 content rows; status needs 36 columns and 1 row to confirm.</td></tr>
     <tr><td colspan="2" class="note">Guards this quit binding, not pane/tab/group close, shell exit or CLI kills. Source and maintenance: <a href="../docs/QUIT_CONFIRMATION.md">quit-confirmation guide</a>.</td></tr>
   </table>
 </div>

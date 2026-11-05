@@ -59,7 +59,7 @@ reporting `#2e3440`. It should be consumed by the terminal-query handler, but ca
 reach the shell as input. This can happen in a fresh session without nesting.
 Press **Ctrl+u** to clear the affected command line before typing a command.
 
-The report matches the Zellij 0.45.1 startup-query ownership bug described in
+This symptom matches the Zellij 0.45.1 startup-query ownership bug described in
 [issue #5566](https://github.com/zellij-org/zellij/issues/5566). The upstream fix,
 [PR #5655](https://github.com/zellij-org/zellij/pull/5655), merged after 0.45.1.
 At this investigation, 0.45.1 was still the latest stable release. That release

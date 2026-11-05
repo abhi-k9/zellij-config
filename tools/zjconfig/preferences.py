@@ -20,11 +20,13 @@ PRESETS = {
         'timezone': 'UTC', 'git_status': False, 'session_name': None,
         'attach_to_session': False, 'rust_backtrace': False, 'lock_key': 'F12',
         'layout': 'default', 'theme': 'catppuccin-mocha', 'pane_frames': True,
+        'quit_confirmation': 'popup',
     },
     'classic': {
         'timezone': 'America/Denver', 'git_status': True, 'session_name': 'main',
         'attach_to_session': True, 'rust_backtrace': True, 'lock_key': 'F12',
         'layout': 'default', 'theme': 'catppuccin-mocha', 'pane_frames': True,
+        'quit_confirmation': 'popup',
     },
 }
 
@@ -62,6 +64,8 @@ def validate_settings(raw) -> dict:
         raise ConfigError('lock_key must be F12 or Ctrl g')
     if result['layout'] not in LAYOUTS:
         raise ConfigError('layout must be ' + ', '.join(LAYOUTS))
+    if result['quit_confirmation'] not in ['popup', 'status']:
+        raise ConfigError('quit_confirmation must be popup or status')
     _string(result['theme'], 'theme')
     timezone = _string(result['timezone'], 'timezone')
     # Both shipped presets are known IANA names. Native Windows may have no
@@ -194,6 +198,22 @@ def _lock_bindings(text: str, key: str) -> str:
     return text
 
 
+def _quit_confirmation(text: str, style: str) -> str:
+    """Configure the managed alias without changing other plugins or bindings."""
+    for root in parse(text):
+        if root.name != 'plugins':
+            continue
+        for alias in root.children:
+            if alias.name == 'confirm-quit':
+                value = 'display_style ' + quote(style)
+                if text[alias.end - 1] == '}':
+                    return _set_children(text, alias, {'display_style': value}, '        ')
+                return _edits(text, [(alias.end, alias.end, ' {\n        ' + value + '\n    }')])
+    if style == 'status':
+        raise ConfigError('Status confirmation requires the confirm-quit plugin alias')
+    return text
+
+
 def render_config(text: str, settings: dict) -> str:
     """Apply the complete resolved preset to managed active config nodes."""
     settings = validate_settings(settings)
@@ -212,7 +232,8 @@ def render_config(text: str, settings: dict) -> str:
         }, '    ')
     elif settings['rust_backtrace']:
         text = set_root_nodes(text, {'env': 'env {\n    RUST_BACKTRACE "1"\n}'})
-    return _lock_bindings(text, settings['lock_key'])
+    text = _lock_bindings(text, settings['lock_key'])
+    return _quit_confirmation(text, settings['quit_confirmation'])
 
 
 def render_layout(text: str, name: str, settings: dict) -> str:

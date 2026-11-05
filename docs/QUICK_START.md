@@ -135,6 +135,12 @@ The current client closes; the session and its programs stop only if no other
 active clients remain. `Ctrl+q` is unbound. Detach with `Ctrl+o, d` when you want
 programs to keep running. See the [confirmation guide](QUIT_CONFIRMATION.md).
 
+Prefer a single confirmation line above the status bar? From the checkout, run
+`python3 tools/manage.py configure --config-dir . --quit-confirmation status`
+(`python` on Windows), then start a fresh `zj` session. Use `popup` to restore the
+default dialog. Status mode additionally asks for `ReadApplicationState` so it
+can position the line; approving permissions still does not confirm Quit.
+
 ## Save personal choices
 
 For example, adopt the richer status bar with its UTC clock. Run from the config

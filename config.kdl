@@ -298,7 +298,11 @@ plugins {
 
     // Auditable local build; regenerate from locked source when changing it.
     // The launcher uses verified bundled bytes; plain Zellij uses this immutable URL.
-    confirm-quit location="https://raw.githubusercontent.com/abhi-k9/zellij-config/3aa07d26dfaa2b4ac0d41f8cc30e880c1d56ea22/plugin-sources/confirm-quit/confirm-quit.wasm"
+    confirm-quit location="https://raw.githubusercontent.com/abhi-k9/zellij-config/b31a9838b1de7fd0e5b090c4d0bae486e1b2c8b9/plugin-sources/confirm-quit/confirm-quit.wasm" {
+        // "status" overlays one line above the bar and also needs ReadApplicationState.
+        // Local quit_confirmation preferences override this for new zj sessions.
+        display_style "popup"
+    }
 }
 
 // To start a plugin with every session (in the background), add a block like

@@ -197,7 +197,17 @@ Press `Ctrl+o`, then `q` to open **Quit Zellij?**. Press `y` to quit or `n` / `E
 to cancel; Enter does not confirm. On first use, grant the dialog's
 `ChangeApplicationState` permission, then answer the separate quit question.
 The verified bundled dialog works through `zj` without a network request or
-external command. See the [quit-confirmation guide](docs/QUIT_CONFIRMATION.md).
+external command. Popup is the default. Choose a single confirmation line above
+the existing bar with
+`python3 tools/manage.py configure --config-dir . --quit-confirmation status`,
+then start a fresh `zj` session. Use `popup` to switch back. Status style also
+requests `ReadApplicationState` to position the line; its permission approval
+remains separate from confirming Quit.
+
+The [quit-confirmation guide](docs/QUIT_CONFIRMATION.md) covers both styles,
+direct KDL configuration, size limits, permissions and reproducible rebuilding.
+The [plugin source](plugin-sources/confirm-quit/README.md), locked dependencies,
+toolchain, licenses and build helper are included in this repository.
 
 Quitting closes your connected client. If it is the last active client, the
 session and its programs stop; other connected clients keep the session alive.

@@ -44,10 +44,10 @@
       "name": "confirm-quit",
       "source": "bundled",
       "repository": "abhi-k9/zellij-config",
-      "tag": "3aa07d26dfaa2b4ac0d41f8cc30e880c1d56ea22",
+      "tag": "b31a9838b1de7fd0e5b090c4d0bae486e1b2c8b9",
       "artifact_path": "plugin-sources/confirm-quit/confirm-quit.wasm",
       "asset": "confirm-quit.wasm",
-      "sha256": "9cc0028a4c964d01543ede618c26aa03f04d84092548e8af0aed5bfec8f93dcf",
+      "sha256": "abe8ede8b75ef9abaa032fdc24d1e430a19cb09f975b49d833c3753b770c5041",
       "license": "MIT",
       "license_path": "plugin-sources/confirm-quit/LICENSE"
     }

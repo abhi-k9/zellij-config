@@ -39,11 +39,13 @@ class ConfigurationTests(Workspace):
         self.assertFalse((source / preferences.LOCAL_FILE).exists())
         self.assertFalse((source / '.zj-preferences.lock').exists())
         self.assertEqual(self.configure(source, '--profile', 'classic'), 0)
-        self.assertEqual(self.configure(source, '--timezone', 'UTC', '--git-status', 'off'), 0)
+        self.assertEqual(self.configure(source, '--timezone', 'UTC', '--git-status', 'off',
+                                        '--quit-confirmation', 'status'), 0)
         raw = common.read_json(source / preferences.LOCAL_FILE)
         self.assertEqual(raw['profile'], 'classic')
         self.assertEqual(raw['timezone'], 'UTC')
         self.assertFalse(raw['git_status'])
+        self.assertEqual(raw['quit_confirmation'], 'status')
         self.assertEqual(self.configure(source, '--reset', '--dry-run'), 0)
         self.assertTrue((source / preferences.LOCAL_FILE).is_file())
         self.assertEqual(self.configure(source, '--reset'), 0)
@@ -201,8 +203,10 @@ class ConfigurationTests(Workspace):
         if not binary:
             self.skipTest('Zellij required for real preference validation')
         source = self.source()
-        for profile, lock_key in [('portable', 'F12'), ('classic', 'F12'), ('portable', 'Ctrl g')]:
-            self.configure(source, '--profile', profile, '--lock-key', lock_key, '--layout', 'zjstatus')
+        for profile, lock_key, style in [('portable', 'F12', 'popup'), ('classic', 'F12', 'status'),
+                                        ('portable', 'Ctrl g', 'status')]:
+            self.configure(source, '--profile', profile, '--lock-key', lock_key, '--layout', 'zjstatus',
+                           '--quit-confirmation', style)
             prepared = runtime.prepare(source / 'config.kdl', [], self.base / 'state', offline=True)
             for layout in ['default', 'dev', 'zjstatus', 'minimal']:
                 result = subprocess.run([binary, *prepared, '--layout', layout, 'setup', '--check'],

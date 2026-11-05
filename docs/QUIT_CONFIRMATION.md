@@ -1,20 +1,66 @@
 # Quit confirmation
 
-Press **Ctrl+o, then q** to open a floating **Quit Zellij?** dialog:
+Press **Ctrl+o, then q** to display **Quit Zellij?**:
 
 - `y` confirms.
 - `n` or `Esc` cancels.
 - Enter and modified `y` keys do not confirm.
 
-The question is drawn inside the pane, so it remains visible with the compact
-bar or zjstatus and with pane frames disabled. It needs at least 26 columns and
-3 rows; below that size, enlarge the pane or cancel. Confirmation stays disabled
-until the question can be displayed. Each invocation creates a fresh dialog.
+Both display styles work with the compact bar or zjstatus and with pane frames
+disabled. Each invocation creates a fresh confirmation; it cannot remember a
+previous affirmative answer. Confirmation stays disabled until the question and
+answer keys can be displayed. Enlarge a terminal that is too small, or cancel.
 
-On first use, Zellij asks for `ChangeApplicationState`. That permission lets the
-plugin invoke native Quit; approving it does not answer the quit question. Wait
-for **Quit Zellij?**, then answer separately. The dialog runs no host commands
-and requests no filesystem, network or application-state-reading permission.
+## Choose a display style
+
+The default is `popup` in the shared KDL and both preference presets. Choose
+`status` for a borderless, single-line question immediately **above** the existing
+status bar. The line temporarily overlays the bottom row of the workspace; it
+does not replace the bar, resize tiled panes or stop their processes. Cancelling
+reveals the underlying row. Without a bottom bar, it uses the last workspace row.
+The focused confirmation receives keys until it is answered or cancelled.
+
+From the full checkout, save a local preference:
+
+```sh
+python3 tools/manage.py configure --config-dir . --quit-confirmation status
+./launcher/zj --config-dir . -s confirmation-demo -n minimal
+```
+
+Use `--quit-confirmation popup` to switch back, or `--dry-run` to preview. On
+Windows, use `python` and `.\launcher\zj.cmd`. The saved JSON field is
+`"quit_confirmation": "status"`. As with other
+[local preferences](GENERALIZATION.md#save-choices-outside-shared-kdl), `zj`
+applies it to new sessions; reattachment keeps the existing snapshot and plain
+`zellij` ignores the JSON. Refresh separately installed helpers before using a
+new preference option.
+
+For plain Zellij or a manually maintained config, change this child option inside
+the existing `confirm-quit` alias in [config.kdl](../config.kdl), preserving its
+pinned `location`:
+
+```kdl
+display_style "status" // "popup" is the default when omitted
+```
+
+Local JSON overrides this alias option when using `zj`.
+An invalid `display_style` cannot confirm Quit and displays a cancellation hint.
+
+| Style | Space needed to confirm | Permissions |
+| --- | --- | --- |
+| `popup` | At least 26 columns and 3 content rows | `ChangeApplicationState` |
+| `status` | At least 36 columns and 1 content row | `ChangeApplicationState`, `ReadApplicationState` |
+
+`ChangeApplicationState` lets the plugin invoke native Quit and position its own
+line. Status style additionally reads tab/pane geometry to follow terminal
+resizes and stay above the bar. Neither style runs host commands or requests
+filesystem or network access.
+
+On first use, Zellij presents its own permission prompt, which can still be a
+popup when status style is selected. Approving permission does not answer the
+quit question. Wait for **Quit Zellij?**, then answer separately. Denying
+permission closes the confirmation without quitting. A newly required permission
+can prompt again when switching styles.
 
 ## What quitting means
 
@@ -100,9 +146,10 @@ The separate artifact commit avoids a commit referring to its own unknown SHA.
 Do not use a mutable branch URL for the plugin alias. Check the rebuilt bytes
 against both committed copies, run `./check.sh`, and review the resulting diff.
 
-Before adopting a changed build, use disposable sessions to check cancel,
-affirmative Quit, first-use permission approval, repeated invocations, a small
-pane, both status bars and two connected clients. The
+Before adopting a changed build, use disposable sessions to check both styles,
+cancel, affirmative Quit, first-use permission approval and denial, repeated
+invocations, terminal resizing, a small pane, both status bars and two connected
+clients. Cancellation must preserve the original bar and tiled pane geometry. The
 [on-machine checklist](../cheatsheets/verification-checklist.html#item-13)
 describes the confirmation checks. Parser success alone does not establish these
 interactive behaviors.

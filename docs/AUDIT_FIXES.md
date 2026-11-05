@@ -24,7 +24,9 @@ The quit binding now launches a small source-reviewed `confirm-quit` dialog,
 built against the pinned Zellij SDK and distributed with its source and MIT
 notice. Launch/setup verify its bundled SHA-256 without fetching remote bytes.
 It requires an explicit affirmative answer after the question is displayed and
-uses native client Quit semantics. See the [confirmation and build guide](QUIT_CONFIRMATION.md).
+uses native client Quit semantics. Popup and status-line styles share the same
+answer handling; the status line additionally reads tab/pane geometry and leaves
+the original bar intact. See the [confirmation and build guide](QUIT_CONFIRMATION.md).
 
 Monocle's published v0.100.2 binary was later reproduced crashing on newer mouse
 payloads from Zellij 0.45.1. The repository now builds that plugin against the
