@@ -113,7 +113,13 @@ zj attach myproject
 ```
 
 If a reattached nested session has a blank strip along its border, check for a
-smaller client still attached inside its parent. See the
+smaller client still attached inside its parent. From the **reattached inner
+session**, press **Ctrl+o → w → Ctrl+x → Esc** to open the session manager,
+disconnect the other clients and close the manager. This restores the space
+while keeping the session's programs and the parent session running.
+
+**Ctrl+x disconnects all other clients of the inner session**, including any
+collaborators. Use it only when that is intended. See the
 [nested-session recovery steps](TROUBLESHOOTING.md#blank-border-after-reattaching-a-nested-session).
 
 Use `zj attach --create myproject` to attach, resurrect or create it as needed.

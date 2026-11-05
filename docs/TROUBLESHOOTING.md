@@ -114,6 +114,8 @@ Replace `inner` with your session name; use `zj.cmd` on native Windows.
 
 In NORMAL mode, keep your current attachment and disconnect the others:
 
+**From the reattached inner session: Ctrl+o → w → Ctrl+x → Esc.**
+
 1. Press **Ctrl+o, then w** to open the built-in session manager.
 2. Press **Ctrl+x** to disconnect other clients of the current session.
 3. Press **Esc** to close the manager.
