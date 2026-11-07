@@ -11,7 +11,7 @@ import subprocess
 import tempfile
 import time
 
-from .common import ConfigError, FileLock, atomic_write, json_bytes, load_versions, plugin_url, private_tempdir, read_json, sha256, validate_versions, zellij_executable
+from .common import ConfigError, FileLock, atomic_write, configuration_lock, json_bytes, load_versions, plugin_url, private_tempdir, read_json, sha256, validate_versions, zellij_executable
 from .kdl import plugin_locations, quote, replace_plugin_locations
 from .plugin_files import acquire
 
@@ -106,13 +106,22 @@ def snapshots(target: Path) -> list[tuple[int, int, Path, Path]]:
             continue
         metadata = entry / 'snapshot.json'
         if metadata.is_file() and not metadata.is_symlink():
-            data = read_json(metadata)
-            if data.get('format') != 'zjconfig-backup-v1' or not isinstance(data.get('created_ns'), int):
+            try:
+                data = read_json(metadata)
+            except ValueError as error:
+                raise ConfigError(f'Invalid snapshot metadata: {metadata}: {error}') from error
+            if (not isinstance(data, dict) or data.get('format') != 'zjconfig-backup-v1'
+                    or type(data.get('created_ns')) is not int or data['created_ns'] < 0
+                    or type(data.get('has_tree')) is not bool):
                 raise ConfigError(f'Invalid snapshot metadata: {metadata}')
             tree = entry / 'tree'
-            if data.get('has_tree') is False and not tree.exists():
+            if tree.is_symlink():
+                raise ConfigError(f'Invalid snapshot tree: {entry}')
+            if not data['has_tree']:
+                if tree.exists():
+                    raise ConfigError(f'Invalid snapshot tree: {entry}')
                 continue
-            if not tree.is_dir() or tree.is_symlink():
+            if not tree.is_dir():
                 raise ConfigError(f'Invalid snapshot tree: {entry}')
             found.append((data['created_ns'], 0, entry, tree))
     return sorted(found, key=lambda item: (item[0], item[1], str(item[2])))
@@ -120,16 +129,23 @@ def snapshots(target: Path) -> list[tuple[int, int, Path, Path]]:
 
 def recover(target: Path) -> None:
     journal = target.parent / ('.' + target.name + '.zj-journal.json')
-    if not journal.exists():
-        return
     if journal.is_symlink():
         raise ConfigError(f'Unsafe recovery journal: {journal}')
-    data = read_json(journal)
+    if not journal.exists():
+        return
+    try:
+        data = read_json(journal)
+    except ValueError as error:
+        raise ConfigError(f'Review the recovery journal manually: {journal}: {error}') from error
+    if (not isinstance(data, dict) or type(data.get('fresh')) is not bool
+            or not all(isinstance(data.get(key), str) and data[key] for key in ['target', 'stage', 'backup'])):
+        raise ConfigError(f'Review the recovery journal manually: {journal}')
     stage, backup = Path(data['stage']), Path(data['backup'])
     if (data.get('target') != str(target) or stage.parent != target.parent or backup.parent != target.parent
             or not stage.name.startswith(target.name + '.stage-')
             or not backup.name.startswith(target.name + '.backup-')
-            or stage.is_symlink() or backup.is_symlink()):
+            or any(path.is_symlink() or (path.exists() and not path.is_dir())
+                   for path in [stage, backup, backup / 'tree'])):
         raise ConfigError(f'Review the recovery journal manually: {journal}')
     if not target.exists() and (backup / 'tree').is_dir():
         os.replace(backup / 'tree', target)
@@ -268,7 +284,7 @@ def install(root: Path, *, target: Path | None = None, offline=False, restore=Fa
 
     signal.signal(signal.SIGTERM, interrupted)
     try:
-        with FileLock(target.parent / ('.' + target.name + '.zj-install.lock')):
+        with configuration_lock(target):
             recover(target)
             zellij = zellij_executable(shutil.which)
             if not restore:

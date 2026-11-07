@@ -68,6 +68,12 @@ Detaching and reattaching does not reload a running session's snapshot. Use a ne
 name for a test session, or save work before fully stopping and recreating an old
 one.
 
+Preference writes and resets share setup's lock beside the physical config
+directory. Its parent must be writable. If another helper is using it, retry
+after that operation finishes; do not delete the lock file. This prevents setup
+from overwriting preferences saved during staging. Dry runs and preference
+display create no lock. Manual editor writes are outside this coordination.
+
 Preferences are read beside the selected config file, so different config files
 in the same directory share that local preferences file. Explicit config-directory
 selection can still supply separate layouts/themes. The launcher snapshots

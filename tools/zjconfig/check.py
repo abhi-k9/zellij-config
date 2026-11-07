@@ -26,6 +26,7 @@ REQUIRED = [
     'tools/smoke_plugin_compatibility.py',
     'package.json', 'package-lock.json', 'pyproject.toml', 'tests/test_regressions.py',
     'tests/test_portability.py', 'tests/test_preferences.py', 'tests/test_entrypoints.py',
+    'tests/test_robustness.py', 'tests/test_concurrency_and_arguments.py',
     'docs/AUDIT_FIXES.md', 'docs/GENERALIZATION.md', 'tests/test_configuration.py',
     'docs/QUICK_START.md', 'docs/QUIT_CONFIRMATION.md', 'docs/TROUBLESHOOTING.md',
     'tests/test_bundled_plugins.py', 'plugin-sources/confirm-quit/LICENSE',
@@ -41,7 +42,7 @@ REQUIRED = [
     *['cheatsheets/' + name + '.html' for name in
       ['zellij-cheatsheet', 'zellij-plugins-cheatsheet', 'kdl-syntax-cheatsheet', 'verification-checklist']],
     *['tools/zjconfig/' + name + '.py' for name in
-      ['__init__', 'cli', 'common', 'install', 'kdl', 'launcher', 'plugin_files', 'runtime', 'versions', 'check', 'preferences']],
+      ['__init__', 'arguments', 'cli', 'common', 'install', 'kdl', 'launcher', 'plugin_files', 'runtime', 'versions', 'check', 'preferences']],
 ]
 
 

@@ -48,6 +48,10 @@ Missing downloads run concurrently, with at most three requests in flight.
 Failed downloads have a five-minute per-pin cooldown, during which backups are
 still hash-verified. Changed pins and unusable backups bypass the cooldown.
 Unchanged backup snapshots are reused without rewriting their files.
+The repository-built Monocle and quit dialog reuse their private cached WASM
+after verifying its hash on every launch. A valid cached build needs no bundle
+reread or repeated startup notice; a missing or corrupt cache is rebuilt from
+the verified bundle without downloading.
 
 To change versions when you choose:
 
@@ -93,6 +97,12 @@ config-directory selector have different jobs: an explicit directory can supply
 layouts/themes without replacing an explicit config file. In particular,
 `ZELLIJ_CONFIG_FILE` still wins over `--config-dir` for the file. Unset an old
 file variable when intending to select an entire different checkout.
+
+Put root selectors **before** the Zellij subcommand: for example,
+`zj --config-dir /path/to/config attach -c project`. Here `attach -c` means
+"create the session if missing"; it is unrelated to root `-c FILE`, which selects
+a config file. `attach --create project` is the equivalent long spelling.
+Arguments after `--` belong to the initial command and pass through unchanged.
 
 When the helper prepares a runtime config, layout/theme lookup uses explicit
 `--config-dir`, then `ZELLIJ_CONFIG_DIR`, then the selected config file's parent;
@@ -424,10 +434,23 @@ installed before config publication; a later publication failure can leave newer
 helpers alongside the previous config. Their installation and the config-tree
 publication are separate operations.
 
+Malformed snapshot metadata or recovery journals stop the operation with a
+diagnostic naming the file to inspect. Recovery also refuses a symlink in place
+of its saved `tree/`. These cases leave the active config and recovery resources
+untouched; review them before retrying instead of deleting the journal blindly.
+
+Setup, restore and `configure` writes/resets share a lock beside the physical
+config directory, so a concurrent setup cannot discard newly saved preferences.
+The parent directory must be writable. Contending commands fail promptly with
+the lock path and a retry instruction; retry after the other command completes.
+Read-only preference display and dry runs create no locks. Refresh copied launcher
+helpers after updating the checkout so both commands use the current protocol.
+This coordination does not cover manual editor writes or Git operations.
+
 Lock files can remain after successful commands. The OS lock is released when
 its owning process closes the file or exits; a leftover lock filename alone
 does not mean setup is still running. Busy locks fail promptly rather than
-waiting. Do not delete lock files to bypass a running installer.
+waiting. Do not delete lock files to bypass a running helper.
 
 Runtime plugin/config/layout generations under the launcher state directory are
 not setup backups. They are retained without automatic garbage collection;

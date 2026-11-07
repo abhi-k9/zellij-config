@@ -18,6 +18,16 @@ as freshly repeated by each documentation review.
 
 ## Unreleased — robustness and portability sweep
 
+- Preserve `attach -c`/`a -c` as session creation flags, keep initial-command
+  arguments intact, and share root-option parsing across launcher selection,
+  runtime rewriting and command classification, including short flag clusters.
+- Coordinate setup/restore and preference writes/resets with a stable parent
+  lock. Competing helpers report the busy lock and retry guidance, preventing
+  silent loss of a preference saved while installation was staging.
+- Reject malformed snapshot/recovery metadata and linked recovery trees before
+  mutating recovery resources. Bound preference reads at their existing size
+  limit. Reuse verified cached local plugin builds without repeated acquisition
+  or notices, while repairing corrupt caches from pinned bundles.
 - Preserve binary files and directories at launcher names instead of failing
   UTF-8 decoding or treating directories as scripts during helper installation.
 - Deploy the config captured at source-alias validation, closing a staging window

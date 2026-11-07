@@ -294,6 +294,8 @@ socket and elapsed-time limits. After a failed download, that plugin uses its
 verified backup for five minutes before retrying. A changed pin bypasses this
 cooldown, as does a missing or corrupt backup. Unchanged backup snapshots are
 reused without rewriting them.
+Monocle and the quit dialog also reuse their verified local-build caches without
+repeating startup notices; every reuse still checks the pinned hash.
 
 Periodic release checks run in a detached background worker, so they cannot hold
 up terminal startup. Results are cached per config and pinset; any update or

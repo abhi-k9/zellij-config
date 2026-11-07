@@ -67,6 +67,20 @@ These use local fixtures and injected failures. The locale case launches real
 Python subprocesses; it does not establish graphical terminal rendering on any
 platform. Native CI still covers the helper suite on Windows/macOS/Linux.
 
+The additional [argument and concurrency regressions](../tests/test_concurrency_and_arguments.py)
+cover the following boundaries:
+
+| Case | Expected behavior |
+| --- | --- |
+| `attach -c`, its `a` alias, or command arguments after `--` | Preserve native arguments; only root config selectors are rewritten |
+| Root option values and short clusters such as `-dcFILE` | Consume values once and preserve the debug flag |
+| Preference write/reset during setup, or setup during a preference write | A real competing process fails promptly without losing a saved change |
+| Invalid snapshot/journal field types or a symlink replacing the saved tree | Stop with an actionable error before recovery changes files |
+
+[Bundled-plugin regressions](../tests/test_bundled_plugins.py) also verify quiet
+reuse of hashed local-build caches and repair after corruption. Preference reads
+stop at the size limit instead of loading an arbitrarily large local file.
+
 ## Priority 1: user data and publication safety
 
 | Audit ID | Resolution | Executable regression |
@@ -79,7 +93,7 @@ platform. Native CI still covers the helper suite on Windows/macOS/Linux.
 | I6 | Private unique staging and exclusive temporary files; atomic file replacement never opens an old destination link | `test_no_preexisting_temporary_symlink_is_written` |
 | I7 | Private POSIX snapshot roots; restrictive user/SYSTEM ACLs on new Windows staging/snapshot directories | `test_backup_root_is_private` |
 | I8 | Dry runs create no state; cleanup only owned staging resources | `test_dry_run_creates_nothing`, `test_interrupted_preparation_preserves_unrelated_parts` |
-| I9 | OS file lock excludes simultaneous installers; unique backup roots and recovery journal | `test_exclusive_lock_and_os_release`, `test_recover_kill_between_renames` |
+| I9 | Stable parent lock coordinates setup/restore with preference writes; unique backup roots and recovery journal | `test_exclusive_lock_and_os_release`, `test_recover_kill_between_renames`, `test_configure_during_setup_cannot_silently_lose_a_saved_change` |
 | I10 | Restore publishes an exact staged snapshot rather than deleting a partial glob | `test_install_restore_and_double_dot_cleanup` |
 | I11 | Numeric snapshot metadata and numeric legacy suffix ordering | `test_legacy_snapshot_numeric_suffix` |
 
@@ -135,8 +149,9 @@ aliases, Windows short paths and configs reached through directory symlinks.
 Publication uses reversible directory renames with a short name gap and an
 interruption recovery journal; it is not a filesystem-level atomic exchange or
 a power-loss durability guarantee. External snapshot symlinks remain references
-to their targets, which this installer never overwrites. Concurrent user edits
-are not serialized by the installer lock.
+to their targets, which this installer never overwrites. The installer lock
+coordinates current setup/restore and preference helpers. Concurrent manual
+edits, Git operations and older helper versions are outside that protocol.
 
 The workflow defines native Windows/macOS jobs; inspect the relevant CI run for
 their current results. Local development checks run in isolated Linux environments.

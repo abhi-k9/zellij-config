@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import contextlib
+import errno
 import hashlib
 import json
 import os
@@ -130,15 +131,21 @@ class FileLock:
                 raise ConfigError(f'Unsafe lock file: {self.path}')
             if hasattr(os, 'getuid') and info.st_uid != os.getuid():
                 raise ConfigError(f'Lock belongs to another user: {self.path}')
-            if os.name == 'nt':
-                import msvcrt
-                if info.st_size == 0:
-                    os.write(self.fd, b'0')
-                os.lseek(self.fd, 0, os.SEEK_SET)
-                msvcrt.locking(self.fd, msvcrt.LK_NBLCK, 1)
-            else:
-                import fcntl
-                fcntl.flock(self.fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            try:
+                if os.name == 'nt':
+                    import msvcrt
+                    if info.st_size == 0:
+                        os.write(self.fd, b'0')
+                    os.lseek(self.fd, 0, os.SEEK_SET)
+                    msvcrt.locking(self.fd, msvcrt.LK_NBLCK, 1)
+                else:
+                    import fcntl
+                    fcntl.flock(self.fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except OSError as error:
+                if error.errno in [errno.EACCES, errno.EAGAIN, errno.EDEADLK]:
+                    raise OSError(error.errno, f'Lock is in use: {self.path}; '
+                                  'retry after the other helper finishes (do not delete the lock file)') from error
+                raise
         except BaseException:
             os.close(self.fd)
             self.fd = None
@@ -149,6 +156,15 @@ class FileLock:
         if self.fd is not None:
             os.close(self.fd)
             self.fd = None
+
+
+def configuration_lock(directory: Path) -> FileLock:
+    """Coordinate setup/restore/preferences across directory replacement.
+
+    Callers resolve the physical directory first. A lock inside that directory
+    would move into the backup on publication and could not protect new writers.
+    """
+    return FileLock(directory.parent / ('.' + directory.name + '.zj-install.lock'))
 
 
 def private_tempdir(parent: Path, prefix: str) -> Path:

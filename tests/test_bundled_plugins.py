@@ -188,3 +188,17 @@ class BundledPluginTests(unittest.TestCase):
         self.assertEqual(arguments[0], '--config')
         self.assertFalse(list(state.rglob('*.retry.json')))
         self.assertTrue(list(state.rglob('*.bundled.wasm')))
+
+        # Reuse verified local builds without reacquiring them or repeating notices.
+        with mock.patch.object(runtime, 'acquire', wraps=plugin_files.acquire) as acquire, \
+                redirect_stdout(io.StringIO()) as output:
+            self.assertEqual(runtime.prepare(config, [], state), arguments)
+            acquire.assert_not_called()
+            self.assertEqual(output.getvalue(), '')
+        # A corrupt cache is still detected, then repaired from the pinned bundle.
+        cache = next(state.rglob('*.bundled.wasm'))
+        cache.write_bytes(b'corrupt')
+        with mock.patch.object(plugin_files, 'fetch_bytes') as fetch, redirect_stdout(io.StringIO()):
+            self.assertEqual(runtime.prepare(config, [], state), arguments)
+            fetch.assert_not_called()
+        self.assertEqual(cache.read_bytes(), self.wasm)

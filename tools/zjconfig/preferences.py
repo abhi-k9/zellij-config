@@ -102,7 +102,8 @@ def settings_snapshot(directory: Path) -> tuple[dict | None, bytes | None]:
     if file.is_symlink():
         raise ConfigError(f'Refusing a local preferences symlink: {file}')
     try:
-        data = file.read_bytes()
+        with file.open('rb') as stream:
+            data = stream.read(MAX_LOCAL_BYTES + 1)
     except FileNotFoundError:
         return None, None
     except (OSError, UnicodeError) as error:

@@ -14,7 +14,7 @@ import signal
 import subprocess
 import sys
 
-from .common import ConfigError, FileLock, atomic_write, json_bytes
+from .common import ConfigError, FileLock, atomic_write, configuration_lock, json_bytes
 
 
 def root_directory() -> Path:
@@ -89,7 +89,7 @@ def configure(options) -> int:
         if options.dry_run:
             print(f'Would remove {file}; no files changed.')
         else:
-            with FileLock(directory / '.zj-preferences.lock'):
+            with configuration_lock(directory), FileLock(directory / '.zj-preferences.lock'):
                 if file.is_symlink():
                     raise ConfigError(f'Refusing a local preferences symlink: {file}')
                 file.unlink(missing_ok=True)
@@ -104,7 +104,7 @@ def configure(options) -> int:
         print(json_bytes(raw).decode(), end='')
         print('No files, locks or downloads created.')
         return 0
-    with FileLock(directory / '.zj-preferences.lock'):
+    with configuration_lock(directory), FileLock(directory / '.zj-preferences.lock'):
         if file.is_symlink():
             raise ConfigError(f'Refusing a local preferences symlink: {file}')
         raw, _ = candidate()

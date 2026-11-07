@@ -16,6 +16,7 @@ import time
 import urllib.parse
 
 from .common import ConfigError, FileLock, atomic_write, github_release, json_bytes, plugin_url, read_json, spawn_detached, validate_versions, zellij_executable
+from .arguments import global_options
 from .install import default_directory
 from .kdl import plugin_locations
 
@@ -23,26 +24,11 @@ from .kdl import plugin_locations
 def config_file(arguments: list[str]) -> Path:
     """Select config text independently from the layouts/themes resource directory."""
     selected, directory = None, None
-    index = 0
-    while index < len(arguments):
-        argument = arguments[index]
-        if argument == '--':
-            break
-        if argument in ['--config', '-c', '--config-dir']:
-            index += 1
-            if index >= len(arguments):
-                raise ConfigError(f'Missing value for {argument}')
-            if argument == '--config-dir':
-                directory = arguments[index]
-            else:
-                selected = arguments[index]
-        elif argument.startswith('--config='):
-            selected = argument.split('=', 1)[1]
-        elif argument.startswith('--config-dir='):
-            directory = argument.split('=', 1)[1]
-        elif argument.startswith('-c') and len(argument) > 2:
-            selected = argument[2:]
-        index += 1
+    for option in global_options(arguments):
+        if option.name == '--config-dir':
+            directory = option.value
+        elif option.name in ['--config', '-c']:
+            selected = option.value
     # --config is a file selector; config-dir supplies layouts/themes, rather
     # than overriding an explicit file supplied through the environment.
     selected = selected or os.environ.get('ZELLIJ_CONFIG_FILE')

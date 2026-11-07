@@ -9,6 +9,7 @@ import shutil
 import time
 
 from .common import ConfigError, FileLock, atomic_write, json_bytes, plugin_url, private_tempdir, read_json, validate_versions
+from .arguments import global_options
 from .kdl import parse, plugin_locations, quote, replace_plugin_locations
 from .plugin_files import acquire, verified
 
@@ -20,62 +21,38 @@ def needs_plugins(arguments: list[str]) -> bool:
     command/option tables when upgrading Zellij; it is not a general CLI parser.
     """
     prefix = arguments[:arguments.index('--')] if '--' in arguments else arguments
-    if any(item in ['--version', '-V', '--help', '-h', '--clean'] for item in prefix):
+    options = list(global_options(prefix))
+    index = options[-1].stop if options else 0
+    if (any(option.name in ['--version', '-V', '--help', '-h'] for option in options)
+            or any(item in ['--help', '-h', '--clean'] for item in prefix[index:])):
         return False
     # These commands inspect or control a server; they don't start a new one.
     commands = {'setup', 'list-sessions', 'ls', 'list-aliases', 'la', 'kill-session', 'k',
                 'kill-all-sessions', 'ka', 'delete-session', 'd', 'delete-all-sessions', 'da',
                 'action', 'ac', 'plugin', 'p', 'pipe', 'edit', 'e', 'run', 'r',
                 'web', 'watch', 'w', 'subscribe', 'help'}
-    values = {'--config', '-c', '--config-dir', '--session', '-s', '--layout', '-l',
-              '--new-session-with-layout', '-n', '--data-dir', '--max-panes', '--layout-string'}
-    index = 0
-    while index < len(prefix):
-        item = prefix[index]
-        if item in values:
-            index += 2
-        elif item.startswith('-'):
-            index += 1
-        else:
-            return item not in commands
-    return True
+    return index == len(prefix) or prefix[index] not in commands
 
 
 def arguments_for_config(arguments: list[str], file: Path, runtime: Path) -> list[str]:
     """Replace the config-file selector, preserving layout/theme dir and argv."""
-    result = []
-    directory = False
-    index = 0
-    while index < len(arguments):
-        item = arguments[index]
-        if item == '--':
-            break
-        if item in ['--config', '-c']:
-            if index + 1 >= len(arguments):
-                raise ConfigError(f'Missing value for {item}')
-            index += 2
-            continue
-        if item.startswith('--config=') or (item.startswith('-c') and len(item) > 2):
-            index += 1
-            continue
-        if item == '--config-dir':
-            if index + 1 >= len(arguments):
-                raise ConfigError('Missing value for --config-dir')
-            result.extend(arguments[index:index + 2])
-            directory = True
-            index += 2
-            continue
-        if item.startswith('--config-dir='):
-            directory = True
-        result.append(item)
-        index += 1
+    options = list(global_options(arguments))
+    directory = any(option.name == '--config-dir' for option in options)
+    removed, retained = set(), {}
+    for option in options:
+        if option.name in ['--config', '-c']:
+            removed.update(range(option.start, option.stop))
+            if option.retained:
+                retained[option.start] = option.retained
+    result = [retained.get(index, item) for index, item in enumerate(arguments)
+              if index not in removed or index in retained]
     prefix = ['--config', str(runtime)]
     if not directory:
         # An explicit environment directory may intentionally supply different
         # layouts/themes from the selected config file's own directory.
         selected = Path(os.environ['ZELLIJ_CONFIG_DIR']).expanduser() if os.environ.get('ZELLIJ_CONFIG_DIR') else file.parent
         prefix += ['--config-dir', str(selected)]
-    return [*prefix, *result, *arguments[index:]]
+    return [*prefix, *result]
 
 
 RETRY_SECONDS = 300
@@ -84,19 +61,9 @@ RETRY_SECONDS = 300
 def resource_directory(arguments: list[str], file: Path) -> Path:
     """Follow native config-directory selection without changing its argv."""
     selected = os.environ.get('ZELLIJ_CONFIG_DIR')
-    index = 0
-    while index < len(arguments):
-        item = arguments[index]
-        if item == '--':
-            break
-        if item == '--config-dir':
-            if index + 1 >= len(arguments):
-                raise ConfigError('Missing value for --config-dir')
-            index += 1
-            selected = arguments[index]
-        elif item.startswith('--config-dir='):
-            selected = item.split('=', 1)[1]
-        index += 1
+    for option in global_options(arguments):
+        if option.name == '--config-dir':
+            selected = option.value
     return Path(selected).expanduser().resolve() if selected else file.parent
 
 
@@ -208,14 +175,17 @@ def prepare(file: Path, arguments: list[str], state: Path, *, offline=False, now
         missing = []
         for pin, aliases in selected:
             destination = directory / (pin['sha256'] + '.wasm')
+            cached = (directory / (pin['sha256'] + '.bundled.wasm')
+                      if pin.get('source') == 'bundled' else destination)
             try:
-                # A verified prior download is preferred over the bundled copy.
-                # Failed downloads/bundled fallbacks are never cached as online.
-                if destination.is_symlink():
+                # Local builds reuse their verified snapshot without extra reads,
+                # worker creation or repeated startup notices. Release fallbacks
+                # remain separate from downloaded caches and still retry online.
+                if cached.is_symlink():
                     raise ConfigError('Refusing a plugin cache symlink')
-                verified(destination.read_bytes(), pin)
+                verified(cached.read_bytes(), pin)
                 for alias in aliases:
-                    replacements[alias] = 'file:' + destination.as_posix()
+                    replacements[alias] = 'file:' + cached.as_posix()
             except (OSError, ConfigError):
                 retry = directory / (pin['name'] + '-' + pin['sha256'] + '.retry.json')
                 cooling = not offline and pin.get('source') != 'bundled' and retry_later(retry, pin, now)
