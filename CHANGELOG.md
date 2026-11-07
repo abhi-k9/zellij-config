@@ -16,6 +16,21 @@ as freshly repeated by each documentation review.
 
 ---
 
+## Unreleased — robustness and portability sweep
+
+- Preserve binary files and directories at launcher names instead of failing
+  UTF-8 decoding or treating directories as scripts during helper installation.
+- Deploy the config captured at source-alias validation, closing a staging window
+  in which a later source edit could otherwise introduce an unchecked plugin URL.
+- Validate deployed version ledgers and require an integer version schema.
+  Malformed metadata yields an incomplete update check without a traceback.
+- Report dangling KDL slashdash markers as configuration errors. Reject preference
+  writes that would exceed the reader's 64 KiB UTF-8 limit, including dry runs,
+  and merge only the preference bytes already validated.
+- Decode native Zellij parser diagnostics as UTF-8 independently of Python's
+  locale. Add focused regressions for each failure path and clarify validation
+  limits, launcher collisions and the narrow scope of local plugin maintenance.
+
 ## 2026-11-05 — configurable quit confirmation
 
 - Add `--quit-confirmation popup/status` and the local JSON `quit_confirmation`

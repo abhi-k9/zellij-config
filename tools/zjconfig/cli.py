@@ -14,7 +14,7 @@ import signal
 import subprocess
 import sys
 
-from .common import ConfigError, FileLock, atomic_write, json_bytes, read_json
+from .common import ConfigError, FileLock, atomic_write, json_bytes
 
 
 def root_directory() -> Path:
@@ -45,7 +45,7 @@ def configure(options) -> int:
     """Persist only user-owned preferences; zj renders the managed KDL later."""
     from .install import default_directory
     from .kdl import parse, quote
-    from .preferences import LOCAL_FILE, read_settings, render_config, render_layout, validate_settings
+    from .preferences import LOCAL_FILE, MAX_LOCAL_BYTES, read_settings, render_config, render_layout, settings_snapshot, validate_settings
     directory = (options.config_dir or default_directory()).expanduser().resolve()
     quote(str(directory))
     config = directory / 'config.kdl'
@@ -68,11 +68,13 @@ def configure(options) -> int:
         raise ConfigError('--reset cannot be combined with preference changes')
 
     def candidate():
-        read_settings(directory)  # Includes duplicate-key and size checks.
-        raw = read_json(file) if file.exists() else {'schema': 1}
-        validate_settings(raw)
+        # Merge the same bytes that passed duplicate-key, symlink and size checks.
+        _, contents = settings_snapshot(directory)
+        raw = json.loads(contents) if contents is not None else {'schema': 1}
         raw.update(updates)
         effective = validate_settings(raw)
+        if len(json_bytes(raw)) > MAX_LOCAL_BYTES:
+            raise ConfigError('Local preferences exceed the 64 KiB limit')
         # Render and check helper-level syntax without Zellij or network access.
         # This does not validate theme availability, Zellij option semantics or
         # the interactive behavior of commands in a selected layout.

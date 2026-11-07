@@ -167,12 +167,16 @@ def parse(text: str) -> list[Node]:
             omit = stream[pos].kind == 'skip'
             if omit:
                 pos += 1
+            if pos >= len(stream):
+                raise ConfigError('Expected KDL node after /-')
             start = stream[pos].start
             node = Node(value(), start=start)
             while pos < len(stream) and stream[pos].kind not in ['\n', ';', '}']:
                 discard = stream[pos].kind == 'skip'
                 if discard:
                     pos += 1
+                if pos >= len(stream):
+                    raise ConfigError('Expected KDL entry after /-')
                 if pos < len(stream) and stream[pos].kind == '{':
                     pos += 1
                     children = nodes(True, depth + 1)

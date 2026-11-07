@@ -17,6 +17,20 @@ The [original README](README.upstream.md) and [development layout](dev.kdl) are
 retained as upstream reference material. Use the instructions below for the
 selected toolchain.
 
+## Maintenance scope
+
+Keep this as an upstream compatibility build: retain upstream search/UI behavior
+and limit local changes to SDK compatibility and necessary dependency fixes.
+[Upstream PR #20](https://github.com/imsnif/monocle/pull/20) tracks the SDK/API
+compatibility work. Prefer a compatible upstream release artifact once it has
+passed filename/content search and mouse-event checks with the selected host;
+review its notices and hashes before changing the inventory back to a release pin.
+
+Updating the core Zellij pin does not update this source tree's SDK or Cargo
+lock. Review those together when changing hosts; a successful WASM compilation
+does not establish host event-payload compatibility. Avoid adding independent
+search/UI features to this copy solely because its source is vendored here.
+
 ## Build and verify
 
 Install Rust with its official toolchain installer and Python 3.10+. This

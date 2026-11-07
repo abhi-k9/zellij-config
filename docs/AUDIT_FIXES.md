@@ -48,6 +48,25 @@ Zellij parsing. Native Windows/Fish tests skip when those runtimes are absent;
 parser success does not establish interactive correctness. See the
 [migration and validation checklist](GENERALIZATION.md#migration-and-validation-checklist).
 
+## Failure-path robustness
+
+The focused regressions in [test_robustness.py](../tests/test_robustness.py)
+exercise failure cases in addition to the successful startup and deployment paths:
+
+| Case | Expected behavior |
+| --- | --- |
+| Binary or directory at a launcher name | Preserve it and continue copying other wrappers/helpers |
+| Source config edited after alias validation | Deploy the captured validated aliases |
+| Oversized preference update, including Unicode | Reject before replacing the existing file, including in dry runs |
+| Dangling KDL `/-` comment marker | Report a configuration error instead of an index traceback |
+| Malformed deployed versions ledger | Return incomplete update-check status without querying releases |
+| Boolean or fractional version schema | Reject it; schema 1 requires an integer |
+| Non-UTF-8 Python locale | Decode native Zellij diagnostics as UTF-8 |
+
+These use local fixtures and injected failures. The locale case launches real
+Python subprocesses; it does not establish graphical terminal rendering on any
+platform. Native CI still covers the helper suite on Windows/macOS/Linux.
+
 ## Priority 1: user data and publication safety
 
 | Audit ID | Resolution | Executable regression |
@@ -94,8 +113,9 @@ parser success does not establish interactive correctness. See the
 verified plugin bytes and exact upstream notices, synchronizes config pins and
 generated references, and rolls back ordinary write failures. Zellij pin updates
 record published binary hashes; installation and compatibility validation are
-separate operations. Download size,
-connection and total-duration bounds apply; HTTPS downgrade redirects are denied.
+separate operations. Download size limits, socket timeouts and per-attempt elapsed
+budgets apply; these are not a hard wall-clock deadline across retries, reads and
+redirects. HTTPS downgrade redirects are denied.
 The launcher can check local installed plugins using retained upstream metadata.
 
 CI runs real pinned Zellij on Linux, macOS and Windows with Python 3.10 and 3.14.

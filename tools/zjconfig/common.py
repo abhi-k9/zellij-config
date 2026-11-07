@@ -178,7 +178,8 @@ def load_versions(root: Path) -> dict:
 
 
 def validate_versions(pins: dict) -> dict:
-    if not isinstance(pins, dict) or pins.get('schema') != 1 or not isinstance(pins.get('plugins'), list):
+    if (not isinstance(pins, dict) or type(pins.get('schema')) is not int
+            or pins['schema'] != 1 or not isinstance(pins.get('plugins'), list)):
         raise ConfigError('Unsupported versions.json schema')
 
     def text(value, label, pattern=None):

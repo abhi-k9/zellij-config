@@ -135,9 +135,9 @@ mouse_click_through false               // default — true lets the focusing cl
 
 // Save each session (tabs, panes, cwds, running commands) and resurrect it.
 // After a crash or reboot use `zellij attach --create NAME` for a named session.
-// Plain `zellij` starts a fresh session. A resurrected nvim has no
-// shell under it; layouts/default.kdl's extra "shell" tab keeps `:qa` from
-// ending the session.
+// Plain `zellij` starts a fresh session. A saved foreground command can be
+// resurrected without its original parent shell; default.kdl's extra "shell"
+// tab keeps another tab available while retained. This does not save buffers.
 session_serialization true              // default
 
 // Also save each pane's visible screen? Off, so resurrected panes come back

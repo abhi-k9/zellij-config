@@ -24,8 +24,10 @@ python3 tools/manage.py configure --config-dir . --timezone Europe/Paris --layou
 `configure` saves preferences in `.zellij-config-local.json` in the chosen config
 directory. This gitignored file uses schema version 1; unknown fields, duplicate
 JSON keys, wrong types and control characters in strings are rejected. Symlinks
-are rejected and the file is limited to 64 KiB. A missing
-file leaves the actual source KDL in control, including any manual source edits.
+are rejected and the file is limited to 64 KiB of encoded UTF-8, including JSON
+formatting. Both saved changes and dry runs check that limit before replacing an
+existing preference file; a rejected change leaves the previous choices intact.
+A missing file leaves the actual source KDL in control, including any manual source edits.
 CLI options are optional, and explicit preferences override the selected preset.
 Changing one option preserves unspecified existing choices. Switching profiles
 also preserves explicit overrides; use `--reset` first to discard them. Running

@@ -15,7 +15,7 @@ import sys
 import time
 import urllib.parse
 
-from .common import ConfigError, FileLock, atomic_write, github_release, json_bytes, plugin_url, read_json, spawn_detached, zellij_executable
+from .common import ConfigError, FileLock, atomic_write, github_release, json_bytes, plugin_url, read_json, spawn_detached, validate_versions, zellij_executable
 from .install import default_directory
 from .kdl import plugin_locations
 
@@ -57,7 +57,7 @@ def locations(file: Path) -> list[str]:
     # Verified local installs retain their exact upstream pins for update checks.
     ledger = file.parent / '.zellij-config-versions.json'
     if ledger.is_file() and not ledger.is_symlink():
-        pins = read_json(ledger)
+        pins = validate_versions(read_json(ledger))
         mapping = {'file:' + (file.parent / 'plugins' / pin['asset']).as_posix(): plugin_url(pin)
                    for pin in pins.get('plugins', [])}
         found = [mapping.get(location, location) for location in found]

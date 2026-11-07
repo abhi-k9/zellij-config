@@ -126,6 +126,7 @@ class RenderingTests(unittest.TestCase):
 
     def test_quit_style_roundtrip_preserves_aliases_and_other_configuration(self):
         for source in [self.config,
+                       'plugins { confirm-quit location="file:custom.wasm"; }\n',
                        'plugins {\n    confirm-quit location="file:custom.wasm" {\n'
                        '        // retained\n        custom "value"\n        display_style "popup"\n    }\n}\n']:
             status = preferences.render_config(source, {'schema': 1, 'quit_confirmation': 'status'})

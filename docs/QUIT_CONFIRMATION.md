@@ -117,6 +117,34 @@ version-update request for a bundled build is rejected; its source and build
 must be reviewed together. Monocle has its own
 [build instructions](../plugin-sources/monocle/README.md).
 
+## Maintenance and native alternatives
+
+This plugin is specific to quitting: the question and Quit action are fixed,
+while `display_style` selects its presentation. Keep that scope small rather
+than growing a general popup framework. Zellij already manages its floating pane;
+the local code supplies the question, answer handling and optional line placement.
+
+The selected Zellij 0.45.1 has no supported configurable quit-confirmation API;
+its `Confirm` and `Deny` actions are
+[deprecated no-ops](https://github.com/zellij-org/zellij/blob/v0.45.1/zellij-server/src/route.rs).
+Upstream development includes native `on_quit` confirmation and a general
+[`zellij:prompt` API](https://github.com/zellij-org/zellij/blob/main/zellij-tile/src/shim.rs).
+Those development features are not enabled by adding options to this pinned
+stable configuration.
+
+Prefer native confirmation once a selected stable release provides it and passes
+the relevant terminal checks. Before replacing this plugin, verify answer keys,
+presentation, resizing, cancellation and permissions. Review multi-client Quit
+semantics explicitly: the development native close dialog can end the whole
+session and disconnect other clients, whereas this build performs client Quit
+as described above. A native dialog also needs a separate check for status-line
+presentation; the existence of a popup API does not establish style parity.
+
+Changing the Zellij pin does not update either bundled plugin's embedded SDK or
+prove runtime compatibility. Review the SDK, source changes and locked
+dependencies together, then run native behavior checks with the selected host.
+The long-term preference is a validated upstream/native replacement.
+
 ## Rebuild and publish the dialog
 
 Follow the [source build instructions](../plugin-sources/confirm-quit/README.md)

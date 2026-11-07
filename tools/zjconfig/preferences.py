@@ -14,6 +14,7 @@ from .kdl import Node, parse, quote
 
 
 LOCAL_FILE = '.zellij-config-local.json'
+MAX_LOCAL_BYTES = 64 * 1024
 LAYOUTS = ('default', 'dev', 'zjstatus', 'minimal')
 PRESETS = {
     'portable': {
@@ -106,7 +107,7 @@ def settings_snapshot(directory: Path) -> tuple[dict | None, bytes | None]:
         return None, None
     except (OSError, UnicodeError) as error:
         raise ConfigError(f'Cannot read local preferences {file}: {error}') from error
-    if len(data) > 64 * 1024:
+    if len(data) > MAX_LOCAL_BYTES:
         raise ConfigError('Local preferences exceed the 64 KiB limit')
     try:
         raw = json.loads(data.decode('utf-8'), object_pairs_hook=_unique_object)

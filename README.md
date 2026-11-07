@@ -11,7 +11,8 @@ see [terminal and plugin troubleshooting](docs/TROUBLESHOOTING.md).
 
 ## Clone directly and start
 
-Install Git, Zellij and Python 3.10+. Choose an **absent or empty** destination;
+Install Git, Zellij and Python 3.10+. The selected Zellij and plugin versions are
+listed in [VERSIONS.md](VERSIONS.md). Choose an **absent or empty** destination;
 move an existing config or nested checkout aside before cloning. Git will not
 merge a clone into a nonempty directory.
 
@@ -137,6 +138,10 @@ does not install Zellij or copy/bind a configuration. Repository management
 commands such as `install`, `check` and `versions` still run from the full source
 checkout. The checked-in launcher uses current checkout code; installed helper
 copies keep their installed code until refreshed.
+
+Existing files or directories named `zj`, `zj.cmd` or `zj.ps1` are preserved
+unless identified as this repository's launcher. Setup reports each skipped
+name; choose another `--bin-dir` if a collision prevents using the desired wrapper.
 
 From Fish, installing the helpers and adding their default directory is:
 

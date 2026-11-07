@@ -71,7 +71,9 @@ def validate_kdl(directory: Path, zellij: str) -> None:
         args = [zellij, '--config', str(directory / 'config.kdl'), '--config-dir', str(directory)]
         if layout:
             args.extend(['--layout', str(layout)])
-        result = subprocess.run(args + ['setup', '--check'], text=True, capture_output=True, timeout=30)
+        # Zellij emits UTF-8 even when Python's Windows/Unix locale is different.
+        result = subprocess.run(args + ['setup', '--check'], encoding='utf-8', errors='replace',
+                                capture_output=True, timeout=30)
         if result.returncode:
             raise ConfigError(f'Zellij rejected {layout or directory / "config.kdl"}:\n{result.stdout}{result.stderr}')
 
@@ -218,7 +220,16 @@ def install_launcher(root: Path, binary_dir: Path) -> None:
             for name in ['zj', 'zj.cmd', 'zj.ps1']:
                 destination = binary_dir / name
                 if destination.exists() or destination.is_symlink():
-                    if destination.is_symlink() or 'zellij-config launcher' not in destination.read_text(encoding='utf-8'):
+                    managed = False
+                    if not destination.is_symlink() and destination.is_file():
+                        try:
+                            # Inspect only a wrapper's header. Existing binaries,
+                            # unreadable files and directories remain untouched.
+                            with destination.open('rb') as stream:
+                                managed = b'zellij-config launcher' in stream.read(4096)
+                        except OSError:
+                            pass
+                    if not managed:
                         print(f'Kept an existing unrelated launcher: {destination}')
                         continue
                 atomic_write(destination, (root / 'launcher' / name).read_bytes(), 0o755)
@@ -299,7 +310,9 @@ def install(root: Path, *, target: Path | None = None, offline=False, restore=Fa
                         shutil.copytree(target, stage, symlinks=True, dirs_exist_ok=True)
                     for directory in ['layouts', 'themes', 'plugins']:
                         materialize(stage / directory)
-                    atomic_write(stage / 'config.kdl', (source / 'config.kdl').read_bytes())
+                    # Use the exact configuration whose aliases were checked above;
+                    # a source edit during staging must not inject an unchecked URL.
+                    atomic_write(stage / 'config.kdl', source_text.encode('utf-8'))
                     for directory in ['layouts', 'themes']:
                         for file in (source / directory).iterdir():
                             if file.is_file():

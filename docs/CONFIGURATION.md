@@ -352,6 +352,13 @@ on a later launch after the worker finishes. Rapid launches share a reservation;
 if a worker crashes, scheduling can retry after ten minutes. Workers never change
 pins or the configuration. Explicit checks below run live in the foreground.
 
+For a separately deployed config, checks validate the adjacent
+`.zellij-config-versions.json` ledger before interpreting local plugin paths.
+Malformed metadata produces an incomplete check (status 2). Refresh a damaged
+deployment through setup from a reviewed source checkout; arbitrary JSON is not
+treated as a valid inventory. The schema field must be the integer `1`, not a
+boolean or floating-point value.
+
 ```sh
 zj --check-updates
 zj --check-updates /path/to/config.kdl
@@ -395,6 +402,18 @@ edits to shipped target files can be overwritten on the next setup. Deployment
 writes absolute `file:` plugin locations, so redeploy after moving a deployed
 tree to a different physical location. All retained target layouts are parser
 checked too; an invalid custom layout can block deployment.
+
+Setup deploys the source configuration captured when its plugin aliases were
+validated. Editing that source during staging cannot introduce a new, unchecked
+plugin URL into the deployed config. Avoid concurrent source changes when you
+need the deployment to reflect a particular revision; the installer does not
+serialize Git operations or other editors.
+
+Launcher copying preserves unrelated files, directories and symlinks at its
+wrapper names, including binary files that are not UTF-8 text. A skipped wrapper
+name is reported; use a separate `--bin-dir` if needed. Zellij parser diagnostics
+are decoded as UTF-8 even under a different Python locale, so configuration
+errors retain non-ASCII paths and messages.
 
 Restore selects the newest recognized snapshot and validates it before restoring
 the whole config tree, including its old local preferences. A corrupt selected
